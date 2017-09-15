@@ -1,3 +1,0 @@
-twoPhaseMassTransferFoam.C
-
-EXE = $(FOAM_APPBIN)/twoPhaseMassTransferFoam

@@ -1,4 +1,0 @@
-OBJECTS = \
-$(OBJECTS_DIR)/FPCCellToFaceStencil.o\
-$(OBJECTS_DIR)/centredFPCCellToFaceStencil.o\
-$(OBJECTS_DIR)/centredCPCCellToCellStencil.o
