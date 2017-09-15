@@ -1752,18 +1752,18 @@ void Foam::plic::tet_cell_intersect
         cellPlns.resize(cellPlns.size()+1);
         cellPlns[cellPlns.size()-1] = intfcPln;        
 
-        tet_slice_with_plns(curTet, cellPlns, V_alpha1, V_cellI, 0);
+        tet_slice_with_plns(curTet, cellPlns, V_alpha1, V_tot, 0);
 
-        V_alpha0 = V_cellI - V_alpha1;
+        V_alpha0 = V_tot - V_alpha1;
     } 
     else
     {
         List<Plane> cellPlns = cellPlns_flatFld_[cellI];
 
-        tet_slice_with_plns(curTet, cellPlns, V_cellI, 0);        
+        tet_slice_with_plns(curTet, cellPlns, V_tot, 0);        
 
-        V_alpha1 = V_cellI*alpha_cellI;
-        V_alpha0 = V_cellI - V_alpha1;
+        V_alpha1 = V_tot*alpha_cellI;
+        V_alpha0 = V_tot - V_alpha1;
     }
 }
 
