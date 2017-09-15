@@ -1,0 +1,25 @@
+# 1 "options"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "options"
+EXE_INC = 	-I../plicStencils/lnInclude 	-IcellInfo/lnInclude 	-IPlane/lnInclude 	-IplicLeastSquaresGrad/lnInclude 	-I$(LIB_SRC)/finiteVolume/lnInclude
+
+
+
+
+
+
+EXE_LIBS = 	-lplicStencils 	-lcellInfo 	-lPlane 	-lplicLeastSquares 	-lfiniteVolume 
+
+
+
+
+
+
+
+
+
+
+
+
+

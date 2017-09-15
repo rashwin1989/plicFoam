@@ -1,0 +1,34 @@
+
+surfaceScalarField alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
+surfaceScalarField alpha0f = fvc::interpolate(alpha0, phi, "alpha0f");
+surfaceScalarField gammaf = interface.nHatf()/mesh.magSf();
+gammaf.min(1.0);
+surfaceScalarField muf_a = alpha1f*mu1 + alpha0f*mu0;
+surfaceScalarField muf_h = mu1*mu0/muf_a;
+muf = gammaf*muf_h + (1 - gammaf)*muf_a;
+
+fvVectorMatrix UEqn
+(
+    fvm::ddt(rho, U)
+    + fvm::div(rhoPhi, U)
+    - fvm::laplacian(muf, U)
+);
+
+UEqn.relax();
+
+if (pimple.momentumPredictor())
+{
+    solve
+    (
+        UEqn
+     ==
+        fvc::reconstruct
+        (
+            (
+                fvc::interpolate(interface.sigmaK())*fvc::snGrad(alpha1)
+              - ghf*fvc::snGrad(rho)
+              - fvc::snGrad(p_rgh)
+            ) * mesh.magSf()
+        )
+    );
+}

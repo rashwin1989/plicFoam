@@ -1,0 +1,10 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+set -x
+
+wmake libso plic
+wmake
+wmake plicTFoam
+wmake plicFlowFoam
+
+# ----------------------------------------------------------------- end-of-file

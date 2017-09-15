@@ -1,0 +1,14 @@
+EXE_INC = \
+	-I$(LIB_SRC)/finiteVolume/lnInclude \
+	-I../../plicStencils/lnInclude
+
+EXE_LIBS = \
+	-lfiniteVolume \
+	-lplicStencils
+
+		      
+
+
+
+
+

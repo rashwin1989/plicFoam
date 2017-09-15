@@ -1,0 +1,4 @@
+plicLeastSquaresVectors.C
+plicLeastSquaresGrad.C
+
+LIB = $(FOAM_LIBBIN)/libplicLeastSquares

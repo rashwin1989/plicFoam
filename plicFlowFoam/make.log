@@ -1,0 +1,24 @@
++ wmake libso ../plic
+wmakeLnInclude: linking include files to ./lnInclude
+Making dependency list for source file plic.C
+Making dependency list for source file plicFuncs.C
+SOURCE=plic.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I../plicStencils/lnInclude 	-IcellInfo/lnInclude 	-IPlane/lnInclude 	-IplicLeastSquaresGrad/lnInclude 	-I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/plic.o
+SOURCE=plicFuncs.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I../plicStencils/lnInclude 	-IcellInfo/lnInclude 	-IPlane/lnInclude 	-IplicLeastSquaresGrad/lnInclude 	-I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/plicFuncs.o
+'/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/lib/libplic.so' is up to date.
++ wmake libso incompTwoPhaseMixture
+options:1:11: warning: backslash and newline separated by space [enabled by default]
+options:4:12: warning: backslash and newline separated by space [enabled by default]
+wmakeLnInclude: linking include files to ./lnInclude
+Making dependency list for source file incompTwoPhaseMixture.C
+SOURCE=incompTwoPhaseMixture.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/incompTwoPhaseMixture.o
+'/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/lib/libincompTwoPhaseMixture.so' is up to date.
++ wmake
+options:5:36: warning: backslash and newline separated by space [enabled by default]
+options:10:17: warning: backslash and newline separated by space [enabled by default]
+Making dependency list for source file plicFlowFoam.C
+SOURCE=plicFlowFoam.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I.. 	-I../plic/lnInclude 	-I../plicStencils/lnInclude 	-IincompTwoPhaseMixture/lnInclude 	-I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/plicFlowFoam.o
+In file included from plicFlowFoam.C:55:0:
+/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude/readTimeControls.H: In function ‘int main(int, char**)’:
+/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude/readTimeControls.H:38:8: warning: unused variable ‘maxDeltaT’ [-Wunused-variable]
+g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I.. 	-I../plic/lnInclude 	-I../plicStencils/lnInclude 	-IincompTwoPhaseMixture/lnInclude 	-I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -Xlinker --add-needed -Xlinker --no-as-needed Make/linux64GccDPOpt/plicFlowFoam.o -L/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/lib \
+	     -lplic 	-lplicStencils 	-lcellInfo 	-lPlane 	-lplicLeastSquares 	-lincompTwoPhaseMixture 	-lfiniteVolume  -lOpenFOAM -ldl   -lm -o /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/bin/plicFlowFoam

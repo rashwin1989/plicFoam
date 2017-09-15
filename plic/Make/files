@@ -1,0 +1,3 @@
+plic.C
+
+LIB = $(FOAM_LIBBIN)/libplic

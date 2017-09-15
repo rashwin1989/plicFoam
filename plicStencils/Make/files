@@ -1,0 +1,5 @@
+FPCCellToFaceStencil.C
+centredFPCCellToFaceStencil.C
+centredCPCCellToCellStencil.C
+
+LIB = $(FOAM_LIBBIN)/libplicStencils

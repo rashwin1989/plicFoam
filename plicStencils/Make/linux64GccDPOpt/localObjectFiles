@@ -1,0 +1,4 @@
+LOCAL_OBJECTS = \
+FPCCellToFaceStencil.o\
+centredFPCCellToFaceStencil.o\
+centredCPCCellToCellStencil.o

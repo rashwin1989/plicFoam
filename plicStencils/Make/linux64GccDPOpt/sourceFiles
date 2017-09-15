@@ -1,0 +1,4 @@
+SOURCE = \
+FPCCellToFaceStencil.C\
+centredFPCCellToFaceStencil.C\
+centredCPCCellToCellStencil.C

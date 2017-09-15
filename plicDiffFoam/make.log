@@ -1,0 +1,45 @@
+wmakeLnInclude: linking include files to ./lnInclude
+Making dependency list for source file plicDiffFoam.C
+SOURCE=plicDiffFoam.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I../plic/lnInclude 	-I../plicStencils/lnInclude 	-I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/plicDiffFoam.o
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H: In function ‘int main(int, char**)’:
+YDiffEqn.H:68:13: error: invalid initialization of reference of type ‘const vector& {aka const Foam::Vector<double>&}’ from expression of type ‘Foam::List<double>’
+In file included from plicDiffFoam.C:37:0:
+../plic/lnInclude/plicFuncs.H:255:10: error: in passing argument 4 of ‘void Foam::plicFuncs::calcTwoSidedFaceGradWeights(const label&, const label&, const label&, const vector&, const Foam::List<double>&, const Foam::List<double>&, const Foam::List<Foam::Vector<double> >&, const labelListList&, const scalar&, const label&, Foam::scalar&, Foam::scalar&, bool)’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:90:13: error: invalid initialization of reference of type ‘const vector& {aka const Foam::Vector<double>&}’ from expression of type ‘Foam::List<double>’
+In file included from plicDiffFoam.C:37:0:
+../plic/lnInclude/plicFuncs.H:255:10: error: in passing argument 4 of ‘void Foam::plicFuncs::calcTwoSidedFaceGradWeights(const label&, const label&, const label&, const vector&, const Foam::List<double>&, const Foam::List<double>&, const Foam::List<Foam::Vector<double> >&, const labelListList&, const scalar&, const label&, Foam::scalar&, Foam::scalar&, bool)’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:112:13: error: invalid initialization of reference of type ‘const vector& {aka const Foam::Vector<double>&}’ from expression of type ‘Foam::List<double>’
+In file included from plicDiffFoam.C:37:0:
+../plic/lnInclude/plicFuncs.H:255:10: error: in passing argument 4 of ‘void Foam::plicFuncs::calcTwoSidedFaceGradWeights(const label&, const label&, const label&, const vector&, const Foam::List<double>&, const Foam::List<double>&, const Foam::List<Foam::Vector<double> >&, const labelListList&, const scalar&, const label&, Foam::scalar&, Foam::scalar&, bool)’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:130:13: error: invalid initialization of reference of type ‘const vector& {aka const Foam::Vector<double>&}’ from expression of type ‘Foam::List<double>’
+In file included from plicDiffFoam.C:37:0:
+../plic/lnInclude/plicFuncs.H:255:10: error: in passing argument 4 of ‘void Foam::plicFuncs::calcTwoSidedFaceGradWeights(const label&, const label&, const label&, const vector&, const Foam::List<double>&, const Foam::List<double>&, const Foam::List<Foam::Vector<double> >&, const labelListList&, const scalar&, const label&, Foam::scalar&, Foam::scalar&, bool)’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:385:28: warning: unused variable ‘pCf’ [-Wunused-variable]
+YDiffEqn.H:387:35: warning: unused variable ‘pY0i’ [-Wunused-variable]
+YDiffEqn.H:605:18: error: redeclaration of ‘Foam::scalarField& C1iCells’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:22:18: error: ‘Foam::scalarField& C1iCells’ previously declared here
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:655:18: error: redeclaration of ‘Foam::scalarField& C0iCells’
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:23:18: error: ‘Foam::scalarField& C0iCells’ previously declared here
+In file included from plicDiffFoam.C:79:0:
+YDiffEqn.H:661:28: error: ‘alpha0Cells’ was not declared in this scope
+In file included from plicDiffFoam.C:51:0:
+readTimeControls.H:42:8: warning: unused variable ‘maxDeltaT’ [-Wunused-variable]
+In file included from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/List.H:259:0,
+                 from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/labelList.H:48,
+                 from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/UPstream.H:42,
+                 from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/Pstream.H:42,
+                 from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/parRun.H:35,
+                 from /home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude/fvCFD.H:4,
+                 from plicDiffFoam.C:35:
+/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/List.C: In instantiation of ‘Foam::List<T>::List(InputIterator, InputIterator) [with InputIterator = int; T = double]’:
+createFields.H:273:51:   required from here
+/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude/List.C:203:9: error: invalid type argument of unary ‘*’ (have ‘int’)
+make: *** [Make/linux64GccDPOpt/plicDiffFoam.o] Error 1

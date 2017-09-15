@@ -1,0 +1,3 @@
+plicFoam.C
+
+EXE = $(FOAM_APPBIN)/plicFoam

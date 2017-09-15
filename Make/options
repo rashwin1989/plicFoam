@@ -1,0 +1,26 @@
+EXE_INC = \
+	-Iplic/lnInclude \
+	-IplicStencils/lnInclude \	
+	-I$(LIB_SRC)/finiteVolume/lnInclude
+
+EXE_LIBS = \
+	-lplic \
+	-lplicStencils \	
+	-lcellInfo \
+	-lPlane \
+	-lplicLeastSquares \
+	-lfiniteVolume 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

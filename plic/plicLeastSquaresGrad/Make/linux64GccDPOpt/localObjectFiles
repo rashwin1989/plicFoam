@@ -1,0 +1,3 @@
+LOCAL_OBJECTS = \
+plicLeastSquaresVectors.o\
+plicLeastSquaresGrad.o
