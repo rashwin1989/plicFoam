@@ -5,5 +5,7 @@ set -x
 wclean libso plic
 wclean 
 wclean plicTFoam
+wclean plicFlowFoam
+wclean plicDiffFoam
 
 # ----------------------------------------------------------------- end-of-file
