@@ -1740,7 +1740,7 @@ void Foam::plic::tet_cell_intersect
         Info<< "Cell alpha1:  " << alpha_cellI << nl << endl; 
     }
 
-    scalar V_cellI = 0;
+    scalar V_tot = 0;
     V_alpha1 = 0;
     V_alpha0 = 0;
 
