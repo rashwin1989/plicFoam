@@ -1549,6 +1549,8 @@ void Foam::plic::intfcInfo_collectData()
         nHat_flatFld_[cellI] = nHat_[cellI];
         gradAlpha1_flatFld_[cellI] = gradAlpha1_[cellI];
         C_intfc_flatFld_[cellI] = C_intfc_[cellI];
+        rho1_flatFld_[cellI] = rho1_[cellI];
+        rho0_flatFld_[cellI] = rho0_[cellI];
     }
     // Insert my boundary values
     forAll(alpha_ph1_.boundaryField(), patchI)
@@ -1557,6 +1559,8 @@ void Foam::plic::intfcInfo_collectData()
         const fvPatchVectorField& pnHat = nHat_.boundaryField()[patchI];
         const fvPatchVectorField& pgradAlpha1 = gradAlpha1_.boundaryField()[patchI];
         const fvPatchVectorField& pCIntfc = C_intfc_.boundaryField()[patchI];
+        const fvPatchScalarField& prho1 = rho1_.boundaryField()[patchI];
+        const fvPatchScalarField& prho0 = rho0_.boundaryField()[patchI];
 
         label nCompact =
             palpha.patch().start()
@@ -1569,6 +1573,8 @@ void Foam::plic::intfcInfo_collectData()
             nHat_flatFld_[nCompact] = pnHat[i];
             gradAlpha1_flatFld_[nCompact] = pgradAlpha1[i];
             C_intfc_flatFld_[nCompact] = pCIntfc[i];
+            rho1_flatFld_[nCompact] = prho1[i];
+            rho0_flatFld_[nCompact] = prho0[i];
             nCompact++;
         }
     }
@@ -1578,6 +1584,8 @@ void Foam::plic::intfcInfo_collectData()
     map.distribute(nHat_flatFld_);
     map.distribute(gradAlpha1_flatFld_);
     map.distribute(C_intfc_flatFld_);
+    map.distribute(rho1_flatFld_);
+    map.distribute(rho0_flatFld_);
 
     if(debug2_)
     {
@@ -1585,6 +1593,8 @@ void Foam::plic::intfcInfo_collectData()
         Foam::plicFuncs::write_flatFld_vector(nHat_flatFld_, nHat_);
         Foam::plicFuncs::write_flatFld_vector(gradAlpha1_flatFld_, gradAlpha1_);
         Foam::plicFuncs::write_flatFld_vector(C_intfc_flatFld_, C_intfc_);
+        Foam::plicFuncs::write_flatFld_scalar(rho1_flatFld_, rho1_);
+        Foam::plicFuncs::write_flatFld_scalar(rho0_flatFld_, rho0_);
     }
 }
 
@@ -2023,6 +2033,8 @@ Foam::plic::plic
     const volScalarField& alpha_ph1,
     const volVectorField& U,
     const surfaceScalarField& phi,
+    const volScalarField& rho1,
+    const volScalarField& rho0,
     const volScalarField& rho
 )
     :
@@ -2077,6 +2089,8 @@ Foam::plic::plic
         ),
         fvc::interpolate(alpha_ph1_)
     ),
+    rho1_(rho1),
+    rho0_(rho0),
     rho_(rho),
     phi_(phi),
     phiAlpha1_
@@ -2214,7 +2228,12 @@ Foam::plic::plic
         ),
         mesh,
         dimensionedVector("zero", dimLength, vector::zero)
-    )
+    ),
+    species_(transPropDict_.lookup("species")),
+    nSpecies_(species_.size()),
+    fAlpha1_(fvc::interpolate(alpha_ph1_,"alpha1")),
+    fY1_(nSpecies_),
+    fY0_(nSpecies_)
 {
     Foam::plicFuncs::write_stencil(faceStencil().stencil(), mesh, "centredFPCCellToFaceStencil");
 
@@ -2236,9 +2255,50 @@ Foam::plic::plic
     alpha_ph1_flatFld_.setSize(nflatFld);
     nHat_flatFld_.setSize(nflatFld);
     gradAlpha1_flatFld_.setSize(nflatFld);
-    C_intfc_flatFld_.setSize(nflatFld);    
+    C_intfc_flatFld_.setSize(nflatFld);
 
-    nSpecies_ = transPropDict_.lookupOrDefault("nSpecies", 2);
+    forAll(fY1_, i)
+    {
+        fY1_.set
+        (
+            i,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    "fY1"+Foam::name(i),
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroY", dimless, 0)
+            )
+        );
+
+        fY0_.set
+        (
+            i,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    "fY0"+Foam::name(i),
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroY", dimless, 0)
+            )
+        );
+    }
+
+    rho1_flatFld_[i].setSize(nFlatFld);
+    rho0_flatFld_[i].setSize(nFlatFld);
+    
     Y1_flatFld_.setSize(nSpecies_);
     Y0_flatFld_.setSize(nSpecies_);
 
@@ -3956,12 +4016,12 @@ void Foam::plic::calc_2ph_advFluxes
     List<tetPoints> curFaceFluxTets(20);
     List<scalar> curFaceFluxTetVols(20);
 
-    surfaceScalarField fAlpha1(fvc::interpolate(alpha_ph1_,"alpha1"));
+    fAlpha1_ = fvc::interpolate(alpha_ph1_,"alpha1");
 
     for(label i=0; i<nSpecies_; i++)
     {
-        fY1[i] = fvc::interpolate(Y1[i], "Yi");
-        fY0[i] = fvc::interpolate(Y0[i], "Yi");
+        fY1_[i] = fvc::interpolate(Y1[i], "Yi");
+        fY0_[i] = fvc::interpolate(Y0[i], "Yi");
     }
 
     if(debugF_)
@@ -3983,8 +4043,8 @@ void Foam::plic::calc_2ph_advFluxes
             }
 
             scalar curFaceFlux = 0;
-            List<scalar> curFaceY1Flux(nSpecies_,0);
-            List<scalar> curFaceY0Flux(nSpecies_,0);
+            List<scalar> curFaceY1Flux(nSpecies_, 0);
+            List<scalar> curFaceY0Flux(nSpecies_, 0);
             
             if(debugF_)
             {
@@ -4160,7 +4220,7 @@ void Foam::plic::calc_2ph_advFluxes
             {
                 for(label i=0; i<nSpecies_; i++)
                 {
-                    advFlux_Y1[i][faceI] = phi_[faceI]*fY1[i][faceI];
+                    advFlux_Y1[i][faceI] = phi_[faceI]*fY1_[i][faceI];
                     advFlux_Y0[i][faceI] = 0;
 
                     if(debugF_)
@@ -4175,7 +4235,7 @@ void Foam::plic::calc_2ph_advFluxes
                 for(label i=0; i<nSpecies_; i++)
                 {
                     advFlux_Y1[i][faceI] = 0;
-                    advFlux_Y0[i][faceI] = phi_[faceI]*fY0[i][faceI];
+                    advFlux_Y0[i][faceI] = phi_[faceI]*fY0_[i][faceI];
 
                     if(debugF_)
                     {
@@ -4405,7 +4465,7 @@ void Foam::plic::calc_2ph_advFluxes
                 {
                     for(label i=0; i<nSpecies_; i++)
                     {
-                        advFlux_Y1[i].boundaryField()[patchI][fcI] = pphi[fcI]*fY1[i].boundaryField()[patchI][fcI];
+                        advFlux_Y1[i].boundaryField()[patchI][fcI] = pphi[fcI]*fY1_[i].boundaryField()[patchI][fcI];
                         advFlux_Y0[i].boundaryField()[patchI][fcI] = 0;
 
                         if(debugF_)
@@ -4420,7 +4480,7 @@ void Foam::plic::calc_2ph_advFluxes
                     for(label i=0; i<nSpecies_; i++)
                     {
                         advFlux_Y1[i].boundaryField()[patchI][fcI] = 0;
-                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*fY0i[faceI];
+                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*fY0_[i].boundaryField()[patchI][faceI];
 
                         if(debugF_)
                         {

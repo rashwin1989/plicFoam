@@ -61,6 +61,7 @@ SourceFiles
 #include "IOdictionary.H"
 #include "plicLeastSquaresGrad.H"
 #include "plicFuncs.H"
+#include "wordList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -109,6 +110,8 @@ class plic
     surfaceScalarField alpha1f_;
 
     //- Reference to density field
+    const volScalarField& rho1_;
+    const volScalarField& rho0_;
     const volScalarField& rho_;
 
     //- Reference to flux field
@@ -170,6 +173,13 @@ class plic
     //- Cell center field including boundary cells
     volVectorField meshC_;
 
+    wordList species_;
+    label nSpecies_;
+
+    surfaceScalarField fAlpha1_;
+    PtrList<surfaceScalarField> fY1_;
+    PtrList<surfaceScalarField> fY0_;
+
     //- Flat fields for extended stencil use
     //- Use mapDistribute to obtain remote values
     List<cellInfo> cells_flatFld_;
@@ -178,8 +188,9 @@ class plic
     List<vector> nHat_flatFld_;
     List<vector> gradAlpha1_flatFld_;
     List<vector> C_intfc_flatFld_;
-
-    label nSpecies_;
+    
+    List<scalar> rho1_flatFld_;
+    List<scalar> rho0_flatFld_;
     List<List<scalar> > Y1_flatFld_;
     List<List<scalar> > Y0_flatFld_;
 
@@ -285,9 +296,19 @@ class plic
 
     void intfcInfo_collectData();
 
+    void Y_collectData
+    (
+        const PtrList<volScalarField>&,
+        const PtrList<volScalarField>&
+    );
+
     scalar tet_cell_intersect(tetPoints&, const label&);
+
+    void tet_cell_intersect(tetPoints&, const label&, scalar&, scalar&);
     
     void tet_slice_with_plns(tetPoints&, const List<Plane>&, scalar&, const label&); 
+
+    void tet_slice_with_plns(tetPoints&, const List<Plane>&, scalar&, scalar&, const label&); 
 
   public:
 
@@ -304,7 +325,9 @@ class plic
         const volScalarField&,
         const volVectorField&,
         const surfaceScalarField&,
-        const volScalarField&      
+        const volScalarField&,
+        const volScalarField&,
+        const volScalarField&     
     );
 
 
@@ -320,6 +343,14 @@ class plic
     void intfc_correct();
 
     void calc_face_phaseFluxes();
+
+    void calc_2ph_advFluxes
+    (
+        const PtrList<volScalarField>&,
+        const PtrList<volScalarField>&,
+        PtrList<surfaceScalarField>&,
+        PtrList<surfaceScalarField>&,
+    );
 
     void plic_correct();
 
