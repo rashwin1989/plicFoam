@@ -351,7 +351,7 @@ class plic
         const PtrList<volScalarField>&,
         const PtrList<volScalarField>&,
         PtrList<surfaceScalarField>&,
-        PtrList<surfaceScalarField>&,
+        PtrList<surfaceScalarField>&
     );
 
     void plic_correct();
