@@ -6,6 +6,7 @@
 *.exe
 *.o
 *.so
+*.dep
 
 # Packages #
 ############
@@ -38,4 +39,8 @@ Thumbs.db
 
 # emacs backup files #
 *~
+
+# Compiled objects directories #
+*/lnInclude/
+*/linux64GccDPOpt/
 

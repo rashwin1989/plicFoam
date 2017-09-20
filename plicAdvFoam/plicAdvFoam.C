@@ -92,13 +92,19 @@ int main(int argc, char *argv[])
             }            
         }
 
-        interface.calc_face_phaseFluxes();
+        interface.calc_2ph_advFluxes(Y1, Y0, advFlux_Y1, advFlux_Y0);
      
         Info<< "ExecutionTime = "
             << runTime.elapsedCpuTime()
             << " s" << endl; 
 
-        #include "alpha1Eqn.H"
+        #include "alpha1Eqn.H"        
+
+        Info<< "ExecutionTime = "
+            << runTime.elapsedCpuTime()
+            << " s" << endl; 
+
+        #include "YAdvEqn.H"
 
         Info<< "ExecutionTime = "
             << runTime.elapsedCpuTime()

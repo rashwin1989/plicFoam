@@ -53,31 +53,61 @@ IOdictionary transPropDict
     )
 );
 
-const dimensionedScalar& rho1 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0 = transPropDict.lookup("rho0");
+// initialization values for phase densities
+const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
+const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
 
-//bool debug = false;
-//debug = transPropDict.lookupOrDefault("debug", false);
+volScalarField rho1
+(
+    IOobject
+    (
+        "rho1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    rho1_0
+);
 
-//bool twoD = true;
-//twoD = runTime.controlDict().lookupOrDefault("twoD", true);
+volScalarField rho0
+(
+    IOobject
+    (
+        "rho0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    rho0_0
+);
 
-//bool unbound_debug = false;
-//unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
-//bool phi_interp_debug = false;
-//phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+volScalarField rho
+(
+    IOobject
+    (
+        "rho",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    alpha1*rho1 + alpha0*rho0,
+    alpha1.boundaryField().types()
+);
 
-//label ALPHA_BOUND_ITERS_MAX = 108;
+// Construct PLIC interface object from alpha1 distribution, U field etc. 
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
 
-//scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
+surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
-bool diff_debug = false;
-diff_debug = runTime.controlDict().lookupOrDefault("diff_debug", false);
+centredCPCCellToCellStencilObject cell_stencil(mesh);
 
-bool diff_debug2 = false;
-diff_debug2 = runTime.controlDict().lookupOrDefault("diff_debug2", false);
-
-label nSpecies = 2;
+// Y, C, species initialization
+label nSpecies;
 nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
 Info<< "Number of species " << nSpecies << endl;
 
@@ -85,14 +115,12 @@ PtrList<volScalarField> Y1(nSpecies);
 PtrList<volScalarField> C1(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
-PtrList<dimensionedScalar> D1(nSpecies);
-PtrList<dimensionedScalar> D0(nSpecies);
 
+word fieldName;
 for(label i=0; i<nSpecies; i++)
 {
-    word fieldName = "Y1" + Foam::name(i);
+    fieldName = "Y1" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
-
     Y1.set
     (
         i,
@@ -109,12 +137,9 @@ for(label i=0; i<nSpecies; i++)
             mesh
         )
     );
-}
-for(label i=0; i<nSpecies; i++)
-{
-    word fieldName = "C1" + Foam::name(i);
-    Info<< "Reading field " << fieldName << endl;
 
+    fieldName = "C1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
     C1.set
     (
         i,
@@ -132,13 +157,9 @@ for(label i=0; i<nSpecies; i++)
             Y1[i].boundaryField().types()
         )
     );
-}
 
-for(label i=0; i<nSpecies; i++)
-{
-    word fieldName = "Y0" + Foam::name(i);
+    fieldName = "Y0" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
-
     Y0.set
     (
         i,
@@ -155,12 +176,9 @@ for(label i=0; i<nSpecies; i++)
             mesh
         )
     );
-}
-for(label i=0; i<nSpecies; i++)
-{
-    word fieldName = "C0" + Foam::name(i);
-    Info<< "Reading field " << fieldName << endl;
 
+    fieldName = "C0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
     C0.set
     (
         i,
@@ -180,11 +198,63 @@ for(label i=0; i<nSpecies; i++)
     );
 }
 
+// Y advection
+PtrList<surfaceScalarField> advFlux_Y1(nSpecies);
+PtrList<surfaceScalarField> advFlux_Y0(nSpecies);
+
 for(label i=0; i<nSpecies; i++)
 {
-    word DName = "D1" + Foam::name(i);
-    Info<< "Reading diffusivity " << DName << endl;
+    fieldName = "advFlux_Y1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    advFlux_Y1.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("advFlux_Y1", dimVol*dimDensity/dimTime, 0)
+        )
+    );
 
+    fieldName = "advFlux_Y0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    advFlux_Y0.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("advFlux_Y0", dimVol*dimDensity/dimTime, 0)
+        )
+    );
+}
+
+// Y diffusion
+/*
+PtrList<dimensionedScalar> D1(nSpecies);
+PtrList<dimensionedScalar> D0(nSpecies);
+
+word DName;
+for(label i=0; i<nSpecies; i++)
+{
+    DName = "D1" + Foam::name(i);
+    Info<< "Reading diffusivity " << DName << endl;
     D1.set
     (
         i,
@@ -193,13 +263,9 @@ for(label i=0; i<nSpecies; i++)
             transPropDict.lookup(DName)
         )
     );
-}
 
-for(label i=0; i<nSpecies; i++)
-{
-    word DName = "D0" + Foam::name(i);
+    DName = "D0" + Foam::name(i);
     Info<< "Reading diffusivity " << DName << endl;
-
     D0.set
     (
         i,
@@ -243,26 +309,6 @@ surfaceScalarField diffFlux_ph0
     dimensionedScalar("diffFlux_ph0", dimVol/dimTime, 0)
 );
 
-
-volScalarField rho
-(
-    IOobject
-    (
-        "rho",
-        runTime.timeName(),
-        mesh,
-        IOobject::READ_IF_PRESENT
-    ),
-    alpha1*rho1 + alpha0*rho0,
-    alpha1.boundaryField().types()
-);
-rho.oldTime();
-
-// Construct PLIC interface object from alpha1 distribution, U field etc. 
-plic interface(mesh, alpha1, U, phi, rho);
-
-//surfaceScalarField& phiAlpha1(interface.phiAlpha1());
-
 centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
 const labelListList& diffCellStencil = diffCellStencilObject.stencil();
 
@@ -290,3 +336,25 @@ for(label i=0; i<nSpecies; i++)
 
 List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
 List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
+*/
+
+// tolerances and max iters
+label ALPHA_BOUND_ITERS_MAX = 108;
+scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
+scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
+
+// debug bool switches
+bool debug;
+debug = transPropDict.lookupOrDefault("debug", false);
+bool unbound_debug;
+unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
+bool phi_interp_debug;
+phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+bool adv_debug;
+adv_debug = runTime.controlDict().lookupOrDefault("adv_debug", false);
+bool adv_debug2;
+adv_debug2 = runTime.controlDict().lookupOrDefault("adv_debug2", false);
+
+// 2-D bool switch
+bool twoD;
+twoD = runTime.controlDict().lookupOrDefault("twoD", true);

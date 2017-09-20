@@ -1,13 +1,11 @@
 
-nSpecies = Y1.size();
-
 volScalarField Y1t = 0.0*Y1[0];
 volScalarField Y0t = 0.0*Y0[0];
 
-scalarField& alpha1Cells = alpha1.internalField();
-scalarField& alpha0Cells = alpha0.internalField();
-
-const labelList& face_phaseState = interface.face_phaseState();
+const scalarField& alpha1Cells = alpha1.internalField();
+const scalarField& alpha0Cells = alpha0.internalField();
+const scalarField& rho1Cells = rho1.internalField();
+const scalarField& rho0Cells = rho0.internalField();
 
 for(label i=0; i<(nSpecies - 1); i++)
 {
@@ -23,7 +21,7 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     surfaceScalarField& advFlux_Y1i = advFlux_Y1[i];
     surfaceScalarField& advFlux_Y0i = advFlux_Y0[i];
-    Foam::plic::calc_2ph_advFlux(Y1i, Y0i, advFlux_Y1i, advFlux_Y0i);
+    
 
     //Phase-1
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
@@ -41,13 +39,13 @@ for(label i=0; i<(nSpecies - 1); i++)
                 
         C1iCells[cellI] += -surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue();
 
-        if(alpha1Cells[cellI] < 1E-15)
+        if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
             Y1iCells[cellI] = 0;
         }
         else
         {
-            Y1iCells[cellI] = C1iCells[cellI]/alpha1Cells[cellI]/rho1;
+            Y1iCells[cellI] = C1iCells[cellI]/alpha1Cells[cellI]/rho1Cells[cellI];
         }
 
         if(adv_debug2)
@@ -75,13 +73,13 @@ for(label i=0; i<(nSpecies - 1); i++)
         if(Y1iCells[cellI] < 0)
         {
             Y1iCells[cellI] = 0;
-            C1iCells[cellI] = rho1*alpha1Cells[cellI]*Y1iCells[cellI];
+            C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         }
         
         if(Y1iCells[cellI] > 1)
         {
             Y1iCells[cellI] = 1;
-            C1iCells[cellI] = rho1*alpha1Cells[cellI]*Y1iCells[cellI];
+            C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         }        
     }
 
@@ -107,13 +105,13 @@ for(label i=0; i<(nSpecies - 1); i++)
                 
         C0iCells[cellI] += -surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue();
 
-        if(alpha0Cells[cellI] < 1E-15)
+        if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
             Y0iCells[cellI] = 0;
         }
         else
         {
-            Y0iCells[cellI] = C0iCells[cellI]/alpha0Cells[cellI]/rho0;
+            Y0iCells[cellI] = C0iCells[cellI]/alpha0Cells[cellI]/rho0Cells[cellI];
         }
 
         if(adv_debug2)
@@ -141,13 +139,13 @@ for(label i=0; i<(nSpecies - 1); i++)
         if(Y0iCells[cellI] < 0)
         {
             Y0iCells[cellI] = 0;
-            C0iCells[cellI] = rho0*alpha0Cells[cellI]*Y0iCells[cellI];
+            C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
         }
         
         if(Y0iCells[cellI] > 1)
         {
             Y0iCells[cellI] = 1;
-            C0iCells[cellI] = rho0*alpha0Cells[cellI]*Y0iCells[cellI];
+            C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
         }        
     }
 

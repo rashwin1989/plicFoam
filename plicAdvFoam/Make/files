@@ -1,3 +1,3 @@
-plicTFoam.C
+plicAdvFoam.C
 
-EXE = $(FOAM_APPBIN)/plicTFoam
+EXE = $(FOAM_APPBIN)/plicAdvFoam
