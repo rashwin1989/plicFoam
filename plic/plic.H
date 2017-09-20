@@ -177,6 +177,8 @@ class plic
     label nSpecies_;
 
     surfaceScalarField fAlpha1_;
+    surfaceScalarField frho1_;
+    surfaceScalarField frho0_;
     PtrList<surfaceScalarField> fY1_;
     PtrList<surfaceScalarField> fY0_;
 

@@ -2232,6 +2232,8 @@ Foam::plic::plic
     species_(transPropDict_.lookup("species")),
     nSpecies_(species_.size()),
     fAlpha1_(fvc::interpolate(alpha_ph1_,"alpha1")),
+    frho1_(fvc::interpolate(rho1_,"rho")),
+    frho0_(fvc::interpolate(rho0_,"rho")),
     fY1_(nSpecies_),
     fY0_(nSpecies_)
 {
@@ -4016,7 +4018,9 @@ void Foam::plic::calc_2ph_advFluxes
     List<tetPoints> curFaceFluxTets(20);
     List<scalar> curFaceFluxTetVols(20);
 
-    fAlpha1_ = fvc::interpolate(alpha_ph1_,"alpha1");
+    fAlpha1_ = fvc::interpolate(alpha_ph1_, "alpha1");
+    frho1_ = fvc::interpolate(rho1_, "rho");
+    frho0_ = fvc::interpolate(rho0_, "rho");
 
     for(label i=0; i<nSpecies_; i++)
     {
@@ -4220,7 +4224,7 @@ void Foam::plic::calc_2ph_advFluxes
             {
                 for(label i=0; i<nSpecies_; i++)
                 {
-                    advFlux_Y1[i][faceI] = phi_[faceI]*fY1_[i][faceI];
+                    advFlux_Y1[i][faceI] = phi_[faceI]*frho1_[faceI]*fY1_[i][faceI];
                     advFlux_Y0[i][faceI] = 0;
 
                     if(debugF_)
@@ -4235,7 +4239,7 @@ void Foam::plic::calc_2ph_advFluxes
                 for(label i=0; i<nSpecies_; i++)
                 {
                     advFlux_Y1[i][faceI] = 0;
-                    advFlux_Y0[i][faceI] = phi_[faceI]*fY0_[i][faceI];
+                    advFlux_Y0[i][faceI] = phi_[faceI]*frho0_[faceI]*fY0_[i][faceI];
 
                     if(debugF_)
                     {
@@ -4465,7 +4469,7 @@ void Foam::plic::calc_2ph_advFluxes
                 {
                     for(label i=0; i<nSpecies_; i++)
                     {
-                        advFlux_Y1[i].boundaryField()[patchI][fcI] = pphi[fcI]*fY1_[i].boundaryField()[patchI][fcI];
+                        advFlux_Y1[i].boundaryField()[patchI][fcI] = pphi[fcI]*frho1_.boundaryField()[patchI][fcI]*fY1_[i].boundaryField()[patchI][fcI];
                         advFlux_Y0[i].boundaryField()[patchI][fcI] = 0;
 
                         if(debugF_)
@@ -4480,7 +4484,7 @@ void Foam::plic::calc_2ph_advFluxes
                     for(label i=0; i<nSpecies_; i++)
                     {
                         advFlux_Y1[i].boundaryField()[patchI][fcI] = 0;
-                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*fY0_[i].boundaryField()[patchI][faceI];
+                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*frho0_.boundaryField()[patchI][fcI]*fY0_[i].boundaryField()[patchI][faceI];
 
                         if(debugF_)
                         {
