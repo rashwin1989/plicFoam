@@ -119,6 +119,8 @@ class plic
 
     //- alpha1 flux at faces
     surfaceScalarField phiAlpha1_;
+
+    surfaceScalarField phiAlpha0_;
   
     //- Number of mixed phase cells
     label nMixCells_;

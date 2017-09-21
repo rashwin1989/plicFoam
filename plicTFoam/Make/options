@@ -1,17 +1,16 @@
 EXE_INC = \
 	-I.. \
 	-I../plic/lnInclude \
-	-I../plicStencils/lnInclude \	
+	-I../plicStencils/lnInclude \
 	-I$(LIB_SRC)/finiteVolume/lnInclude
 
 EXE_LIBS = \
-	-lplic \
-	-lplicStencils \
-	-lcellInfo \
-	-lPlane \
-	-lplicLeastSquares \
-	-lfiniteVolume 
-
+	 -lplic \
+	 -lplicStencils \
+	 -lcellInfo \
+	 -lPlane \
+	 -lplicLeastSquares \
+	 -lfiniteVolume
 
 
 

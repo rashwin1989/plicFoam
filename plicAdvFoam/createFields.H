@@ -153,7 +153,7 @@ for(label i=0; i<nSpecies; i++)
                 IOobject::NO_READ,
                 IOobject::AUTO_WRITE
             ),
-            alpha1*Y1[i],
+            alpha1*rho1*Y1[i],
             Y1[i].boundaryField().types()
         )
     );
@@ -192,7 +192,7 @@ for(label i=0; i<nSpecies; i++)
                 IOobject::NO_READ,
                 IOobject::AUTO_WRITE
             ),
-            alpha0*Y0[i],
+            alpha0*rho0*Y0[i],
             Y0[i].boundaryField().types()
         )
     );
@@ -351,9 +351,9 @@ unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
 bool adv_debug;
-adv_debug = runTime.controlDict().lookupOrDefault("adv_debug", false);
+adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 bool adv_debug2;
-adv_debug2 = runTime.controlDict().lookupOrDefault("adv_debug2", false);
+adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 
 // 2-D bool switch
 bool twoD;

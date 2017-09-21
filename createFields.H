@@ -53,28 +53,36 @@ IOdictionary transPropDict
     )
 );
 
-const dimensionedScalar& rho1 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0 = transPropDict.lookup("rho0");
+const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
+const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
 
-bool debug = false;
-debug = transPropDict.lookupOrDefault("debug", false);
+volScalarField rho1
+(
+    IOobject
+    (
+        "rho1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    rho1_0
+);
 
-bool twoD = true;
-twoD = runTime.controlDict().lookupOrDefault("twoD", true);
-
-bool unbound_debug = false;
-unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
-bool phi_interp_debug = false;
-phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
-
-label ALPHA_BOUND_ITERS_MAX = 108;
-
-scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
- 
-/*if(debug)
-{
-    Foam::plicFuncs::write_surfaceField_scalar(phi, mesh);
-    }*/
+volScalarField rho0
+(
+    IOobject
+    (
+        "rho0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    rho0_0
+);
 
 volScalarField rho
 (
@@ -88,14 +96,29 @@ volScalarField rho
     alpha1*rho1 + alpha0*rho0,
     alpha1.boundaryField().types()
 );
-rho.oldTime();
 
 // Construct PLIC interface object from alpha1 distribution, U field etc. 
-plic interface(mesh, alpha1, U, phi, rho);
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
 
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
 centredCPCCellToCellStencilObject cell_stencil(mesh);
+
+// tolerances and max iters
+label ALPHA_BOUND_ITERS_MAX = 108;
+scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
+
+// debug bool switches
+bool debug;
+debug = transPropDict.lookupOrDefault("debug", false);
+bool unbound_debug;
+unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
+bool phi_interp_debug;
+phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+
+// twoD bool switch
+bool twoD;
+twoD = runTime.controlDict().lookupOrDefault("twoD", true);
 
 /*const mapDistribute& map = cell_stencil.map();
 
