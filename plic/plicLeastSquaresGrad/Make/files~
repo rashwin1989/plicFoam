@@ -1,3 +1,0 @@
-cellInfo.C
-
-LIB = $(FOAM_LIBBIN)/libcellInfo

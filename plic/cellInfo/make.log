@@ -1,3 +1,0 @@
-Making dependency list for source file cellInfo.C
-SOURCE=cellInfo.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/cellInfo.o
-'/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/lib/libcellInfo.so' is up to date.

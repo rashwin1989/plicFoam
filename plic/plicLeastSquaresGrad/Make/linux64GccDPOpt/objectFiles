@@ -1,3 +1,0 @@
-OBJECTS = \
-$(OBJECTS_DIR)/plicLeastSquaresVectors.o\
-$(OBJECTS_DIR)/plicLeastSquaresGrad.o

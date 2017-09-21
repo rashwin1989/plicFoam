@@ -1,9 +1,0 @@
-options:4:12: warning: backslash and newline separated by space [enabled by default]
-wmakeLnInclude: linking include files to ./lnInclude
-Making dependency list for source file FPCCellToFaceStencil.C
-Making dependency list for source file centredFPCCellToFaceStencil.C
-Making dependency list for source file centredCPCCellToCellStencil.C
-SOURCE=FPCCellToFaceStencil.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/FPCCellToFaceStencil.o
-SOURCE=centredFPCCellToFaceStencil.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/centredFPCCellToFaceStencil.o
-SOURCE=centredCPCCellToCellStencil.C ;  g++-4.7 -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/centredCPCCellToCellStencil.o
-'/home/r_ashwin/OpenFOAM/OpenFOAM-2.3.0/platforms/linux64GccDPOpt/lib/libplicStencils.so' is up to date.
