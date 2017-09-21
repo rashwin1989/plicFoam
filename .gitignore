@@ -6,10 +6,12 @@
 *~
 
 # compiled objects directories #
-*/lnInclude/
-*/Make/linux64GccDPOpt/
 /Make/linux64GccDPOpt/
 lnInclude/
+*/lnInclude/
+*/Make/linux64GccDPOpt/
+*/*/lnInclude/
+*/*/Make/linux64GccDPOpt/
 
 # compiled source files #
 *.dep
