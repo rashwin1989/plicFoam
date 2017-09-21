@@ -1607,7 +1607,7 @@ void Foam::plic::Y_collectData
 {
     const mapDistribute& map = faceStencil().map();
 
-    forAll(Y1, i)
+    for(label i=0; i<(nSpecies_ - 1); i++)
     {
         const volScalarField& Y1i = Y1[i];
         const volScalarField& Y0i = Y0[i];
@@ -2113,7 +2113,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         phi
     ),
@@ -2141,7 +2141,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         alpha_ph1.mesh(),
         dimensionedVector("nHat", dimless, vector::one),
@@ -2184,7 +2184,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         mesh,
         dimensionedVector("zero", dimLength, vector::zero)
@@ -2210,7 +2210,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         mesh,
         dimensionedVector("zero", dimLength, vector::zero)
@@ -2223,7 +2223,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         mesh,
         dimensionedVector("zero", dimLength, vector::zero)
@@ -2236,7 +2236,7 @@ Foam::plic::plic
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
-            IOobject::AUTO_WRITE
+            IOobject::NO_WRITE
         ),
         mesh,
         dimensionedVector("zero", dimLength, vector::zero)
@@ -2246,10 +2246,10 @@ Foam::plic::plic
     fAlpha1_(fvc::interpolate(alpha_ph1_,"alpha1")),
     frho1_(fvc::interpolate(rho1_,"rho")),
     frho0_(fvc::interpolate(rho0_,"rho")),
-    fY1_(nSpecies_),
-    fY0_(nSpecies_)
+    fY1_(nSpecies_ - 1),
+    fY0_(nSpecies_ - 1)
 {
-    Foam::plicFuncs::write_stencil(faceStencil().stencil(), mesh, "centredFPCCellToFaceStencil");
+    //Foam::plicFuncs::write_stencil(faceStencil().stencil(), mesh, "centredFPCCellToFaceStencil");
 
     const label nCells = mesh.nCells();
     const label nFaces = mesh.nFaces();
@@ -2313,10 +2313,10 @@ Foam::plic::plic
     rho1_flatFld_.setSize(nflatFld);
     rho0_flatFld_.setSize(nflatFld);
     
-    Y1_flatFld_.setSize(nSpecies_);
-    Y0_flatFld_.setSize(nSpecies_);
+    Y1_flatFld_.setSize(nSpecies_ - 1);
+    Y0_flatFld_.setSize(nSpecies_ - 1);
 
-    for(label i=0; i<nSpecies_; i++)
+    for(label i=0; i<(nSpecies_ - 1); i++)
     {
         Y1_flatFld_[i].setSize(nflatFld);
         Y0_flatFld_[i].setSize(nflatFld);
@@ -4035,7 +4035,7 @@ void Foam::plic::calc_2ph_advFluxes
     frho1_ = fvc::interpolate(rho1_, "rho");
     frho0_ = fvc::interpolate(rho0_, "rho");
 
-    for(label i=0; i<nSpecies_; i++)
+    for(label i=0; i<(nSpecies_ - 1); i++)
     {
         fY1_[i] = fvc::interpolate(Y1[i], "Yi");
         fY0_[i] = fvc::interpolate(Y0[i], "Yi");
@@ -4061,9 +4061,9 @@ void Foam::plic::calc_2ph_advFluxes
 
             scalar curFaceFlux_ph1 = 0;
             scalar curFaceFlux_ph0 = 0;
-            List<scalar> curFaceY1Flux(nSpecies_);
-            List<scalar> curFaceY0Flux(nSpecies_);
-            for(label i=0; i<nSpecies_; i++)
+            List<scalar> curFaceY1Flux(nSpecies_ - 1);
+            List<scalar> curFaceY0Flux(nSpecies_ - 1);
+            for(label i=0; i<(nSpecies_ - 1); i++)
             {
                 curFaceY1Flux[i] = 0;
                 curFaceY0Flux[i] = 0;
@@ -4116,9 +4116,9 @@ void Foam::plic::calc_2ph_advFluxes
 
                 scalar curTetVolFlux_ph1 = 0;
                 scalar curTetVolFlux_ph0 = 0;
-                List<scalar> curTetY1Flux(nSpecies_);
-                List<scalar> curTetY0Flux(nSpecies_);
-                for(label i=0; i<nSpecies_; i++)
+                List<scalar> curTetY1Flux(nSpecies_ - 1);
+                List<scalar> curTetY0Flux(nSpecies_ - 1);
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     curTetY1Flux[i] = 0;
                     curTetY0Flux[i] = 0;
@@ -4147,7 +4147,7 @@ void Foam::plic::calc_2ph_advFluxes
                             << "curCell rho1 = " << rho1_flatFld_[curCell_lbl] << "  curCell rho0 = " << rho0_flatFld_[curCell_lbl] << endl;
                     }
 
-                    for(label i=0; i<nSpecies_; i++)
+                    for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         curTetY1Flux[i] += rho1_flatFld_[curCell_lbl]*Y1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;
                         curTetY0Flux[i] += rho0_flatFld_[curCell_lbl]*Y0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
@@ -4157,7 +4157,7 @@ void Foam::plic::calc_2ph_advFluxes
                             Info<< "  Y1[" << i << "] = " << Y1_flatFld_[i][curCell_lbl] << "  curTet curCell Y1[" << i << "] flux = " << rho1_flatFld_[curCell_lbl]*Y1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1 << nl
                                 << "  Y0[" << i << "] = " << Y0_flatFld_[i][curCell_lbl] << "  curTet curCell Y0[" << i << "] flux = " << rho0_flatFld_[curCell_lbl]*Y0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0 << endl;
                         }
-                    }// end for(label i=0; i<nSpecies_; i++)
+                    }// end for(label i=0; i<(nSpecies_ - 1); i++)
 
                     if(debugF_)
                     {
@@ -4172,16 +4172,23 @@ void Foam::plic::calc_2ph_advFluxes
                 if(debugF_)
                 {
                     Info<< "Tetrahedron " << tetI << nl
-                        << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
                         << "Phase-1 flux contribution:  " << curTetVolFlux_ph1 << nl
                         << "Phase-0 flux contribution:  " << curTetVolFlux_ph0 << nl
                         << "Phase-1 + Phase-0 flux:  " << curTetVolFlux_ph1 + curTetVolFlux_ph0 << nl
+                        << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
+                        << "Tetrahedron vol flux error: " << mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) << nl
                         << "Sign of flux:  " << sign(curFaceFluxTetVols[tetI]) << nl
                         << "Cumulative phase-1 face flux:  " << curFaceFlux_ph1 << nl
                         << "Cumulative phase-0 face flux:  " << curFaceFlux_ph0 << endl;
+
+                    if(mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) > 1E-15)
+                    {
+                        Info<< "Tetrahedron vol flux error > 1E-15!!"
+                            << endl;
+                    }
                 }
 
-                for(label i=0; i<nSpecies_; i++)
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     curFaceY1Flux[i] += curTetY1Flux[i]*sign(curFaceFluxTetVols[tetI]);
                     curFaceY0Flux[i] += curTetY0Flux[i]*sign(curFaceFluxTetVols[tetI]);
@@ -4193,7 +4200,7 @@ void Foam::plic::calc_2ph_advFluxes
                             << "Y0[" << i << "] flux contribution:  " << curTetY0Flux[i] << nl                                              
                             << "Cumulative Y0[" << i << "] face flux:  " << curFaceY0Flux[i] << endl;                            
                     }
-                }// end for(label i=0; i<nSpecies_; i++)
+                }// end for(label i=0; i<(nSpecies_ - 1); i++)
 
                 if(debugF_)
                 {
@@ -4216,11 +4223,18 @@ void Foam::plic::calc_2ph_advFluxes
             {
                 Info<< "Total phase-1 face flux:  " << phiAlpha1_[faceI] << nl
                     << "Total phase-0 face flux:  " << phiAlpha0_[faceI] << nl
-                    << "phase-1 + phase-0 face flux:  " << phiAlpha1_[faceI] + phiAlpha0_[faceI] << nl
-                    << "face phi:  " << curFacePhi << endl;
+                    << "Total phase-1 + phase-0 face flux:  " << phiAlpha1_[faceI] + phiAlpha0_[faceI] << nl
+                    << "face phi:  " << curFacePhi << nl
+                    << "face phi error:  " << mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - curFacePhi) << endl;
+
+                if(mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - curFacePhi) > 1E-12)
+                {
+                    Info<< "face phi error > 1E-12!!"
+                        << endl;
+                }
             }
 
-            for(label i=0; i<nSpecies_; i++)
+            for(label i=0; i<(nSpecies_ - 1); i++)
             {
                 advFlux_Y1[i][faceI] = curFaceY1Flux[i]/mesh().time().deltaT().value();
                 advFlux_Y0[i][faceI] = curFaceY0Flux[i]/mesh().time().deltaT().value();
@@ -4255,12 +4269,22 @@ void Foam::plic::calc_2ph_advFluxes
             if(debugF_)
             {
                 Info<< "Face alpha1:  " << fAlpha1_[faceI] << nl
-                    << "Total phase-1 face flux:  " << phiAlpha1_[faceI] << endl;
+                    << "Total phase-1 face flux:  " << phiAlpha1_[faceI] << nl
+                    << "Total phase-0 face flux:  " << phiAlpha0_[faceI] << nl
+                    << "Total phase-1 + phase-0 face flux:  " << phiAlpha1_[faceI] + phiAlpha0_[faceI] << nl
+                    << "face phi:  " << phi_[faceI] << nl
+                    << "face phi error:  " << mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - phi_[faceI]) << endl;
+
+                if(mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - phi_[faceI]) > 1E-12)
+                {
+                    Info<< "face phi error > 1E-12!!"
+                        << endl;
+                }
             }
             
             if(fAlpha1_[faceI] > 0.5)
             {
-                for(label i=0; i<nSpecies_; i++)
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     advFlux_Y1[i][faceI] = phi_[faceI]*frho1_[faceI]*fY1_[i][faceI];
                     advFlux_Y0[i][faceI] = 0;
@@ -4274,7 +4298,7 @@ void Foam::plic::calc_2ph_advFluxes
             }// end if (fAlpha1_[faceI] > 0.5)
             else
             {
-                for(label i=0; i<nSpecies_; i++)
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     advFlux_Y1[i][faceI] = 0;
                     advFlux_Y0[i][faceI] = phi_[faceI]*frho0_[faceI]*fY0_[i][faceI];
@@ -4333,9 +4357,9 @@ void Foam::plic::calc_2ph_advFluxes
                 
                 scalar curFaceFlux_ph1 = 0;
                 scalar curFaceFlux_ph0 = 0;                
-                List<scalar> curFaceY1Flux(nSpecies_);
-                List<scalar> curFaceY0Flux(nSpecies_);
-                for(label i=0; i<nSpecies_; i++)
+                List<scalar> curFaceY1Flux((nSpecies_ - 1));
+                List<scalar> curFaceY0Flux((nSpecies_ - 1));
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     curFaceY1Flux[i] = 0;
                     curFaceY0Flux[i] = 0;
@@ -4388,9 +4412,9 @@ void Foam::plic::calc_2ph_advFluxes
 
                     scalar curTetVolFlux_ph1 = 0;
                     scalar curTetVolFlux_ph0 = 0;
-                    List<scalar> curTetY1Flux(nSpecies_);
-                    List<scalar> curTetY0Flux(nSpecies_);
-                    for(label i=0; i<nSpecies_; i++)
+                    List<scalar> curTetY1Flux((nSpecies_ - 1));
+                    List<scalar> curTetY0Flux((nSpecies_ - 1));
+                    for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         curTetY1Flux[i] = 0;
                         curTetY0Flux[i] = 0;
@@ -4419,7 +4443,7 @@ void Foam::plic::calc_2ph_advFluxes
                                 << "curCell rho1 = " << rho1_flatFld_[curCell_lbl] << "  curCell rho0 = " << rho0_flatFld_[curCell_lbl] << endl;
                         }
 
-                        for(label i=0; i<nSpecies_; i++)
+                        for(label i=0; i<(nSpecies_ - 1); i++)
                         {
                             curTetY1Flux[i] += rho1_flatFld_[curCell_lbl]*Y1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;
                             curTetY0Flux[i] += rho0_flatFld_[curCell_lbl]*Y0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
@@ -4429,7 +4453,7 @@ void Foam::plic::calc_2ph_advFluxes
                                 Info<< "  Y1[" << i << "] = " << Y1_flatFld_[i][curCell_lbl] << "  curTet curCell Y1[" << i << "] flux = " << rho1_flatFld_[curCell_lbl]*Y1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1 << nl
                                     << "  Y0[" << i << "] = " << Y0_flatFld_[i][curCell_lbl] << "  curTet curCell Y0[" << i << "] flux = " << rho0_flatFld_[curCell_lbl]*Y0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0 << endl;
                             }
-                        }// end for(label i=0; i<nSpecies_; i++)
+                        }// end for(label i=0; i<(nSpecies_ - 1); i++)
 
                         if(debugF_)
                         {
@@ -4444,16 +4468,23 @@ void Foam::plic::calc_2ph_advFluxes
                     if(debugF_)
                     {
                         Info<< "Tetrahedron " << tetI << nl
-                        << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
                         << "Phase-1 flux contribution:  " << curTetVolFlux_ph1 << nl
                         << "Phase-0 flux contribution:  " << curTetVolFlux_ph0 << nl
                         << "Phase-1 + Phase-0 flux:  " << curTetVolFlux_ph1 + curTetVolFlux_ph0 << nl
+                        << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
+                        << "Tetrahedron vol flux error: " << mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) << nl
                         << "Sign of flux:  " << sign(curFaceFluxTetVols[tetI]) << nl
                         << "Cumulative phase-1 face flux:  " << curFaceFlux_ph1 << nl
                         << "Cumulative phase-0 face flux:  " << curFaceFlux_ph0 << endl;
+
+                        if(mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) > 1E-15)
+                        {
+                            Info<< "Tetrahedron vol flux error > 1E-15!!"
+                                << endl;
+                        }
                     }
 
-                    for(label i=0; i<nSpecies_; i++)
+                    for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         curFaceY1Flux[i] += curTetY1Flux[i]*sign(curFaceFluxTetVols[tetI]);
                         curFaceY0Flux[i] += curTetY0Flux[i]*sign(curFaceFluxTetVols[tetI]);
@@ -4465,7 +4496,7 @@ void Foam::plic::calc_2ph_advFluxes
                                 << "Y0[" << i << "] flux contribution:  " << curTetY0Flux[i] << nl                                              
                                 << "Cumulative Y0[" << i << "] face flux:  " << curFaceY0Flux[i] << endl;                            
                         }
-                    }// end for(label i=0; i<nSpecies_; i++)
+                    }// end for(label i=0; i<(nSpecies_ - 1); i++)
 
                     if(debugF_)
                     {
@@ -4489,10 +4520,17 @@ void Foam::plic::calc_2ph_advFluxes
                     Info<< "Total phase-1 face flux:  " << pphiAlpha1[fcI] << nl
                         << "Total phase-0 face flux:  " << pphiAlpha0[fcI] << nl
                         << "phase-1 + phase-0 face flux:  " << pphiAlpha1[fcI] + pphiAlpha0[fcI] << nl
-                        << "face phi:  " << curFacePhi << endl;
+                        << "face phi:  " << curFacePhi << nl
+                        << "face phi error:  " << mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - curFacePhi) << endl;
+
+                    if(mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - curFacePhi) > 1E-12)
+                    {
+                        Info<< "face phi error > 1E-12!!"
+                            << endl;
+                    }
                 }
 
-                for(label i=0; i<nSpecies_; i++)
+                for(label i=0; i<(nSpecies_ - 1); i++)
                 {
                     advFlux_Y1[i].boundaryField()[patchI][fcI] = curFaceY1Flux[i]/mesh().time().deltaT().value();
                     advFlux_Y0[i].boundaryField()[patchI][fcI] = curFaceY0Flux[i]/mesh().time().deltaT().value();
@@ -4526,12 +4564,22 @@ void Foam::plic::calc_2ph_advFluxes
                 if(debugF_)
                 {
                     Info<< "Face alpha1:  " << pfAlpha1[fcI] << nl
-                        << "Total phase-1 face flux:  " << pphiAlpha1[fcI] << endl;
+                        << "Total phase-1 face flux:  " << pphiAlpha1[fcI] << nl
+                        << "Total phase-0 face flux:  " << pphiAlpha0[fcI] << nl
+                        << "Total phase-1 + phase-0 face flux:  " << pphiAlpha1[fcI] + pphiAlpha0[fcI] << nl
+                        << "face phi:  " << pphi[fcI] << nl
+                        << "face phi error:  " << mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - pphi[fcI]) << endl;
+
+                    if(mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - pphi[fcI]) > 1E-12)
+                    {
+                        Info<< "face phi error > 1E-12!!"
+                            << endl;
+                    }
                 }
 
                 if(pfAlpha1[fcI] > 0.5)
                 {
-                    for(label i=0; i<nSpecies_; i++)
+                    for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         advFlux_Y1[i].boundaryField()[patchI][fcI] = pphi[fcI]*frho1_.boundaryField()[patchI][fcI]*fY1_[i].boundaryField()[patchI][fcI];
                         advFlux_Y0[i].boundaryField()[patchI][fcI] = 0;
@@ -4545,10 +4593,10 @@ void Foam::plic::calc_2ph_advFluxes
                 }// end if (pfAlpha1[fcI] > 0.5)
                 else
                 {
-                    for(label i=0; i<nSpecies_; i++)
+                    for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         advFlux_Y1[i].boundaryField()[patchI][fcI] = 0;
-                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*frho0_.boundaryField()[patchI][fcI]*fY0_[i].boundaryField()[patchI][faceI];
+                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*frho0_.boundaryField()[patchI][fcI]*fY0_[i].boundaryField()[patchI][fcI];
 
                         if(debugF_)
                         {

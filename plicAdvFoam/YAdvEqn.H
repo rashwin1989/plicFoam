@@ -1,6 +1,6 @@
 
-volScalarField Y1t = 0.0*Y1[0];
-volScalarField Y0t = 0.0*Y0[0];
+Y1t = 0.0*Y1[0];
+Y0t = 0.0*Y0[0];
 
 const scalarField& alpha1Cells = alpha1.internalField();
 const scalarField& alpha0Cells = alpha0.internalField();
@@ -56,9 +56,6 @@ for(label i=0; i<(nSpecies - 1); i++)
         }
     }
 
-    C1i.correctBoundaryConditions();
-    Y1i.correctBoundaryConditions();
-
     Info<< "Phase-1 Yi= "
         << (C1i).weightedAverage(mesh.Vsc()).value()
         << "  Min(Y1i) = " << min(Y1i).value()
@@ -88,6 +85,9 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "  Min(Y1i) = " << min(Y1i).value()
         << "  Max(Y1i) = " << max(Y1i).value()        
         << endl;
+
+    C1i.correctBoundaryConditions();
+    Y1i.correctBoundaryConditions();
 
     //Phase-0
     volScalarField surfInt_advFlux_Y0i(fvc::surfaceIntegrate(advFlux_Y0i));
@@ -120,11 +120,8 @@ for(label i=0; i<(nSpecies - 1); i++)
                 << "Y0i = " << Y0iCells[cellI] << nl
                 << endl;
         }
-    }
-
-    C0i.correctBoundaryConditions();
-    Y0i.correctBoundaryConditions();
-
+    }    
+    /*
     Info<< "Phase-0 Yi= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << "  Min(Y0i) = " << min(Y0i).value()
@@ -133,40 +130,53 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "Y0i undershoot = " << min(min(Y0i).value(), 0)
         << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
         << endl;
-        
+        */  
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < 0)
         {
             Y0iCells[cellI] = 0;
             C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+
+            if(adv_debug2)
+            {
+                Info<< "Y0[" << i << "] < 0 in cell " << cellI << endl;
+            }
         }
         
         if(Y0iCells[cellI] > 1)
         {
             Y0iCells[cellI] = 1;
             C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+
+            if(adv_debug2)
+            {
+                Info<< "Y0[" << i << "] > 1 in cell " << cellI << endl;
+            }
         }        
     }
-
+    /*
     Info<< "Phase-0 Yi after correction= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << "  Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()        
         << endl;
+        */
+    C0i.correctBoundaryConditions();
+    Y0i.correctBoundaryConditions();
 
     Y1t += Y1i;
     Y0t += Y0i;
 }
 
 Y1[nSpecies - 1] = scalar(1.0) - Y1t;
-Y1[nSpecies - 1].max(0.0);
-Y1[nSpecies - 1].min(1.0);
+//Y1[nSpecies - 1].max(0.0);
+//Y1[nSpecies - 1].min(1.0);
 C1[nSpecies - 1] = rho1*alpha1*Y1[nSpecies - 1];
 
 Y0[nSpecies - 1] = scalar(1.0) - Y0t;
-Y0[nSpecies - 1].max(0.0);
-Y0[nSpecies - 1].min(1.0);
+//Y0[nSpecies - 1].max(0.0);
+//Y0[nSpecies - 1].min(1.0);
 C0[nSpecies - 1] = rho0*alpha0*Y0[nSpecies - 1];
 
 Info<< "Done YAdvEqns" << endl;

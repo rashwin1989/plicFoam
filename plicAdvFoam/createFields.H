@@ -65,7 +65,7 @@ volScalarField rho1
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     mesh,
     rho1_0
@@ -79,7 +79,7 @@ volScalarField rho0
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     mesh,
     rho0_0
@@ -117,7 +117,7 @@ PtrList<volScalarField> Y0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
 
 word fieldName;
-for(label i=0; i<nSpecies; i++)
+for(label i=0; i<(nSpecies-1); i++)
 {
     fieldName = "Y1" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
@@ -137,6 +137,7 @@ for(label i=0; i<nSpecies; i++)
             mesh
         )
     );
+    Y1[i].correctBoundaryConditions();
 
     fieldName = "C1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -176,6 +177,7 @@ for(label i=0; i<nSpecies; i++)
             mesh
         )
     );
+    Y0[i].correctBoundaryConditions();
 
     fieldName = "C0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -198,11 +200,104 @@ for(label i=0; i<nSpecies; i++)
     );
 }
 
-// Y advection
-PtrList<surfaceScalarField> advFlux_Y1(nSpecies);
-PtrList<surfaceScalarField> advFlux_Y0(nSpecies);
+volScalarField Y1t = 0.0*Y1[0];
+volScalarField Y0t = 0.0*Y0[0];
 
-for(label i=0; i<nSpecies; i++)
+for(label i=0; i<(nSpecies - 1); i++)
+{
+    Y1t += Y1[i];
+    Y0t += Y0[i];
+}
+
+label i = nSpecies - 1;
+
+fieldName = "Y1" + Foam::name(i);
+Info<< "Reading field " << fieldName << endl;
+Y1.set
+(
+    i,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Y1[0]
+    )
+);
+Y1[i] = scalar(1.0) - Y1t;
+Y1[i].correctBoundaryConditions();
+
+fieldName = "C1" + Foam::name(i);
+Info<< "Initializing field " << fieldName << endl;
+C1.set
+(
+    i,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        alpha1*rho1*Y1[i],
+        Y1[i].boundaryField().types()
+    )
+);
+
+fieldName = "Y0" + Foam::name(i);
+Info<< "Reading field " << fieldName << endl;
+Y0.set
+(
+    i,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Y0[0]
+    )
+);
+Y0[i] = scalar(1.0) - Y0t;
+Y0[i].correctBoundaryConditions();
+
+fieldName = "C0" + Foam::name(i);
+Info<< "Initializing field " << fieldName << endl;
+C0.set
+(
+    i,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        alpha0*rho0*Y0[i],
+        Y0[i].boundaryField().types()
+    )
+);
+
+// Y advection
+PtrList<surfaceScalarField> advFlux_Y1(nSpecies - 1);
+PtrList<surfaceScalarField> advFlux_Y0(nSpecies - 1);
+
+for(label i=0; i<(nSpecies - 1); i++)
 {
     fieldName = "advFlux_Y1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -217,7 +312,7 @@ for(label i=0; i<nSpecies; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
             mesh,
             dimensionedScalar("advFlux_Y1", dimVol*dimDensity/dimTime, 0)
@@ -237,7 +332,7 @@ for(label i=0; i<nSpecies; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
             mesh,
             dimensionedScalar("advFlux_Y0", dimVol*dimDensity/dimTime, 0)
