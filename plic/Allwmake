@@ -2,10 +2,10 @@
 cd ${0%/*} || exit 1    # run from this directory
 set -x
 
+wmake libso ../plicStencils
 wmake libso cellInfo
 wmake libso Plane
 wmake libso plicLeastSquaresGrad
-wmake libso ../plicStencils
 wmake libso
 
 # ----------------------------------------------------------------- end-of-file
