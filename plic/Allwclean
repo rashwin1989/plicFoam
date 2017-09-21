@@ -4,7 +4,7 @@ set -x
 
 wclean libso cellInfo
 wclean libso Plane
-wclean libso plicLeastSquares
+wclean libso plicLeastSquaresGrad
 wclean libso ../plicStencils
 wclean libso
 

@@ -4,7 +4,7 @@ set -x
 
 wmake libso cellInfo
 wmake libso Plane
-wmake libso plicLeastSquares
+wmake libso plicLeastSquaresGrad
 wmake libso ../plicStencils
 wmake libso
 
