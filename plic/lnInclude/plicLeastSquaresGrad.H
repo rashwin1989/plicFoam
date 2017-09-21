@@ -1,1 +1,0 @@
-../plicLeastSquaresGrad/plicLeastSquaresGrad.H
