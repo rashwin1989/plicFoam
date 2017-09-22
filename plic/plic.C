@@ -2308,7 +2308,7 @@ Foam::plic::plic
     ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
     GRADALPHA_MIN = transPropDict_.lookupOrDefault("GRADALPHA_MIN", 1E-03);
     ALPHA_TOL = transPropDict_.lookupOrDefault("ALPHA_TOL", 1E-12);
-    DIST_TOL = transPropDict_.lookupOrDefault("ALPHA_TOL", 1E-15);
+    DIST_TOL = transPropDict_.lookupOrDefault("DIST_TOL", 1E-15);
     PT_DIST_TOL = transPropDict_.lookupOrDefault("PT_DIST_TOL", 1E-15);
     SMALLEST_TET_VOL = transPropDict_.lookupOrDefault("SMALLEST_TET_VOL", 1E-24);
     SMALLEST_PHI = transPropDict_.lookupOrDefault("SMALLEST_PHI", 1E-24);
