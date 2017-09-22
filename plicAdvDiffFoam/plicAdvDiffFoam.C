@@ -108,17 +108,22 @@ int main(int argc, char *argv[])
 
         Info<< "ExecutionTime = "
             << runTime.elapsedCpuTime()
-            << " s" << endl; 
+            << " s" << endl;
 
-        #include "U_shear.H"
-       
         interface.intfc_correct();
+        Info<< "ExecutionTime = "
+            << runTime.elapsedCpuTime()
+            << " s" << endl;
 
-        runTime.write();
+        #include "YDiffEqn.H"
 
         Info<< "ExecutionTime = "
             << runTime.elapsedCpuTime()
-            << " s\n\n" << endl; 
+            << " s" << endl; 
+
+        #include "U_shear.H"       
+
+        runTime.write();        
     }    
 
     Info<< "End\n" << endl;
