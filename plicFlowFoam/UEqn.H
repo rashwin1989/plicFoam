@@ -1,10 +1,12 @@
 
 surfaceScalarField alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
 surfaceScalarField alpha0f = scalar(1) - alpha1f;
+surfaceScalarField mu1f = fvc::interpolate(mu1);
+surfaceScalarField mu0f = fvc::interpolate(mu0);
 surfaceScalarField gammaf = mag(interface.nHatf())/mesh.magSf();
 gammaf.min(1.0);
-surfaceScalarField muf_a = alpha1f*mu1 + alpha0f*mu0;
-surfaceScalarField muf_h = mu1*mu0/muf_a;
+surfaceScalarField muf_a = alpha1f*mu1f + alpha0f*mu0f;
+surfaceScalarField muf_h = mu1f*mu0f/muf_a;
 muf = gammaf*muf_h + (1 - gammaf)*muf_a;
 
 Info<< "Min(rho) = " << min(rho).value()

@@ -298,4 +298,6 @@ alpha0 = scalar(1) - limitedAlpha1;
 
 rho = limitedAlpha1*rho1 + (scalar(1) - limitedAlpha1)*rho0;
 
-rhoPhi = phiAlpha1*(rho1 - rho0) + phi*rho0;
+surfaceScalarField rho1f = fvc::interpolate(rho1);
+surfaceScalarField rho0f = fvc::interpolate(rho0);
+rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;

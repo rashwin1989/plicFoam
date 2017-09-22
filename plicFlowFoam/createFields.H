@@ -55,6 +55,8 @@ volVectorField U
 
 U.correctBoundaryConditions();
 
+phi = linearInterpolate(U) & mesh.Sf();
+
 Info<< "Reading transportProperties\n" << endl;
 //incompTwoPhaseMixture twoPhaseProperties(alpha1);
 
@@ -70,25 +72,40 @@ IOdictionary transPropDict
     )
 );
 
-const dimensionedScalar& rho1 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0 = transPropDict.lookup("rho0");
+// initialization values for phase densities
+const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
+const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
 
-const dimensionedScalar& mu1 = transPropDict.lookup("mu1");
-const dimensionedScalar& mu0 = transPropDict.lookup("mu0");
+const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
+const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
 
-bool debug = false;
-debug = transPropDict.lookupOrDefault("debug", false);
-bool debug2 = false;
-debug2 = transPropDict.lookupOrDefault("debug2", false);
-bool unbound_debug = false;
-unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
-bool phi_interp_debug = false;
-phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+volScalarField rho1
+(
+    IOobject
+    (
+        "rho1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    rho1_0
+);
 
-label ALPHA_BOUND_ITERS_MAX = 108;
-
-scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
-scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
+volScalarField rho0
+(
+    IOobject
+    (
+        "rho0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    rho0_0
+);
 
 volScalarField rho
 (
@@ -97,13 +114,40 @@ volScalarField rho
         "rho",
         runTime.timeName(),
         mesh,
-        IOobject::READ_IF_PRESENT,
+        IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
     alpha1*rho1 + alpha0*rho0,
     alpha1.boundaryField().types()
 );
-rho.oldTime();
+
+volScalarField mu1
+(
+    IOobject
+    (
+        "mu1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    mu1_0
+);
+
+volScalarField mu0
+(
+    IOobject
+    (
+        "mu0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    mu0_0
+);
 
 volScalarField mu
 (
@@ -148,12 +192,13 @@ surfaceScalarField rhoPhi
 );
 
 // Construct PLIC interface object from alpha1 distribution, U field etc. 
-plic interface(mesh, alpha1, U, phi, rho);
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
 
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
+// gravity and pressure
 #include "readGravitationalAcceleration.H"
 
 Info<< "Calculating field g.h\n" << endl;
@@ -195,6 +240,16 @@ if (p_rgh.needReference())
     p_rgh = p - rho*gh;
 }
 
+// tolerances and max iters
+label ALPHA_BOUND_ITERS_MAX = 108;
+scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
+scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
 
+// debug bool switches
+bool debug;
+debug = transPropDict.lookupOrDefault("debug", false);
+bool unbound_debug;
+unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
+bool phi_interp_debug;
+phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
 
-    
