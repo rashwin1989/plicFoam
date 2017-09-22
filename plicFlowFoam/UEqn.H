@@ -19,6 +19,7 @@ Info<< "Min(muf) = " << min(muf).value()
     << "  Max(muf) = " << max(muf).value()
     << endl;
 
+
 fvVectorMatrix UEqn
 (
     fvm::ddt(rho, U)
@@ -37,7 +38,7 @@ if (pimple.momentumPredictor())
         fvc::reconstruct
         (
             (
-                fvc::interpolate(interface.sigmaK())*fvc::snGrad(alpha1)
+                fvc::interpolate(intfcProp.sigmaK())*fvc::snGrad(alpha1)
               - ghf*fvc::snGrad(rho)
               - fvc::snGrad(p_rgh)
             ) * mesh.magSf()

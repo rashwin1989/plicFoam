@@ -2146,36 +2146,18 @@ Foam::plic::plic
         alpha_ph1.mesh(),
         dimensionedVector("nHat", dimless, vector::one),
         zeroGradientFvPatchField<vector>::typeName
-    ),
+    ),  
     nHatf_
     (
         IOobject
         (
-            "nHatf",
+            "nHatf_plic",
             alpha_ph1.time().timeName(),
             alpha_ph1.mesh()
         ),
         alpha_ph1.mesh(),
-        dimensionedScalar("nHatf", dimArea, 0.0)
+        dimensionedScalar("nHatf_plic", dimArea, 0.0)
     ),
-    deltaN_
-    (
-        "deltaN",
-        dimless/dimLength,
-        1e-15
-    ),    
-    K_
-    (
-        IOobject
-        (
-            "K",
-            alpha_ph1.time().timeName(),
-            alpha_ph1.mesh()
-        ),
-        alpha_ph1.mesh(),
-        dimensionedScalar("K", dimless/dimLength, 0.0)
-    ),
-    sigma_("sigma", dimensionSet(1, 0, -2, 0, 0), transPropDict_.lookup("sigma")),
     C_intfc_
     (
         IOobject
@@ -2447,10 +2429,6 @@ void Foam::plic::intfc_normal_correct_lsq()
         }
     }    
 
-    nHatf_ = fvc::interpolate(nHat_) & mesh().Sf();
-
-    K_ = -fvc::div(nHatf_);
-
     if(debug2_)
     {
         Foam::plicFuncs::write_field_vector(nHat_);
@@ -2606,11 +2584,9 @@ void Foam::plic::intfc_normal_correct()
     } 
 
     //nHat_ = gradAlpha1_/(mag(gradAlpha1_) + deltaN_);        
-    nHat_.correctBoundaryConditions();
+    nHat_.correctBoundaryConditions();    
 
     nHatf_ = fvc::interpolate(nHat_) & mesh().Sf();
-
-    K_ = -fvc::div(nHatf_);
 
     if(debug2_)
     {

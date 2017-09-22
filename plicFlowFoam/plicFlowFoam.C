@@ -34,6 +34,7 @@ Description
 #include "fvCFD.H"
 #include "plic.H"
 #include "plicFuncs.H"
+#include "interfaceProperties.H"
 #include "IOdictionary.H"
 #include "centredCPCCellToCellStencilObject.H"
 #include "pimpleControl.H"
@@ -95,9 +96,9 @@ int main(int argc, char *argv[])
 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
-                    << " s" << endl;                 
-        
-                //twoPhaseProperties.correct();                
+                    << " s" << endl;
+
+                intfcProp.correct();
             }
 
             #include "UEqn.H"

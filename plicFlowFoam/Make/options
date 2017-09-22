@@ -2,7 +2,9 @@ EXE_INC = \
 	-I.. \
 	-I../plic/lnInclude \
 	-I../plicStencils/lnInclude \
-	-I$(LIB_SRC)/finiteVolume/lnInclude
+	-I$(LIB_SRC)/finiteVolume/lnInclude \
+	-I$(LIB_SRC)/transportModels \
+	-I$(LIB_SRC)/transportModels/interfaceProperties/lnInclude
 
 EXE_LIBS = \
 	-lplic \
@@ -10,7 +12,12 @@ EXE_LIBS = \
 	-lcellInfo \
 	-lPlane \
 	-lplicLeastSquares \
-	-lfiniteVolume 
+	-lfiniteVolume \
+	-linterfaceProperties \
+	-ltwoPhaseProperties
+
+
+
 
 
 

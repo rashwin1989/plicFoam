@@ -198,6 +198,8 @@ surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
+interfaceProperties intfcProp(alpha1, U, transPropDict);
+
 // gravity and pressure
 #include "readGravitationalAcceleration.H"
 

@@ -145,15 +145,8 @@ class plic
     volVectorField gradAlpha1_;
 
     //- Interface unit normal vector field
-    volVectorField nHat_;    
-
-    //- Interface unit normal at cell face & face area
-    surfaceScalarField nHatf_;    
-
-    //- Interface curvature and surface tension
-    const dimensionedScalar deltaN_;
-    volScalarField K_;
-    dimensionedScalar sigma_;
+    volVectorField nHat_;        
+    surfaceScalarField nHatf_;
 
     //- Interface face center point field
     volVectorField C_intfc_;
@@ -380,28 +373,12 @@ class plic
 
     inline const volVectorField& gradAlpha1() const;
 
-    inline const volVectorField& nHat() const;
+    inline const volVectorField& nHat() const;    
 
     const surfaceScalarField& nHatf() const
     { 
         return nHatf_;
     }
-
-    const volScalarField& K() const
-    {
-        return K_;
-    }
-
-    const dimensionedScalar& sigma() const
-    {
-        return sigma_;
-    }
-
-    tmp<volScalarField> sigmaK() const
-    {
-        return sigma_*K_;
-    }
-
 
     inline const volVectorField& C_intfc() const;
 
