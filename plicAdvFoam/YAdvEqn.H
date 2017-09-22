@@ -32,7 +32,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         if(adv_debug2)
         {
             Info<< "Solving Y1[" << i << "] eqn in cell " << cellI << nl
-                << "Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << nl
+                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << nl
                 << "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
@@ -58,8 +58,15 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     Info<< "Phase-1 Yi= "
         << (C1i).weightedAverage(mesh.Vsc()).value()
-        << "  Min(Y1i) = " << min(Y1i).value()
+        << nl
+        << "Min(C1i) = " << min(C1i).value()
+        << "  Max(C1i) = " << max(C1i).value()
+        << nl
+        << "Min(Y1i) = " << min(Y1i).value()
         << "  Max(Y1i) = " << max(Y1i).value()
+        << nl
+        << "C1i undershoot = " << min(min(C1i).value(), 0)
+        << "  C1i overshoot = " << max((max(C1i).value() - rho1_0.value()), 0)
         << nl
         << "Y1i undershoot = " << min(min(Y1i).value(), 0)
         << "  Y1i overshoot = " << max((max(Y1i).value() - 1), 0)
@@ -82,7 +89,11 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     Info<< "Phase-1 Yi after correction= "
         << (C1i).weightedAverage(mesh.Vsc()).value()
-        << "  Min(Y1i) = " << min(Y1i).value()
+        << nl
+        << "Min(C1i) = " << min(C1i).value()
+        << "  Max(C1i) = " << max(C1i).value()
+        << nl
+        << "Min(Y1i) = " << min(Y1i).value()
         << "  Max(Y1i) = " << max(Y1i).value()        
         << endl;
 
