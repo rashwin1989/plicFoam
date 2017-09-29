@@ -27,8 +27,9 @@ Application
 Description
     Solver for 2 incompressible, immiscible fluids using a VOF
     (volume of fluid) phase-fraction based interface capturing with 
-    piecewise linear interface reconstruction.
-    Time-varying velocity field set
+    piecewise linear interface reconstruction. Advection and diffusion
+    of species within each bulk phase.
+    Time-varying velocity field set.
 
 \*---------------------------------------------------------------------------*/
 
@@ -60,15 +61,23 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
+        //--------------------------------------------------------------------//
+        // At start of each time-step, read time controls like max Courant No.
+        // Make sure to use a "CourantNo.H" file which calculates both Adv
+        // and Diff Courant numbers. Use a "setDeltaT.H" file which scales dt
+        // according to both Adv and Diff Courant numbers
         #include "readTimeControls.H"
-        #include "CourantNo.H"
-        #include "alphaCourantNo.H"
+        #include "CourantNo.H"        
         #include "setDeltaT.H"
+        //--------------------------------------------------------------------//
 
         runTime++;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
+        //--------------------------------------------------------------------//
+        // code to check and debug big differences between face flux field
+        // and velocity field linearly interpolated to mesh faces
         const labelList& own = mesh.owner();
         const labelList& nei = mesh.neighbour();
         surfaceVectorField U_interp(linearInterpolate(U));
@@ -86,11 +95,14 @@ int main(int argc, char *argv[])
                 if(mag((curPhiU - curU_interp)/(curU_interp + VSMALL)) > 0.5)
                 {
                     Info<< "Face " << faceI << nl
-                        << "Flux = " << curPhi << "  Face vel. = " << curPhiU << "  Interp. U = " << curU_interp << nl
-                        << "Own U = " << U.internalField()[own[faceI]] << "  Nei U = " << U.internalField()[nei[faceI]] << endl;
+                        << "Flux = " << curPhi << "  Face vel. = " << curPhiU 
+                        << "  Interp. U = " << curU_interp << nl
+                        << "Own U = " << U.internalField()[own[faceI]] 
+                        << "  Nei U = " << U.internalField()[nei[faceI]] << endl;
                 }            
             }            
         }
+        //--------------------------------------------------------------------//
 
         interface.calc_2ph_advFluxes(Y1, Y0, advFlux_Y1, advFlux_Y0);
      
