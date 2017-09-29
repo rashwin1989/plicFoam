@@ -22,7 +22,7 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    plicTFoam
+    plicAdvDiffFoam
 
 Description
     Solver for 2 incompressible, immiscible fluids using a VOF
