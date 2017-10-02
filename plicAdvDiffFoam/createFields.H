@@ -340,73 +340,171 @@ for(label i=0; i<(nSpecies - 1); i++)
     );
 }
 
-// Y diffusion
-/*
-PtrList<dimensionedScalar> D1(nSpecies);
-PtrList<dimensionedScalar> D0(nSpecies);
+const scalarField& rho1Cells = rho1.internalField();
+const scalarField& rho0Cells = rho0.internalField();
+const scalarField& alpha1Cells = alpha1.internalField();
+const scalarField& alpha0Cells = alpha0.internalField();
 
-word DName;
+// Y diffusion
+
+PtrList<dimensionedScalar> D1_0(nSpecies);
+PtrList<dimensionedScalar> D0_0(nSpecies);
+
+PtrList<volScalarField> D1(nSpecies);
+PtrList<volScalarField> D0(nSpecies);
+
 for(label i=0; i<nSpecies; i++)
 {
-    DName = "D1" + Foam::name(i);
-    Info<< "Reading diffusivity " << DName << endl;
-    D1.set
+    fieldName = "D1" + Foam::name(i);
+    Info<< "Reading diffusivity " << fieldName << endl;
+    D1_0.set
     (
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(DName)
+            transPropDict.lookup(fieldName)
         )
     );
 
-    DName = "D0" + Foam::name(i);
-    Info<< "Reading diffusivity " << DName << endl;
-    D0.set
+    Info<< "Initializing field " << fieldName << endl;
+    D1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            D1_0[i]            
+        )
+    );
+
+    fieldName = "D0" + Foam::name(i);
+    Info<< "Reading diffusivity " << fieldName << endl;
+    D0_0.set
     (
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(DName)
+            transPropDict.lookup(fieldName)
+        )
+    );
+
+    Info<< "Initializing field " << fieldName << endl;
+    D0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            D0_0[i]            
         )
     );
 }
 
-// scalarField diffWeightsOwn_ph1(mesh.nFaces());
-// scalarField diffWeightsNei_ph1(mesh.nFaces());
-// scalarField diffWeightsOwn_ph0(mesh.nFaces());
-// scalarField diffWeightsNei_ph0(mesh.nFaces());
+PtrList<surfaceScalarField> gradf_Y1(nSpecies);
+PtrList<surfaceScalarField> gradf_Y0(nSpecies);
 
-surfaceScalarField diffFlux_ph1
-(
-    IOobject
-    (
-        "diffFlux_ph1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedScalar("diffFlux_ph1", dimVol/dimTime, 0)
-);
+PtrList<surfaceScalarField> diffFlux_Y1(nSpecies);
+PtrList<surfaceScalarField> diffFlux_Y0(nSpecies);
 
-surfaceScalarField diffFlux_ph0
-(
-    IOobject
+for(label i=0; i<nSpecies; i++)
+{
+    fieldName = "gradf_Y1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    gradf_Y1.set
     (
-        "diffFlux_ph0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedScalar("diffFlux_ph0", dimVol/dimTime, 0)
-);
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("gradf_Y1", dimless/dimLength, 0)
+        )
+    );
+
+    fieldName = "gradf_Y0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    gradf_Y0.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("gradf_Y0", dimless/dimLength, 0)
+        )
+    );
+
+    fieldName = "diffFlux_Y1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    diffFlux_Y1.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("diffFlux_Y1", dimVol*dimDensity/dimTime, 0)
+        )
+    );
+
+    fieldName = "diffFlux_Y0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    diffFlux_Y0.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("diffFlux_Y0", dimVol*dimDensity/dimTime, 0)
+        )
+    );
+}
 
 centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
 const labelListList& diffCellStencil = diffCellStencilObject.stencil();
-
 
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
@@ -429,9 +527,10 @@ for(label i=0; i<nSpecies; i++)
     Y0_flatFld_diff[i] = Y_flatFld_diff;        
 }
 
+// flat field for phase centroid position vectors
 List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
 List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
-*/
+
 
 // tolerances and max iters
 label ALPHA_BOUND_ITERS_MAX = 108;

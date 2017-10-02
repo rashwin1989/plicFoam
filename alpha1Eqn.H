@@ -18,6 +18,7 @@ Info<< "Phase-1 volume fraction = "
 scalarField& alphaCells = alpha1.internalField();
 label nCells = mesh.nCells();
 
+/*
 scalar maxAlpha1 = 1;
 scalar minAlpha1 = 0;
 label maxAlpha1Cell = -1;
@@ -25,6 +26,7 @@ label minAlpha1Cell = -1;
 
 scalar ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
 scalar ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
+*/
 
 const labelUList& owner = mesh.owner();
 const labelUList& neighbour = mesh.neighbour();
@@ -99,6 +101,7 @@ if(unbound_debug)
     }
 }
 
+/*
 forAll(alphaCells, cellI)
 {
     if(alphaCells[cellI] < ALPHA_MIN_BOUND)
@@ -278,6 +281,7 @@ Info<< "Phase-1 volume fraction after correction= "
     << "alpha1 undershoot = " << min(alpha1).value()
     << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
     << endl;
+*/
 
 /*Info<< "alpha1 extrema locations: " << nl
 << "Min alpha1 cell: " << minAlpha1Cell << " Min cell loc: " << minAlpha1CellC << " Min alpha1 value: " << minAlpha1 << nl 
@@ -291,6 +295,8 @@ Info<< "Phase-1 volume fraction after correction= "
     << "  Min(alpha1) = " << min(alpha1).value()
     << "  Max(alpha1) = " << max(alpha1).value()
     << endl;
+
+alpha1.correctBoundaryConditions();
 
 limitedAlpha1 = min(max(alpha1, scalar(0)), scalar(1));
 

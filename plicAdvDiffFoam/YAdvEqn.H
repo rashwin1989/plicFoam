@@ -2,11 +2,6 @@
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
-const scalarField& alpha1Cells = alpha1.internalField();
-const scalarField& alpha0Cells = alpha0.internalField();
-const scalarField& rho1Cells = rho1.internalField();
-const scalarField& rho0Cells = rho0.internalField();
-
 for(label i=0; i<(nSpecies - 1); i++)
 {
     volScalarField& Y1i = Y1[i];
@@ -132,7 +127,7 @@ for(label i=0; i<(nSpecies - 1); i++)
                 << endl;
         }
     }    
-    /*
+    
     Info<< "Phase-0 Yi= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << "  Min(Y0i) = " << min(Y0i).value()
@@ -141,7 +136,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "Y0i undershoot = " << min(min(Y0i).value(), 0)
         << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
         << endl;
-        */  
+          
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < 0)
@@ -166,13 +161,13 @@ for(label i=0; i<(nSpecies - 1); i++)
             }
         }        
     }
-    /*
+    
     Info<< "Phase-0 Yi after correction= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << "  Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()        
         << endl;
-        */
+        
     C0i.correctBoundaryConditions();
     Y0i.correctBoundaryConditions();
 

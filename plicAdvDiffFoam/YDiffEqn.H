@@ -1,11 +1,6 @@
 
-nSpecies = Y1.size();
-
-volScalarField Y1t = 0.0*Y1[0];
-volScalarField Y0t = 0.0*Y0[0];
-
-scalarField& alpha1Cells = alpha1.internalField();
-scalarField& alpha0Cells = alpha0.internalField();
+Y1t = 0.0*Y1[0];
+Y0t = 0.0*Y0[0];
 
 plicFuncs::makeFlatFld(alpha1, diffMap, alpha1_flatFld_diff);
 plicFuncs::makeFlatFld(interface.C_ph1(), diffMap, C_ph1_flatFld_diff);
