@@ -43,9 +43,10 @@ namespace plicFuncs
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-void display_field_scalar
+template <class Type>
+void display_field
 (
-    const volScalarField& fld
+    const GeometricField<Type, fvPatchField, volMesh>& fld
 )
 {
     Info<< "//========================================================================\\" << endl << endl
@@ -76,7 +77,7 @@ void display_field_scalar
 
     forAll(fld.boundaryField(), patchI)
     {
-        const fvPatchScalarField& pfld = fld.boundaryField()[patchI];
+        const fvPatchField<Type>& pfld = fld.boundaryField()[patchI];
         const fvPatch& pp = mesh.boundary()[patchI];
 
         label nf = pp.start();            
@@ -103,9 +104,10 @@ void display_field_scalar
 }
 
 
-void write_field_scalar
+template <class Type>
+void write_field
 (
-    const volScalarField& fld
+    const GeometricField<Type, fvPatchField, volMesh>& fld
 )
 {
     const fvMesh& mesh = fld.mesh();
@@ -140,7 +142,7 @@ void write_field_scalar
 
     forAll(fld.boundaryField(), patchI)
     {
-        const fvPatchScalarField& pfld = fld.boundaryField()[patchI];
+        const fvPatchField<Type>& pfld = fld.boundaryField()[patchI];
         const fvPatch& pp = mesh.boundary()[patchI];
 
         label nf = pp.start();            
@@ -167,133 +169,10 @@ void write_field_scalar
 }
 
 
-void display_field_vector
+template <class Type>
+void display_point_field
 (
-    const volVectorField& fld
-)
-{
-    Info<< "//========================================================================\\" << endl << endl
-        << "                             " << fld.name() << " field" << endl << endl
-        << "\\========================================================================//" << endl
-        << endl       
-        << "============================================================================" << endl
-        << "                              Internal field" << endl
-        << "============================================================================" << endl
-        << endl
-        << "----------------------------------------------------------------------------" << endl
-        << "    Cell index                        Field value" << endl
-        << "----------------------------------------------------------------------------" << endl;
-
-    forAll(fld.internalField(), cellI)
-    {
-        Info<< "        " << cellI << "                           " << fld.internalField()[cellI] << endl;
-    }
-
-    Info<< endl << endl
-        << "============================================================================" << endl
-        << "                              Boundary field" << endl
-        << "============================================================================" << endl
-        << endl;
-    
-    const fvMesh& mesh = fld.mesh();
-    wordList patchNames(mesh.boundaryMesh().names());
-
-    forAll(fld.boundaryField(), patchI)
-    {
-        const fvPatchVectorField& pfld = fld.boundaryField()[patchI];
-        const fvPatch& pp = mesh.boundary()[patchI];
-
-        label nf = pp.start();            
-        
-        Info<< "----------------------------------------------------------------------------" << endl
-            << "                       " << patchNames[patchI] << endl
-            << "----------------------------------------------------------------------------" << endl << endl
-            << "----------------------------------------------------------------------------" << endl
-            << "Patch face index    Global face index                Field value" << endl
-            << "----------------------------------------------------------------------------" << endl;
-
-        forAll(pfld, i)
-        {
-            Info<< "        " << i << "                  " << nf << "                         " << pfld[i] << endl;
-            nf++;
-        }
-        Info<< endl;
-    }
-    
-    Info<< "//========================================================================\\" << endl << endl
-        << "                         End of " << fld.name() << " field" << endl << endl
-        << "\\========================================================================//" << endl
-        << endl;    
-}
-
-
-void write_field_vector
-(
-    const volVectorField& fld
-)
-{
-    const fvMesh& mesh = fld.mesh();
-
-    fileName outputFile(fld.name()+"_db");
-    OFstream os(mesh.time().path()/mesh.time().timeName()/outputFile);
-
-    os<< "//==========================================================================\\" << endl << endl
-      << "                            " << fld.name() << " field" << endl << endl
-      << "\\==========================================================================//" << endl
-      << endl       
-      << "==============================================================================" << endl
-      << "                                Internal field" << endl
-      << "==============================================================================" << endl
-      << endl
-      << "------------------------------------------------------------------------------" << endl
-      << "    Cell index                        Field value" << endl
-      << "------------------------------------------------------------------------------" << endl;
-
-    forAll(fld.internalField(), cellI)
-    {
-        os<< "        " << cellI << "                           " << fld.internalField()[cellI] << endl;
-    }
-
-    os<< endl << endl
-      << "==============================================================================" << endl
-      << "                                Boundary field" << endl
-      << "==============================================================================" << endl
-      << endl;
-        
-    wordList patchNames(mesh.boundaryMesh().names());
-
-    forAll(fld.boundaryField(), patchI)
-    {
-        const fvPatchVectorField& pfld = fld.boundaryField()[patchI];
-        const fvPatch& pp = mesh.boundary()[patchI];
-
-        label nf = pp.start();            
-        
-        os<< "------------------------------------------------------------------------------" << endl
-          << "                        " << patchNames[patchI] << endl
-          << "------------------------------------------------------------------------------" << endl << endl
-          << "------------------------------------------------------------------------------" << endl
-          << "Patch face index    Global face index                Field value" << endl
-          << "------------------------------------------------------------------------------" << endl;
-
-        forAll(pfld, i)
-        {
-            os<< "        " << i << "                  " << nf << "                         " << pfld[i] << endl;
-            nf++;
-        }
-        os<< endl;
-    }
-    
-    os<< "//==========================================================================\\" << endl << endl
-      << "                          End of " << fld.name() << " field" << endl << endl
-      << "\\==========================================================================//" << endl
-      << endl;         
-}
-
-
-void display_point_field_vector
-(
-    const pointVectorField& ptfld
+    const GeometricField<Type, pointPatchField, pointMesh>& ptfld
 )
 {
     Info<< "//========================================================================\\" << endl << endl
@@ -324,7 +203,7 @@ void display_point_field_vector
 
     forAll(ptfld.boundaryField(), patchI)
     {
-        vectorField pptfld(ptfld.boundaryField()[patchI].patchInternalField());    
+        Field<Type> pptfld(ptfld.boundaryField()[patchI].patchInternalField());    
         
         Info<< "----------------------------------------------------------------------------" << endl
             << "                        " << patchNames[patchI] << endl
@@ -347,9 +226,10 @@ void display_point_field_vector
 }
 
 
-void write_point_field_vector
+template <class Type>
+void write_point_field
 (
-    const pointVectorField& ptfld,
+    const GeometricField<Type, pointPatchField, pointMesh>& ptfld,
     const fvMesh& mesh
 )
 {
@@ -383,7 +263,7 @@ void write_point_field_vector
 
     forAll(ptfld.boundaryField(), patchI)
     {
-        vectorField pptfld(ptfld.boundaryField()[patchI].patchInternalField());    
+        Field<Type> pptfld(ptfld.boundaryField()[patchI].patchInternalField());    
         
         os<< "------------------------------------------------------------------------------" << endl
           << "                       " << patchNames[patchI] << endl
@@ -615,175 +495,6 @@ void write_stencil
 }
 
 
-void write_flatFld_scalar
-(
-    const List<scalar>& flatFld,
-    const volScalarField& fld
-)
-{
-    const fvMesh& mesh = fld.mesh();
-
-    fileName outputFile(fld.name()+"_flatFld");
-    OFstream os(mesh.time().path()/mesh.time().timeName()/outputFile);
-
-    os<< "//==========================================================================\\" << nl 
-        << nl
-        << "                        " << fld.name() << " flat field" << nl << nl
-        << "\\==========================================================================//" << nl
-        << nl       
-        << "==============================================================================" << nl
-        << "                                Internal field" << nl
-        << "==============================================================================" << nl
-        << nl
-        << "------------------------------------------------------------------------------" << nl
-        << "cell index    flatFld index          field value          flatFld value" << nl
-        << "------------------------------------------------------------------------------" << endl;
-
-    label nFlat = 0;
-
-    forAll(fld.internalField(), cellI)
-    {
-        os<< "    " << cellI << "          " << cellI << "                " << fld.internalField()[cellI]  << "                " << flatFld[nFlat] << endl;
-        nFlat++;
-    }
-
-    os<< nl << nl
-        << "==============================================================================" << nl
-        << "                                Boundary field" << nl
-        << "==============================================================================" << nl
-        << endl;
-        
-    wordList patchNames(mesh.boundaryMesh().names());
-
-    forAll(fld.boundaryField(), patchI)
-    {
-        const fvPatchScalarField& pfld = fld.boundaryField()[patchI];
-        const fvPatch& pp = mesh.boundary()[patchI];
-
-        label nf = pp.start();            
-        
-        os<< "------------------------------------------------------------------------------" << nl
-            << "                        " << patchNames[patchI] << nl
-            << "------------------------------------------------------------------------------" << nl << nl
-            << "------------------------------------------------------------------------------" << nl
-            << "face index    flatFld index          field value          flatFld value" << nl
-            << "------------------------------------------------------------------------------" << endl;
-
-        forAll(pfld, i)
-        {
-            os<< "    " << nf << "            " << nFlat << "                    " << pfld[i] << "                " << flatFld[nFlat] << endl;
-            nf++;
-            nFlat++;
-        }
-        os<< endl;
-    }
-    os<< nl
-        << "==============================================================================" << nl
-        << "                                Non-local field data" << nl
-        << "==============================================================================" << nl
-        << nl
-        << "------------------------------------------------------------------------------" << nl
-        << "flatFld index            flatFld value" << nl
-        << "------------------------------------------------------------------------------" << endl;
-        
-    
-    for(label i=nFlat; i<flatFld.size(); i++)
-    {
-        os<< "    " << i << "                        " << flatFld[i] << endl;
-    }
-    
-    os<< nl  
-        << "//==========================================================================\\" << nl << nl
-        << "                        End of " << fld.name() << " flat field" << nl << nl
-        << "\\==========================================================================//" << nl
-        << endl;
-}
-
-
-void write_flatFld_vector
-(
-    const List<vector>& flatFld,
-    const volVectorField& fld
-)
-{
-    const fvMesh& mesh = fld.mesh();
-
-    fileName outputFile(fld.name()+"_flatFld");
-    OFstream os(mesh.time().path()/mesh.time().timeName()/outputFile);
-
-    os<< "//==========================================================================\\" << nl 
-        << nl
-        << "                        " << fld.name() << " flat field" << nl << nl
-        << "\\==========================================================================//" << nl
-        << nl       
-        << "==============================================================================" << nl
-        << "                                Internal field" << nl
-        << "==============================================================================" << nl
-        << nl
-        << "------------------------------------------------------------------------------" << nl
-        << "cell index    flatFld index          field value          flatFld value" << nl
-        << "------------------------------------------------------------------------------" << endl;
-
-    label nFlat = 0;
-
-    forAll(fld.internalField(), cellI)
-    {
-        os<< "    " << cellI << "          " << cellI << "                " << fld.internalField()[cellI]  << "                " << flatFld[nFlat] << endl;
-        nFlat++;
-    }
-
-    os<< nl << nl
-        << "==============================================================================" << nl
-        << "                                Boundary field" << nl
-        << "==============================================================================" << nl
-        << endl;
-        
-    wordList patchNames(mesh.boundaryMesh().names());
-
-    forAll(fld.boundaryField(), patchI)
-    {
-        const fvPatchVectorField& pfld = fld.boundaryField()[patchI];
-        const fvPatch& pp = mesh.boundary()[patchI];
-
-        label nf = pp.start();            
-        
-        os<< "------------------------------------------------------------------------------" << nl
-            << "                        " << patchNames[patchI] << nl
-            << "------------------------------------------------------------------------------" << nl << nl
-            << "------------------------------------------------------------------------------" << nl
-            << "face index    flatFld index          field value          flatFld value" << nl
-            << "------------------------------------------------------------------------------" << endl;
-
-        forAll(pfld, i)
-        {
-            os<< "    " << nf << "            " << nFlat << "                    " << pfld[i] << "                " << flatFld[nFlat] << endl;
-            nf++;
-            nFlat++;
-        }
-        os<< endl;
-    }
-    os<< nl
-        << "==============================================================================" << nl
-        << "                                Non-local field data" << nl
-        << "==============================================================================" << nl
-        << nl
-        << "------------------------------------------------------------------------------" << nl
-        << "flatFld index            flatFld value" << nl
-        << "------------------------------------------------------------------------------" << endl;
-        
-    
-    for(label i=nFlat; i<flatFld.size(); i++)
-    {
-        os<< "    " << i << "                        " << flatFld[i] << endl;
-    }
-    
-    os<< nl  
-        << "//==========================================================================\\" << nl << nl
-        << "                        End of " << fld.name() << " flat field" << nl << nl
-        << "\\==========================================================================//" << nl
-        << endl;
-}
-
 template<class Type>
 void write_flatFld
 (
@@ -869,10 +580,10 @@ void write_flatFld
         << endl;
 }
 
-
-void write_surfaceField_scalar
+template<class Type>
+void write_surfaceField
 (
-    const surfaceScalarField& sfld,
+    const GeometricField<Type, fvsPatchField, surfaceMesh>& sfld,
     const fvMesh& mesh
 )
 {
@@ -906,7 +617,7 @@ void write_surfaceField_scalar
 
     forAll(sfld.boundaryField(), patchI)
     {
-        fvsPatchScalarField psfld(sfld.boundaryField()[patchI]);    
+        fvsPatchField<Type> psfld(sfld.boundaryField()[patchI]);    
         
         os<< "------------------------------------------------------------------------------" << endl
           << "                       " << patchNames[patchI] << endl
@@ -929,9 +640,10 @@ void write_surfaceField_scalar
 }
 
 
-void display_surfaceField_scalar
+template<class Type>
+void display_surfaceField
 (
-    const surfaceScalarField& sfld,
+    const GeometricField<Type, fvsPatchField, surfaceMesh>& sfld,
     const fvMesh& mesh
 )
 {   
@@ -962,7 +674,7 @@ void display_surfaceField_scalar
 
     forAll(sfld.boundaryField(), patchI)
     {
-        fvsPatchScalarField psfld(sfld.boundaryField()[patchI]);    
+        fvsPatchField<Type> psfld(sfld.boundaryField()[patchI]);    
         
         Info<< "------------------------------------------------------------------------------" << endl
             << "                       " << patchNames[patchI] << endl
@@ -991,7 +703,7 @@ point centre
     const pointField& points
 )
 {
-    bool debug_ = true;
+    bool debug_ = false;
 
     if(debug_)
     {

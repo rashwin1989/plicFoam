@@ -1589,12 +1589,12 @@ void Foam::plic::intfcInfo_collectData()
 
     if(debug2_)
     {
-        Foam::plicFuncs::write_flatFld_scalar(alpha_ph1_flatFld_, alpha_ph1_);
-        Foam::plicFuncs::write_flatFld_vector(nHat_flatFld_, nHat_);
-        Foam::plicFuncs::write_flatFld_vector(gradAlpha1_flatFld_, gradAlpha1_);
-        Foam::plicFuncs::write_flatFld_vector(C_intfc_flatFld_, C_intfc_);
-        Foam::plicFuncs::write_flatFld_scalar(rho1_flatFld_, rho1_);
-        Foam::plicFuncs::write_flatFld_scalar(rho0_flatFld_, rho0_);
+        Foam::plicFuncs::write_flatFld(alpha_ph1_flatFld_, alpha_ph1_);
+        Foam::plicFuncs::write_flatFld(nHat_flatFld_, nHat_);
+        Foam::plicFuncs::write_flatFld(gradAlpha1_flatFld_, gradAlpha1_);
+        Foam::plicFuncs::write_flatFld(C_intfc_flatFld_, C_intfc_);
+        Foam::plicFuncs::write_flatFld(rho1_flatFld_, rho1_);
+        Foam::plicFuncs::write_flatFld(rho0_flatFld_, rho0_);
     }
 }
 
@@ -1644,8 +1644,8 @@ void Foam::plic::Y_collectData
     
         if(debug2_)
         {        
-            Foam::plicFuncs::write_flatFld_scalar(Y1i_flatFld, Y1i);
-            Foam::plicFuncs::write_flatFld_scalar(Y0i_flatFld, Y0i);
+            Foam::plicFuncs::write_flatFld(Y1i_flatFld, Y1i);
+            Foam::plicFuncs::write_flatFld(Y0i_flatFld, Y0i);
         }
     }
 }
@@ -2398,7 +2398,7 @@ void Foam::plic::intfc_normal_correct_lsq()
 
     if(debug2_)
     {
-        Foam::plicFuncs::write_field_vector(gradAlpha);
+        Foam::plicFuncs::write_field(gradAlpha);
     }    
 
     //nHat_ = gradAlpha/(mag(gradAlpha) + deltaN_);    
@@ -2431,7 +2431,7 @@ void Foam::plic::intfc_normal_correct_lsq()
 
     if(debug2_)
     {
-        Foam::plicFuncs::write_field_vector(nHat_);
+        Foam::plicFuncs::write_field(nHat_);
     }
 }
 
@@ -2547,7 +2547,7 @@ void Foam::plic::intfc_normal_correct()
 
     if(debug2_)
     {
-        Foam::plicFuncs::write_field_vector(gradAlpha1_);
+        Foam::plicFuncs::write_field(gradAlpha1_);
     }    
     //Foam::plicFuncs::write_field_vector(gradAlpha1_);
 
@@ -2590,7 +2590,7 @@ void Foam::plic::intfc_normal_correct()
 
     if(debug2_)
     {
-        Foam::plicFuncs::write_field_vector(nHat_);
+        Foam::plicFuncs::write_field(nHat_);
     }
     //Foam::plicFuncs::write_field_vector(nHat_);
 }
@@ -3266,7 +3266,7 @@ void Foam::plic::calc_face_phaseFluxes()
     U_pts_ = ptInterp_.interpolate(U_);
     if(debugF_)
     {
-        Foam::plicFuncs::write_point_field_vector(U_pts_, mesh());
+        Foam::plicFuncs::write_point_field(U_pts_, mesh());
     }
 
     if(debugF_)
@@ -3794,7 +3794,7 @@ void Foam::plic::calc_2ph_advFluxes
 
     if(debugF2_)
     {
-        Foam::plicFuncs::write_point_field_vector(U_pts_, mesh());
+        Foam::plicFuncs::write_point_field(U_pts_, mesh());
     }
 
     if(debugF_)

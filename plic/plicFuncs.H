@@ -41,6 +41,7 @@ SourceFiles
 
 #include "volFields.H"
 #include "surfaceFields.H"
+#include "pointFields.H"
 #include "cell.H"
 #include "cellInfo.H"
 #include "faceList.H"
@@ -65,34 +66,28 @@ namespace Foam
 
 namespace plicFuncs
 {
-    void display_field_scalar
+    template <class Type>
+    void display_field
     (
-        const volScalarField&
+        const GeometricField<Type, fvPatchField, volMesh>&
     );
 
-    void write_field_scalar
+    template <class Type>
+    void write_field
     (
-        const volScalarField&
+        const GeometricField<Type, fvPatchField, volMesh>&
     );
 
-    void display_field_vector
+    template <class Type>
+    void display_point_field
     (
-        const volVectorField&
+        const GeometricField<Type, pointPatchField, pointMesh>&
     );
 
-    void write_field_vector
+    template <class Type>
+    void write_point_field
     (
-        const volVectorField&
-    );
-
-    void display_point_field_vector
-    (
-        const pointVectorField&
-    );
-
-    void write_point_field_vector
-    (
-        const pointVectorField&,
+        const GeometricField<Type, pointPatchField, pointMesh>&,
         const fvMesh&
     );
 
@@ -150,18 +145,6 @@ namespace plicFuncs
         const word&
     );
 
-    void write_flatFld_scalar
-    (
-        const List<scalar>&,
-        const volScalarField&
-    );
-
-    void write_flatFld_vector
-    (
-        const List<vector>&,
-        const volVectorField&
-    );
-
     template<class Type>
     void write_flatFld
     (
@@ -169,15 +152,17 @@ namespace plicFuncs
         const GeometricField<Type, fvPatchField, volMesh>&
     );
 
-    void write_surfaceField_scalar
+    template<class Type>
+    void write_surfaceField
     (
-        const surfaceScalarField&,
+        const GeometricField<Type, fvsPatchField, surfaceMesh>&,
         const fvMesh&
     );
 
-    void display_surfaceField_scalar
+    template<class Type>
+    void display_surfaceField
     (
-        const surfaceScalarField&,
+        const GeometricField<Type, fvsPatchField, surfaceMesh>&,
         const fvMesh&
     );
 
@@ -205,21 +190,7 @@ namespace plicFuncs
         const vector&,
         const label&,
         bool
-    );
-
-    // void calcDiffWeights
-    // (
-    //     const fvMesh&,
-    //     const plic&,
-    //     const label&,
-    //     const volScalarField&,
-    //     const volScalarField&,
-    //     const labelListList&,
-    //     const scalar&,
-    //     const label&,
-    //     scalar&,
-    //     scalar&
-    // );
+    );    
 
     void calcCellGradWeights
     (
