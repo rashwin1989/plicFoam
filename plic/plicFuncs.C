@@ -1359,12 +1359,17 @@ void calc_2ph_gradf
     const label& nSpecies,
     const plic& interface,
     const fvMesh& mesh,
+    const labelListList& diffCellStencil,
     const volScalarField& Y1i,
     const volScalarField& Y0i,
     const List<scalar>& Y1i_flatFld_diff,
     const List<scalar>& Y0i_flatFld_diff,
-    surfaceScalarField& gradf_Y1,
-    surfaceScalarField& gradf_Y0,
+    const List<scalar>& alpha1_flatFld_diff,
+    const List<vector>& C_ph1_flatFld_diff,
+    const List<vector>& C_ph0_flatFld_diff,
+    surfaceScalarField& gradf_Y1i,
+    surfaceScalarField& gradf_Y0i,
+    const label& i,
     const scalar& MIN_ALPHA_DIFF,
     const bool debug
 )
@@ -1386,19 +1391,32 @@ void calc_2ph_gradf
             << endl;
     }
 
+    scalar curMagSf; 
+    scalar curMagSf_ph1; 
+    scalar curMagSf_ph0;
+    scalar curAlpha1f; 
+    scalar curAlpha0f; 
+    vector nf;
+    label faceOwn; 
+    label faceNei; 
+    label donor; 
+    label rec;
+    scalar wOwn; 
+    scalar wNei;
+
     //Internal faces    
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
-        scalar curMagSf = meshMagSf[faceI];
-        scalar curMagSf_ph1 = magSf_ph1[faceI];
-        scalar curMagSf_ph0 = magSf_ph0[faceI];
-        scalar curAlpha1f = curMagSf_ph1/curMagSf;
-        scalar curAlpha0f = curMagSf_ph0/curMagSf;
-        vector nf = meshSf[faceI]/curMagSf;
-        const label& faceOwn = own[faceI];
-        const label& faceNei = nei[faceI];
-        label donor = own[faceI];
-        label rec = nei[faceI];
+        curMagSf = meshMagSf[faceI];
+        curMagSf_ph1 = magSf_ph1[faceI];
+        curMagSf_ph0 = magSf_ph0[faceI];
+        curAlpha1f = curMagSf_ph1/curMagSf;
+        curAlpha0f = curMagSf_ph0/curMagSf;
+        nf = meshSf[faceI]/curMagSf;
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+        donor = own[faceI];
+        rec = nei[faceI];
 
         if(debug)
         {
@@ -1410,167 +1428,113 @@ void calc_2ph_gradf
                 << endl;
         }
 
-        scalar wOwn = 1;
-        scalar wNei = 1;
+        wOwn = 1;
+        wNei = 1;
 
         if(curAlpha1f < MIN_ALPHA_DIFF && curAlpha0f < MIN_ALPHA_DIFF)
         {
-            diffFlux_ph0[faceI] = 0;
-            diffFlux_ph1[faceI] = 0;
+            gradf_Y0i[faceI] = 0;
+            gradf_Y1i[faceI] = 0;
         }
         else if(curAlpha1f < MIN_ALPHA_DIFF)
         {
             plicFuncs::calcTwoSidedFaceGradWeights
-                (
-                    faceI,
-                    faceOwn,
-                    faceNei,
-                    nf,
-                    Y0i_flatFld_diff,
-                    alpha1_flatFld_diff,
-                    C_ph0_flatFld_diff,
-                    diffCellStencil,
-                    0.1*MIN_ALPHA_DIFF,
-                    0,
-                    wOwn,
-                    wNei,
-                    diff_debug2
-                );
+            (
+                faceI,
+                faceOwn,
+                faceNei,
+                nf,
+                Y0i_flatFld_diff,
+                alpha1_flatFld_diff,
+                C_ph0_flatFld_diff,
+                diffCellStencil,
+                0.1*MIN_ALPHA_DIFF,
+                0,
+                wOwn,
+                wNei,
+                debug
+            );
             
-            diffFlux_ph0[faceI] = -D0i*magSf_ph0[faceI]*(wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei]);
+            gradf_Y0i[faceI] = wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei];
             
-            diffFlux_ph1[faceI] = 0;
+            gradf_Y1i[faceI] = 0;
         }//end if(curAlpha1f < MIN_ALPHA_DIFF)
         else if(curAlpha1f > MAX_ALPHA_DIFF)
         {
             plicFuncs::calcTwoSidedFaceGradWeights
-                (
-                    faceI,
-                    faceOwn,
-                    faceNei,
-                    nf,
-                    Y1i_flatFld_diff,
-                    alpha1_flatFld_diff,
-                    C_ph1_flatFld_diff,
-                    diffCellStencil,
-                    0.1*MIN_ALPHA_DIFF,
-                    1,
-                    wOwn,
-                    wNei,
-                    diff_debug2
-                );
+            (
+                faceI,
+                faceOwn,
+                faceNei,
+                nf,
+                Y1i_flatFld_diff,
+                alpha1_flatFld_diff,
+                C_ph1_flatFld_diff,
+                diffCellStencil,
+                0.1*MIN_ALPHA_DIFF,
+                1,
+                wOwn,
+                wNei,
+                debug
+            );
             
-            diffFlux_ph1[faceI] = -D1i*magSf_ph1[faceI]*(wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei]);
+            gradf_Y1i[faceI] = wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei];
             
-            diffFlux_ph0[faceI] = 0;
+            gradf_Y0i[faceI] = 0;
         }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
         else
         {
             plicFuncs::calcTwoSidedFaceGradWeights
-                (
-                    faceI,
-                    faceOwn,
-                    faceNei,
-                    nf,
-                    Y0i_flatFld_diff,
-                    alpha1_flatFld_diff,
-                    C_ph0_flatFld_diff,
-                    diffCellStencil,
-                    0.1*MIN_ALPHA_DIFF,
-                    0,
-                    wOwn,
-                    wNei,
-                    diff_debug2
-                );
+            (
+                faceI,
+                faceOwn,
+                faceNei,
+                nf,
+                Y0i_flatFld_diff,
+                alpha1_flatFld_diff,
+                C_ph0_flatFld_diff,
+                diffCellStencil,
+                0.1*MIN_ALPHA_DIFF,
+                0,
+                wOwn,
+                wNei,
+                debug
+            );
             
-            diffFlux_ph0[faceI] = -D0i*magSf_ph0[faceI]*(wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei]);
+            gradf_Y0i[faceI] = wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei];
 
             plicFuncs::calcTwoSidedFaceGradWeights
-                (
-                    faceI,
-                    faceOwn,
-                    faceNei,
-                    nf,
-                    Y1i_flatFld_diff,
-                    alpha1_flatFld_diff,
-                    C_ph1_flatFld_diff,
-                    diffCellStencil,
-                    0.1*MIN_ALPHA_DIFF,
-                    1,
-                    wOwn,
-                    wNei,
-                    diff_debug2
-                );
+            (
+                faceI,
+                faceOwn,
+                faceNei,
+                nf,
+                Y1i_flatFld_diff,
+                alpha1_flatFld_diff,
+                C_ph1_flatFld_diff,
+                diffCellStencil,
+                0.1*MIN_ALPHA_DIFF,
+                1,
+                wOwn,
+                wNei,
+                debug
+            );
             
-            diffFlux_ph1[faceI] = -D1i*magSf_ph1[faceI]*(wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei]);
+            gradf_Y1i[faceI] = wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei];
         }//end if(curAlpha1f < MIN_ALPHA_DIFF)
 
-        if(diff_debug2)
+        if(debug)
         {
             Info<< nl
-                << "diffusion flux ph1 for Y" << i << " = " << diffFlux_ph1[faceI] << nl
-                << "diffusion flux ph0 for Y" << i << " = " << diffFlux_ph0[faceI] << nl
+                << "gradient ph1 for Y" << i << " = " << gradf_Y1i[faceI] << nl
+                << "gradient ph0 for Y" << i << " = " << gradf_Y0i[faceI] << nl
                 << endl;
-        }
-
-        //check diffFlux > maxDiffFlux causing unboundedness
-        //ph1
-        if(diffFlux_ph1[faceI] > 0)
-        {
-            donor = faceOwn;
-            rec = faceNei;
-        }
-        else
-        {
-            donor = faceNei;
-            rec = faceOwn;
-        }
-        scalar maxDiffFlux = Y1iCells[donor]*alpha1Cells[donor]*mesh.V()[donor]/runTime.deltaTValue();
-        if(mag(diffFlux_ph1[faceI]) > maxDiffFlux)
-        {
-            if(diff_debug)
-            {
-                Info<< "Face " << faceI << "  diff flux ph 1: " << diffFlux_ph1[faceI] << nl
-                    << "Af_ph1: " << magSf_ph1[faceI]/meshMagSf[faceI] << "  Af_ph0: " << magSf_ph0[faceI]/meshMagSf[faceI] << "  phaseState: " << face_phaseState[faceI] << nl
-                    << "Own " << faceOwn << "  Nei " << faceNei << "  Donor " << donor << nl
-                    << "MaxDiffFlux: " << maxDiffFlux << nl 
-                    << "Don alpha1: " << alpha1Cells[donor] << "  Y1: " <<  Y1iCells[donor] << "  deltaT: " << runTime.deltaTValue() << "  V: " <<  mesh.V()[donor] << nl 
-                    << "Rec alpha1: " << alpha1Cells[rec] << "  Y1: " <<  Y1iCells[rec] << "  deltaT: " << runTime.deltaTValue() << "  V: " <<  mesh.V()[rec] << nl 
-                    << endl;
-            }
-        }
-
-        //ph0
-        if(diffFlux_ph0[faceI] > 0)
-        {
-            donor = faceOwn;
-            rec = faceNei;
-        }
-        else
-        {
-            donor = faceNei;
-            rec = faceOwn;
-        }
-        maxDiffFlux = Y0iCells[donor]*(1 - alpha1Cells[donor])*mesh.V()[donor]/runTime.deltaTValue();
-        if(mag(diffFlux_ph0[faceI]) > maxDiffFlux)
-        {
-            if(diff_debug)
-            {
-                Info<< "Face " << faceI << "  diff flux ph 0: " << diffFlux_ph0[faceI] << nl
-                    << "Af_ph1: " << magSf_ph1[faceI]/meshMagSf[faceI] << "  Af_ph0: " << magSf_ph0[faceI]/meshMagSf[faceI] << "  phaseState: " << face_phaseState[faceI] << nl
-                    << "Own " << faceOwn << "  Nei " << faceNei << "  Donor " << donor << nl
-                    << "MaxDiffFlux: " << maxDiffFlux << nl 
-                    << "Don alpha0: " << (1 - alpha1Cells[donor]) << "  Y0: " <<  Y0iCells[donor] << "  deltaT: " << runTime.deltaTValue() << "  V: " <<  mesh.V()[donor] << nl 
-                    << "Rec alpha0: " << (1 - alpha1Cells[rec]) << "  Y0: " <<  Y0iCells[rec] << "  deltaT: " << runTime.deltaTValue() << "  V: " <<  mesh.V()[rec] << nl 
-                    << endl;
-            }
-        }
-        //end check diffFlux > maxDiffFlux
+        }        
     }//end for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
 
     //end internal faces
 
-    if(diff_debug2)
+    if(debug)
     {
         Info<< "Boundary faces" << nl
             << endl;
@@ -1607,6 +1571,13 @@ void calc_2ph_gradf
     List<scalar> neiMagt2_ph0(nBnd);
     List<scalar> neiD_ph0(nBnd);
 
+    scalar alpha;
+    scalar beta;
+    scalar magt1;
+    scalar magt2;
+    scalar d;
+    label bndFaceI;
+
     forAll(patches,patchI)
     {
         const polyPatch& pp = patches[patchI];
@@ -1617,44 +1588,38 @@ void calc_2ph_gradf
 
             forAll(pp, fcI)
             {
-                label bndFaceI = faceI - mesh.nInternalFaces();
-                scalar curMagSf = meshMagSf[faceI];
-                scalar curMagSf_ph1 = magSf_ph1[faceI];
-                scalar curAlpha1f = curMagSf_ph1/curMagSf;
-                vector nf = meshSf[faceI]/curMagSf;
-                const label& faceOwn = own[faceI];
+                bndFaceI = faceI - mesh.nInternalFaces();
+                curMagSf = meshMagSf[faceI];
+                curMagSf_ph1 = magSf_ph1[faceI];
+                curAlpha1f = curMagSf_ph1/curMagSf;
+                nf = meshSf[faceI]/curMagSf;
+                faceOwn = own[faceI];
                 const labelList& ownCells = diffCellStencil[faceOwn];
 
                 ownYi_ph1 = Y1iCells[faceOwn];
                 neiYi_ph1 = Y1iCells[faceOwn];
                 ownYi_ph0 = Y0iCells[faceOwn];
-                neiYi_ph0 = Y0iCells[faceOwn];
-
-                scalar alpha;
-                scalar beta;
-                scalar magt1;
-                scalar magt2;
-                scalar d;
+                neiYi_ph0 = Y0iCells[faceOwn];                
 
                 if(curAlpha1f < MIN_ALPHA_DIFF)
                 {                    
                     plicFuncs::calcCellGradWeights
-                        (
-                            faceOwn,
-                            nf,
-                            Y0i_flatFld_diff,
-                            alpha1_flatFld_diff,
-                            C_ph0_flatFld_diff,
-                            ownCells,
-                            0.1*MIN_ALPHA_DIFF,
-                            0,
-                            alpha,
-                            beta,
-                            magt1,
-                            magt2,
-                            d,
-                            diff_debug2
-                        );
+                    (
+                        faceOwn,
+                        nf,
+                        Y0i_flatFld_diff,
+                        alpha1_flatFld_diff,
+                        C_ph0_flatFld_diff,
+                        ownCells,
+                        0.1*MIN_ALPHA_DIFF,
+                        0,
+                        alpha,
+                        beta,
+                        magt1,
+                        magt2,
+                        d,
+                        debug
+                    );
                     ownAlpha_ph0[bndFaceI] = alpha;
                     ownBeta_ph0[bndFaceI] = beta;
                     ownMagt1_ph0[bndFaceI] = magt1;
@@ -1669,22 +1634,22 @@ void calc_2ph_gradf
                 else if(curAlpha1f > MAX_ALPHA_DIFF)
                 {
                     plicFuncs::calcCellGradWeights
-                        (
-                            faceOwn,
-                            nf,
-                            Y1i_flatFld_diff,
-                            alpha1_flatFld_diff,
-                            C_ph1_flatFld_diff,
-                            ownCells,
-                            0.1*MIN_ALPHA_DIFF,
-                            1,
-                            alpha,
-                            beta,
-                            magt1,
-                            magt2,
-                            d,
-                            diff_debug2
-                        );
+                    (
+                        faceOwn,
+                        nf,
+                        Y1i_flatFld_diff,
+                        alpha1_flatFld_diff,
+                        C_ph1_flatFld_diff,
+                        ownCells,
+                        0.1*MIN_ALPHA_DIFF,
+                        1,
+                        alpha,
+                        beta,
+                        magt1,
+                        magt2,
+                        d,
+                        debug
+                    );
                     ownAlpha_ph1[bndFaceI] = alpha;
                     ownBeta_ph1[bndFaceI] = beta;
                     ownMagt1_ph1[bndFaceI] = magt1;
@@ -1699,22 +1664,22 @@ void calc_2ph_gradf
                 else
                 {                    
                     plicFuncs::calcCellGradWeights
-                        (
-                            faceOwn,
-                            nf,
-                            Y0i_flatFld_diff,
-                            alpha1_flatFld_diff,
-                            C_ph0_flatFld_diff,
-                            ownCells,
-                            0.1*MIN_ALPHA_DIFF,
-                            0,
-                            alpha,
-                            beta,
-                            magt1,
-                            magt2,
-                            d,
-                            diff_debug2
-                        );
+                    (
+                        faceOwn,
+                        nf,
+                        Y0i_flatFld_diff,
+                        alpha1_flatFld_diff,
+                        C_ph0_flatFld_diff,
+                        ownCells,
+                        0.1*MIN_ALPHA_DIFF,
+                        0,
+                        alpha,
+                        beta,
+                        magt1,
+                        magt2,
+                        d,
+                        debug
+                    );
                     ownAlpha_ph0[bndFaceI] = alpha;
                     ownBeta_ph0[bndFaceI] = beta;
                     ownMagt1_ph0[bndFaceI] = magt1;
@@ -1727,22 +1692,22 @@ void calc_2ph_gradf
                     neiD_ph0[bndFaceI] = d;
 
                     plicFuncs::calcCellGradWeights
-                        (
-                            faceOwn,
-                            nf,
-                            Y1i_flatFld_diff,
-                            alpha1_flatFld_diff,
-                            C_ph1_flatFld_diff,
-                            ownCells,
-                            0.1*MIN_ALPHA_DIFF,
-                            1,
-                            alpha,
-                            beta,
-                            magt1,
-                            magt2,
-                            d,
-                            diff_debug2
-                        );
+                    (
+                        faceOwn,
+                        nf,
+                        Y1i_flatFld_diff,
+                        alpha1_flatFld_diff,
+                        C_ph1_flatFld_diff,
+                        ownCells,
+                        0.1*MIN_ALPHA_DIFF,
+                        1,
+                        alpha,
+                        beta,
+                        magt1,
+                        magt2,
+                        d,
+                        debug
+                    );
                     ownAlpha_ph1[bndFaceI] = alpha;
                     ownBeta_ph1[bndFaceI] = beta;
                     ownMagt1_ph1[bndFaceI] = magt1;
@@ -1776,23 +1741,24 @@ void calc_2ph_gradf
 
     //Info<< "Done syncing coupled info" << endl;
 
+    scalar faceGrad = 0;
+
     forAll(patches,patchI)
     {
         const polyPatch& pp = patches[patchI];        
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
-        fvsPatchScalarField pdiffFlux_ph0 = diffFlux_ph0.boundaryField()[patchI];
-        fvsPatchScalarField pdiffFlux_ph1 = diffFlux_ph1.boundaryField()[patchI];
-        label faceI = pp.start();
-        scalar faceGrad = 0;
+        fvsPatchScalarField pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
+        fvsPatchScalarField pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
+        label faceI = pp.start();        
 
         if(pp.coupled())
         {
             forAll(pY1i, fcI)
             {
-                label bndFaceI = faceI - mesh.nInternalFaces();
-                scalar curMagSf = meshMagSf[faceI];
-                scalar curMagSf_ph1 = magSf_ph1[faceI];
-                scalar curAlpha1f = curMagSf_ph1/curMagSf;
+                bndFaceI = faceI - mesh.nInternalFaces();
+                curMagSf = meshMagSf[faceI];
+                curMagSf_ph1 = magSf_ph1[faceI];
+                curAlpha1f = curMagSf_ph1/curMagSf;
 
                 if(curAlpha1f < MIN_ALPHA_DIFF)
                 {                
