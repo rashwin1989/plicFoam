@@ -266,6 +266,26 @@ namespace plicFuncs
         const mapDistribute&,
         List<Type>&
     );
+
+    void calc_2ph_gradf
+    (
+        const label& nSpecies,
+        const plic& interface,
+        const fvMesh& mesh,
+        const labelListList& diffCellStencil,
+        const volScalarField& Y1i,
+        const volScalarField& Y0i,
+        const List<scalar>& Y1i_flatFld_diff,
+        const List<scalar>& Y0i_flatFld_diff,
+        const List<scalar>& alpha1_flatFld_diff,
+        const List<vector>& C_ph1_flatFld_diff,
+        const List<vector>& C_ph0_flatFld_diff,
+        surfaceScalarField& gradf_Y1i,
+        surfaceScalarField& gradf_Y0i,
+        const label& i,
+        const scalar& MIN_ALPHA_DIFF,
+        const bool debug
+    );
 }
 
 
