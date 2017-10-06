@@ -1397,9 +1397,7 @@ void calc_2ph_gradf
     scalar curAlpha0f; 
     vector nf;
     label faceOwn; 
-    label faceNei; 
-    label donor; 
-    label rec;
+    label faceNei;     
     scalar wOwn; 
     scalar wNei;
 
@@ -1746,8 +1744,8 @@ void calc_2ph_gradf
     {
         const polyPatch& pp = patches[patchI];        
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
-        fvsPatchScalarField pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
-        fvsPatchScalarField pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
+        fvsPatchScalarField& pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
+        fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
         label faceI = pp.start();        
 
         if(pp.coupled())
@@ -2018,29 +2016,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                 << endl;
         }
 
-        if(curAlpha1f < MIN_ALPHA_DIFF && curAlpha0f < MIN_ALPHA_DIFF)
-        {
-            diffFlux_Y0i[faceI] = 0;
-            diffFlux_Y1i[faceI] = 0;
-        }
-        else if(curAlpha1f < MIN_ALPHA_DIFF)
-        {                        
-            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*magSf_ph0[faceI]*gradf_Y0i[faceI];
-            
-            diffFlux_Y1i[faceI] = 0;
-        }//end if(curAlpha1f < MIN_ALPHA_DIFF)
-        else if(curAlpha1f > MAX_ALPHA_DIFF)
-        {                        
-            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*magSf_ph1[faceI]*gradf_Y1i[faceI];
-            
-            diffFlux_Y0i[faceI] = 0;
-        }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
-        else
-        {
-            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*magSf_ph0[faceI]*gradf_Y0i[faceI];
+        diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*magSf_ph0[faceI]*gradf_Y0i[faceI];
 
-            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*magSf_ph1[faceI]*gradf_Y1i[faceI];
-        }//end if(curAlpha1f < MIN_ALPHA_DIFF)
+        diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*magSf_ph1[faceI]*gradf_Y1i[faceI];
 
         if(debug)
         {
@@ -2091,6 +2069,8 @@ void calc_2ph_diffFluxes_Yi_Fick
         diffFlux_Y1i[faceI] *= diffFlux_limiter;
 
         //ph0
+        diffFlux_limiter = 1;
+
         calc_diffFlux_limiter
         (
             rho0Cells[faceOwn],
@@ -2132,6 +2112,178 @@ void calc_2ph_diffFluxes_Yi_Fick
     }//end for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
 
     //end internal faces
+
+    if(debug)
+    {
+        Info<< "Boundary faces" << nl
+            << endl;
+    }
+
+    //Boundary faces
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
+        fvsPatchScalarField& pdiffFlux_Y1i = diffFlux_Y1i.boundaryField()[patchI];
+        const fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
+        const fvsPatchScalarField& prho1f = rho1f.boundaryField()[patchI];
+        const fvsPatchScalarField& pD1fi = D1fi.boundaryField()[patchI];
+        fvsPatchScalarField& pdiffFlux_Y0i = diffFlux_Y0i.boundaryField()[patchI];
+        const fvsPatchScalarField& pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
+        const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
+        const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
+        
+        label faceI = pp.start();
+
+        forAll(pY1i, fcI)
+        {
+            pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*magSf_ph0[faceI]*pgradf_Y0i[fcI];
+            pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*magSf_ph1[faceI]*pgradf_Y1i[fcI];;                            
+            faceI++;
+        }//end forAll(pY1i, fcI)
+
+        label faceI = pp.start();
+
+        if(pp.coupled())
+        {
+            const scalarField& rho1Own = rho1.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha1Own = alpha1.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y1iOwn = Y1i.boundaryField()[patchI].patchInternalField();
+            const scalarField& rho1Nei = rho1.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& alpha1Nei = alpha1.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& Y1iNei = Y1i.boundaryField()[patchI].patchNeighbourField();
+
+            const scalarField& rho0Own = rho0.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha0Own = alpha0.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y0iOwn = Y0i.boundaryField()[patchI].patchInternalField();
+            const scalarField& rho0Nei = rho0.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& alpha0Nei = alpha0.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& Y0iNei = Y0i.boundaryField()[patchI].patchNeighbourField();
+            
+            forAll(pY1i, fcI)
+            {
+                curMagSf = meshMagSf[faceI];
+                curMagSf_ph1 = magSf_ph1[faceI];                
+                curAlpha1f = curMagSf_ph1/curMagSf;
+                faceOwn = own[faceI];
+                // check diffFlux > maxDiffFlux causing unboundedness and
+                // limit diffFlux if that is the case 
+                
+                //ph1        
+                diffFlux_limiter = 1;
+
+                calc_diffFlux_limiter
+                (
+                    rho1Own[fcI],
+                    alpha1Own[fcI],
+                    Y1iOwn[fcI],
+                    VOwn[bndFaceI],
+                    rho1Nei[fcI],
+                    alpha1Nei[fcI],
+                    Y1iNei[fcI],
+                    VNei[bndFaceI],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y1i[fcI],
+                    diffFlux_limiter
+                );
+
+                if(diffFlux_limiter != 1)
+                {
+                    if(debug)
+                    {
+                        Info<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
+                            << nl
+                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  VOwn[fcI] 
+                            << nl 
+                            << "rho1Nei: " << rho1Nei[fcI] << "  alpha1Nei: " << alpha1Nei[fcI] << "  Y1iNei: " <<  Y1iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << nl
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y1i[fcI] *= diffFlux_limiter;
+                
+                //ph0        
+                diffFlux_limiter = 1;
+
+                calc_diffFlux_limiter
+                (
+                    rho0Own[fcI],
+                    alpha0Own[fcI],
+                    Y0iOwn[fcI],
+                    VOwn[bndFaceI],
+                    rho0Nei[fcI],
+                    alpha0Nei[fcI],
+                    Y0iNei[fcI],
+                    VNei[bndFaceI],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y0i[fcI],
+                    diffFlux_limiter
+                );
+
+                if(diffFlux_limiter != 1)
+                {
+                    if(debug)
+                    {
+                        Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
+                            << nl
+                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  VOwn[fcI] 
+                            << nl 
+                            << "rho0Nei: " << rho0Nei[fcI] << "  alpha0Nei: " << alpha0Nei[fcI] << "  Y0iNei: " <<  Y0iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << nl
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y0i[fcI] *= diffFlux_limiter;
+                
+                faceI++;
+            }//end forAll(pY1i, fcI)
+        }//end if(pp.coupled())        
+        else if(isA<fixedValueFvPatchScalarField>(pY1i))
+        {
+            forAll(pY1i, fcI)
+            {                                
+                const label& faceOwn = own[faceI];
+                faceI++;
+            }//end forAll(pY1i, fcI)
+        }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
+    }//end forAll(patches,patchI)
+
+    //end boundary faces
+
+    if(diff_debug)
+    {
+        Info<<"-------------------------------------" << nl
+            << "Diffusive fluxes at faces" << nl
+            << "------------------------------------" << nl
+            << endl;
+
+        Info<< "-----------------------------------------------------------------------------------------------------" << nl
+            << " Face    face_phaseState        alpha1f                alpha0f        diffFlux_Y1i       diffFlux_Y0i" << nl
+            << "-----------------------------------------------------------------------------------------------------" << nl
+            << endl;
+        
+        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+        {
+            Info<< "   " << faceI << "              " << face_phaseState[faceI] << "                " << magSf_ph1[faceI]/meshMagSf[faceI] << "                " << magSf_ph0[faceI]/meshMagSf[faceI] << "                " << diffFlux_Y1i[faceI] << "                " << diffFlux_Y0i[faceI] << endl;
+        }
+
+        Info<< "------------------------------------------------------------------------------------------------------" << nl
+            << endl;
+    }
 }
 
 
@@ -2159,7 +2311,7 @@ void calc_diffFlux_limiter
         
         if(mag(diffFlux) > maxDiffFlux)
         {
-            diff_lim_factor = 0.5*maxDiffFlux/(diffFlux + VSMALL);
+            diffFlux_limiter = 0.5*maxDiffFlux/(diffFlux + VSMALL);
         }        
     }
     else
@@ -2168,7 +2320,7 @@ void calc_diffFlux_limiter
 
         if(mag(diffFlux) > maxDiffFlux)
         {
-            diff_lim_factor = 0.5*maxDiffFlux/(diffFlux + VSMALL);
+            diffFlux_limiter = 0.5*maxDiffFlux/(diffFlux + VSMALL);
         }
     }        
 }
