@@ -39,6 +39,7 @@ SourceFiles
 #ifndef plicFuncs_H
 #define plicFuncs_H
 
+#include "fvCFD.H"
 #include "volFields.H"
 #include "surfaceFields.H"
 #include "pointFields.H"
@@ -54,6 +55,7 @@ SourceFiles
 #include "label.H"
 #include "plic.H"
 #include "dimensionedTypes.H"
+#include "syncTools.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -65,7 +67,7 @@ namespace Foam
 \*---------------------------------------------------------------------------*/
 
 namespace plicFuncs
-{
+{    
     template <class Type>
     void display_field
     (
@@ -268,9 +270,7 @@ namespace plicFuncs
     );
 
     void calc_2ph_gradf
-    (
-        const label& nSpecies,
-        const plic& interface,
+    (                
         const fvMesh& mesh,
         const labelListList& diffCellStencil,
         const volScalarField& Y1i,
@@ -280,11 +280,69 @@ namespace plicFuncs
         const List<scalar>& alpha1_flatFld_diff,
         const List<vector>& C_ph1_flatFld_diff,
         const List<vector>& C_ph0_flatFld_diff,
+        const scalarField& magSf_ph1,
+        const scalarField& magSf_ph0,
         surfaceScalarField& gradf_Y1i,
         surfaceScalarField& gradf_Y0i,
         const label& i,
         const scalar& MIN_ALPHA_DIFF,
         const bool debug
+    );
+
+    void calc_2ph_diffFluxes_Yi_Fick
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& rho1f,
+        const surfaceScalarField& rho0f,
+        const surfaceScalarField& D1fi,
+        const surfaceScalarField& D0fi,
+        const surfaceScalarField& gradf_Y1i,
+        const surfaceScalarField& gradf_Y0i,
+        const scalarField& magSf_ph1,
+        const scalarField& magSf_ph0,
+        const labelList& face_phaseState,
+        const volScalarField& rho1,
+        const volScalarField& alpha1,
+        const volScalarField& Y1i,
+        const volScalarField& rho0,
+        const volScalarField& alpha0,
+        const volScalarField& Y0i,
+        surfaceScalarField& diffFlux_Y1i,
+        surfaceScalarField& diffFlux_Y0i,
+        const label& i,    
+        const bool debug
+    );
+
+    void calc_diffFlux_limiter
+    (
+        const scalar& rhoOwn,
+        const scalar& alphaOwn,
+        const scalar& YOwn,
+        const scalar& VOwn,
+        const scalar& rhoNei,
+        const scalar& alphaNei,
+        const scalar& YNei,
+        const scalar& VNei,
+        const scalar& dt,
+        const scalar& diffFlux,
+        scalar& diffFlux_limiter
+    );
+
+    template<class Type>
+    void linearInterpolate_2ph
+    (
+        const GeometricField<Type, fvPatchField, volMesh>& Y,
+        const fvMesh& mesh,
+        const surfaceScalarField& weights,
+        GeometricField<Type, fvsPatchField, surfaceMesh>& Yf
+    );
+
+    void calc_2ph_linearInterpolation_weights
+    (
+        const fvMesh& mesh,
+        const vectorField& C_ph,
+        const vectorField& Cf_ph,
+        surfaceScalarField& weights
     );
 }
 

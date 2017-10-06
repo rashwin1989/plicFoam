@@ -32,11 +32,11 @@ Description
 const bool adjustTimeStep =
     runTime.controlDict().lookupOrDefault("adjustTimeStep", false);
 
-//scalar maxCo =
-    runTime.controlDict().lookupOrDefault<scalar>("maxCo", 1.0);
+scalar maxCo =
+    runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.5);
 
 scalar maxDiffCo = 
-    runTime.controlDict().lookupOrDefault<scalar>("maxDiffCo", 1.0);
+    runTime.controlDict().lookupOrDefault<scalar>("maxDiffCo", 0.5);
 
 
 scalar maxDeltaT =

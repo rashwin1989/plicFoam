@@ -1,15 +1,41 @@
 
 if (adjustTimeStep)
 {
-    if ((runTime.timeIndex() == 0) && (diffCoNum > SMALL))
+    if ((runTime.timeIndex() == 0))
     {
+        scalar maxDeltaTFactAdv;
+        scalar maxDeltaTFactDiff;
+        scalar maxDeltaTFact;
+
+        if(CoNum > SMALL)
+        {
+            maxDeltaTFactAdv = maxCo/CoNum;
+        }
+        else
+        {
+            maxDeltaTFactAdv = 1;
+        }
+
+        if(diffCoNum > SMALL)
+        {
+            maxDeltaTFactDiff = maxDiffCo/diffCoNum;
+        }
+        else
+        {
+            maxDeltaTFactDiff = 1;
+        }
+
+        maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactDiff);
+
         runTime.setDeltaT
         (
             min
             (
-                maxDiffCo*runTime.deltaTValue()/diffCoNum,
-                runTime.deltaTValue()
+                maxDeltaTFact*runTime.deltaTValue(),
+                maxDeltaT
             )
         );
+
+        Info<< "deltaT = " <<  runTime.deltaTValue() << endl;
     }
 }

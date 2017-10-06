@@ -25,15 +25,17 @@ Global
     setDeltaT
 
 Description
-    Reset the timestep to maintain a constant maximum diffusion courant Number.
-    Reduction of time-step is immediate, but increase is damped to avoid
-    unstable oscillations.
+    Reset the timestep to maintain a constant maximum courant number and diffusion courant Number.
+    Reduction of time-step is immediate, but increase is damped to avoid unstable oscillations.
 
 \*---------------------------------------------------------------------------*/
 
 if (adjustTimeStep)
 {
-    scalar maxDeltaTFact = maxDiffCo/(diffCoNum + SMALL);
+    scalar maxDeltaTFactAdv = maxCo/(CoNum + SMALL);
+    scalar maxDeltaTFactDiff = maxDiffCo/(diffCoNum + SMALL);
+
+    scalar maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactDiff);
 
     scalar deltaTFact = min(min(maxDeltaTFact, 1.0 + 0.1*maxDeltaTFact), 1.2);
 

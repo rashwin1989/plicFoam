@@ -16,17 +16,17 @@ Info<< "Phase-1 volume fraction = "
     << endl;
 
 scalarField& alphaCells = alpha1.internalField();
-label nCells = mesh.nCells();
+//label nCells = mesh.nCells();
 
 /*
 scalar maxAlpha1 = 1;
 scalar minAlpha1 = 0;
 label maxAlpha1Cell = -1;
 label minAlpha1Cell = -1;
+*/
 
 scalar ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
 scalar ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
-*/
 
 const labelUList& owner = mesh.owner();
 const labelUList& neighbour = mesh.neighbour();

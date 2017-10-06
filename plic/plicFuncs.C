@@ -1355,8 +1355,7 @@ void makeFlatFld
 
 
 void calc_2ph_gradf
-(
-    const plic& interface,
+(    
     const fvMesh& mesh,
     const labelListList& diffCellStencil,
     const volScalarField& Y1i,
@@ -1366,6 +1365,8 @@ void calc_2ph_gradf
     const List<scalar>& alpha1_flatFld_diff,
     const List<vector>& C_ph1_flatFld_diff,
     const List<vector>& C_ph0_flatFld_diff,
+    const scalarField& magSf_ph1,
+    const scalarField& magSf_ph0,
     surfaceScalarField& gradf_Y1i,
     surfaceScalarField& gradf_Y0i,
     const label& i,
@@ -1376,9 +1377,7 @@ void calc_2ph_gradf
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
     const vectorField& meshSf = mesh.Sf();
-    const scalarField& meshMagSf = mesh.magSf();
-    const scalarField& magSf_ph1 = interface.Af_ph1();
-    const scalarField& magSf_ph0 = interface.Af_ph0();
+    const scalarField& meshMagSf = mesh.magSf();    
 
     scalar MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;                
 
@@ -1402,6 +1401,9 @@ void calc_2ph_gradf
     scalar wNei;
 
     //Internal faces    
+    const scalarField& Y1iCells = Y1i.internalField();
+    const scalarField& Y0iCells = Y0i.internalField();
+
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
         curMagSf = meshMagSf[faceI];
@@ -1411,9 +1413,7 @@ void calc_2ph_gradf
         curAlpha0f = curMagSf_ph0/curMagSf;
         nf = meshSf[faceI]/curMagSf;
         faceOwn = own[faceI];
-        faceNei = nei[faceI];
-        donor = own[faceI];
-        rec = nei[faceI];
+        faceNei = nei[faceI];        
 
         if(debug)
         {
@@ -1957,34 +1957,40 @@ void calc_2ph_gradf
 
 void calc_2ph_diffFluxes_Yi_Fick
 (
-    const plic& interface,
-    const fvMesh& mesh,    
-    const label& i,
-    const scalar& MIN_ALPHA_DIFF,
+    const fvMesh& mesh,
+    const surfaceScalarField& rho1f,
+    const surfaceScalarField& rho0f,
+    const surfaceScalarField& D1fi,
+    const surfaceScalarField& D0fi,
+    const surfaceScalarField& gradf_Y1i,
+    const surfaceScalarField& gradf_Y0i,
+    const scalarField& magSf_ph1,
+    const scalarField& magSf_ph0,
+    const labelList& face_phaseState,
+    const volScalarField& rho1,
+    const volScalarField& alpha1,
+    const volScalarField& Y1i,
+    const volScalarField& rho0,
+    const volScalarField& alpha0,
+    const volScalarField& Y0i,
+    surfaceScalarField& diffFlux_Y1i,
+    surfaceScalarField& diffFlux_Y0i,
+    const label& i,    
     const bool debug
 )
 {
     const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
-    const vectorField& meshSf = mesh.Sf();
-    const scalarField& meshMagSf = mesh.magSf();
-    const scalarField& magSf_ph1 = interface.Af_ph1();
-    const scalarField& magSf_ph0 = interface.Af_ph0();
-    const vectorField& Cf_ph1 = interface.Cf_ph1();
-    const vectorField& Cf_ph0 = interface.Cf_ph0();
-
-    scalar MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;    
-
+    const labelList& nei = mesh.neighbour();    
+    const scalarField& meshMagSf = mesh.magSf();    
+    const scalarField& meshV = mesh.V();
+    
     scalar curMagSf; 
-    scalar curMagSf_ph1; 
-    scalar curMagSf_ph0;
-    scalar curAlpha1f; 
-    scalar curAlpha0f; 
+    scalar curMagSf_ph1;    
+    scalar curAlpha1f;    
     vector nf;
     label faceOwn; 
-    label faceNei; 
-    label don; 
-    label rec;
+    label faceNei;    
+    scalar diffFlux_limiter;
 
     if(debug)
     {
@@ -1994,15 +2000,21 @@ void calc_2ph_diffFluxes_Yi_Fick
             << endl;
     }
 
-    //Internal faces    
+    //--------------------------------------------------------------//
+    //Internal faces
+    const scalarField& rho1Cells = rho1.internalField();
+    const scalarField& alpha1Cells = alpha1.internalField();
+    const scalarField& Y1iCells = Y1i.internalField();    
+
+    const scalarField& rho0Cells = rho0.internalField();
+    const scalarField& alpha0Cells = alpha0.internalField();
+    const scalarField& Y0iCells = Y0i.internalField();    
+
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
         curMagSf = meshMagSf[faceI];
         curMagSf_ph1 = magSf_ph1[faceI];
-        curMagSf_ph0 = magSf_ph0[faceI];
-        curAlpha1f = curMagSf_ph1/curMagSf;
-        curAlpha0f = curMagSf_ph0/curMagSf;
-        nf = meshSf[faceI]/curMagSf;
+        curAlpha1f = curMagSf_ph1/curMagSf;        
         faceOwn = own[faceI];
         faceNei = nei[faceI];                
 
@@ -2010,8 +2022,8 @@ void calc_2ph_diffFluxes_Yi_Fick
         {
             Info<< "Face: " << faceI << nl
                 << "Own: " << faceOwn << "  Nei: " << faceNei << nl
-                << "Own Y_ph1: " << Y1i_flatFld_diff[faceOwn] << "  Nei Y_ph1: " << Y1i_flatFld_diff[faceNei] << nl
-                << "Own Y_ph0: " << Y0i_flatFld_diff[faceOwn] << "  Nei Y_ph0: " << Y0i_flatFld_diff[faceNei] << nl
+                << "Own Y1" << i << ": " << Y1i[faceOwn] << "  Nei Y1" << i << ": " << Y1i[faceNei] << nl
+                << "Own Y0" << i << ": " << Y0i[faceOwn] << "  Nei Y0" << i << ": " << Y0i[faceNei] << nl
                 << "mag(Sf) = " << curMagSf << "  mag(Sf)_ph1 =  " << curMagSf_ph1 << "  alpha1f = " << curAlpha1f << nl
                 << endl;
         }
@@ -2028,9 +2040,10 @@ void calc_2ph_diffFluxes_Yi_Fick
                 << endl;
         }
 
+        //----------------------------------------------------------//
         // check diffFlux > maxDiffFlux causing unboundedness and
         // limit diffFlux if that is the case 
-        scalar diffFlux_limiter = 1;
+        diffFlux_limiter = 1;
         //ph1        
         calc_diffFlux_limiter
         (
@@ -2086,13 +2099,13 @@ void calc_2ph_diffFluxes_Yi_Fick
             diffFlux_limiter
         );        
 
-        if(diffFlux_limiter != 0)
+        if(diffFlux_limiter != 1)
         {
             if(debug)
             {
                 Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
                     << nl
-                    << "alpha0f: " << curAlpha0f << "  phaseState: " << face_phaseState[faceI] << nl
+                    << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
                     << "Own " << faceOwn << "  Nei " << faceNei 
                     << nl
                     << "diffFlux_Y0" << i << ": " << diffFlux_Y0i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2102,25 +2115,55 @@ void calc_2ph_diffFluxes_Yi_Fick
                     << "rho0Nei: " << rho0Cells[faceNei] << "  alpha0Nei: " << alpha0Cells[faceNei] << "  Y0iNei: " <<  Y0iCells[faceNei] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  meshV[faceNei]
                     << nl
                     << endl;
-            }            
+            }
         }
 
         diffFlux_Y0i[faceI] *= diffFlux_limiter;
 
         //end check diffFlux > maxDiffFlux
+        //----------------------------------------------------------//
 
     }//end for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
 
-    //end internal faces
+    //end internal faces    
+    //--------------------------------------------------------------//
 
+    //--------------------------------------------------------------//
+    //Boundary faces
     if(debug)
     {
         Info<< "Boundary faces" << nl
             << endl;
     }
-
-    //Boundary faces
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    //--------------------------------------------------------------//
+    //Need volume of cell neighbour on neighbouring processor for 
+    //each coupled patch face in order to calculate flux limiter
+    //for that face
+    const label nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<scalar> VNei(nBnd);
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                const label& faceOwn = own[faceI];
+                VNei[bndFaceI] = meshV[faceOwn];
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, VNei);
+    //VNei now has cell volume of neighbouring cell for each coupled
+    //patch face
+    //--------------------------------------------------------------//
     
     forAll(patches, patchI)
     {
@@ -2135,19 +2178,21 @@ void calc_2ph_diffFluxes_Yi_Fick
         const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
         const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
         
-        label faceI = pp.start();
+        label faceI = pp.start();        
 
         forAll(pY1i, fcI)
-        {
+        {            
+            pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*magSf_ph1[faceI]*pgradf_Y1i[fcI];
             pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*magSf_ph0[faceI]*pgradf_Y0i[fcI];
-            pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*magSf_ph1[faceI]*pgradf_Y1i[fcI];;                            
             faceI++;
         }//end forAll(pY1i, fcI)
 
-        label faceI = pp.start();
+        faceI = pp.start();
 
         if(pp.coupled())
         {
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+
             const scalarField& rho1Own = rho1.boundaryField()[patchI].patchInternalField();
             const scalarField& alpha1Own = alpha1.boundaryField()[patchI].patchInternalField();
             const scalarField& Y1iOwn = Y1i.boundaryField()[patchI].patchInternalField();
@@ -2179,7 +2224,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     rho1Own[fcI],
                     alpha1Own[fcI],
                     Y1iOwn[fcI],
-                    VOwn[bndFaceI],
+                    meshV[faceOwn],
                     rho1Nei[fcI],
                     alpha1Nei[fcI],
                     Y1iNei[fcI],
@@ -2200,7 +2245,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  VOwn[fcI] 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
                             << nl 
                             << "rho1Nei: " << rho1Nei[fcI] << "  alpha1Nei: " << alpha1Nei[fcI] << "  Y1iNei: " <<  Y1iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
                             << nl
@@ -2218,7 +2263,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     rho0Own[fcI],
                     alpha0Own[fcI],
                     Y0iOwn[fcI],
-                    VOwn[bndFaceI],
+                    meshV[faceOwn],
                     rho0Nei[fcI],
                     alpha0Nei[fcI],
                     Y0iNei[fcI],
@@ -2239,7 +2284,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  VOwn[fcI] 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
                             << nl 
                             << "rho0Nei: " << rho0Nei[fcI] << "  alpha0Nei: " << alpha0Nei[fcI] << "  Y0iNei: " <<  Y0iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
                             << nl
@@ -2250,13 +2295,108 @@ void calc_2ph_diffFluxes_Yi_Fick
                 pdiffFlux_Y0i[fcI] *= diffFlux_limiter;
                 
                 faceI++;
+                bndFaceI++;
             }//end forAll(pY1i, fcI)
         }//end if(pp.coupled())        
         else if(isA<fixedValueFvPatchScalarField>(pY1i))
         {
+            const scalarField& rho1Own = rho1.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha1Own = alpha1.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y1iOwn = Y1i.boundaryField()[patchI].patchInternalField();            
+
+            const scalarField& rho0Own = rho0.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha0Own = alpha0.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y0iOwn = Y0i.boundaryField()[patchI].patchInternalField();
+
             forAll(pY1i, fcI)
-            {                                
-                const label& faceOwn = own[faceI];
+            {                
+                curMagSf = meshMagSf[faceI];
+                curMagSf_ph1 = magSf_ph1[faceI];                
+                curAlpha1f = curMagSf_ph1/curMagSf;
+                faceOwn = own[faceI];
+                // check diffFlux > maxDiffFlux causing unboundedness and
+                // limit diffFlux if that is the case 
+                
+                //ph1        
+                diffFlux_limiter = 1;
+
+                if(pdiffFlux_Y1i[fcI] > 0)
+                {
+                    calc_diffFlux_limiter
+                    (
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y1i[fcI],
+                        diffFlux_limiter
+                    );
+                }
+
+                if(diffFlux_limiter != 1)
+                {
+                    if(debug)
+                    {
+                        Info<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
+                            << nl
+                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl                             
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y1i[fcI] *= diffFlux_limiter;
+                
+                //ph0        
+                diffFlux_limiter = 1;
+
+                if(pdiffFlux_Y1i[fcI] > 0)
+                {
+                    calc_diffFlux_limiter
+                    (
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y0i[fcI],
+                        diffFlux_limiter
+                    );
+                }
+
+                if(diffFlux_limiter != 1)
+                {
+                    if(debug)
+                    {
+                        Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
+                            << nl
+                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl                            
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y0i[fcI] *= diffFlux_limiter;
+
                 faceI++;
             }//end forAll(pY1i, fcI)
         }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
@@ -2264,11 +2404,11 @@ void calc_2ph_diffFluxes_Yi_Fick
 
     //end boundary faces
 
-    if(diff_debug)
+    if(debug)
     {
-        Info<<"-------------------------------------" << nl
-            << "Diffusive fluxes at faces" << nl
-            << "------------------------------------" << nl
+        Info<<"---------------------------------------------" << nl
+            << "Diffusive fluxes at faces for Y" << i << nl
+            << "--------------------------------------------" << nl
             << endl;
 
         Info<< "-----------------------------------------------------------------------------------------------------" << nl
@@ -2323,6 +2463,139 @@ void calc_diffFlux_limiter
             diffFlux_limiter = 0.5*maxDiffFlux/(diffFlux + VSMALL);
         }
     }        
+}
+
+
+template<class Type>
+void linearInterpolate_2ph
+(
+    const GeometricField<Type, fvPatchField, volMesh>& Y,
+    const fvMesh& mesh,
+    const surfaceScalarField& weights,
+    GeometricField<Type, fvsPatchField, surfaceMesh>& Yf
+)
+{
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+
+    const Field<Type>& YCells = Y.internalField();
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        label faceOwn = own[faceI];
+        label faceNei = nei[faceI];
+        scalar wf = weights[faceI];
+
+        Yf[faceI] = wf*YCells[faceOwn] + (1.0 - wf)*YCells[faceNei];
+    }
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    forAll(Yf.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        fvsPatchField<Type>& pYf = Yf.boundaryField()[patchI];
+        const fvPatchField<Type>& pY = Y.boundaryField()[patchI];
+        const fvsPatchScalarField& pw = weights.boundaryField()[patchI];
+        if(pp.coupled())
+        {
+            const Field<Type>& pYOwn = pY.patchInternalField();
+            const Field<Type>& pYNei = pY.patchNeighbourField();
+            forAll(pp, fcI)
+            {
+                scalar wf = pw[fcI];
+                pYf[fcI] = wf*pYOwn[fcI] + (1.0 - wf)*pYNei[fcI];
+            }
+        }
+        else
+        {
+            forAll(pp, fcI)
+            {
+                scalar wf = pw[fcI];
+                pYf[fcI] = wf*pY[fcI] + (1.0 - wf)*pY[fcI];
+            }
+        }
+    }
+}
+
+
+void calc_2ph_linearInterpolation_weights
+(
+    const fvMesh& mesh,
+    const vectorField& C_ph,
+    const vectorField& Cf_ph,
+    surfaceScalarField& weights
+)
+{
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const vectorField& Sf = mesh.Sf();
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {        
+        scalar SfdOwn = mag(Sf[faceI] & (Cf_ph[faceI] - C_ph[own[faceI]]));
+        scalar SfdNei = mag(Sf[faceI] & (C_ph[nei[faceI]] - Cf_ph[faceI]));
+        weights[faceI] = SfdNei/(SfdOwn + SfdNei);        
+    }
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    //--------------------------------------------------------------//
+    //Need phase centroid in cell neighbour on neighbouring 
+    //processor for each coupled patch face in order to 
+    //calculate weight for that face
+    const label nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<vector> CNei(nBnd);
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                CNei[bndFaceI] = C_ph[own[faceI]];
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, CNei);
+    //CNei now has phase centroid of neighbouring cell for each 
+    //coupled patch face
+    //--------------------------------------------------------------//
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        fvsPatchScalarField& pw = weights.boundaryField()[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                scalar SfdOwn = mag(Sf[faceI] & (Cf_ph[faceI] - C_ph[own[faceI]]));
+                scalar SfdNei = mag(Sf[faceI] & (CNei[bndFaceI] - Cf_ph[faceI]));
+                weights[faceI] = SfdNei/(SfdOwn + SfdNei);
+                pw[fcI] = SfdNei/(SfdOwn + SfdNei);
+                faceI++;
+                bndFaceI++;
+            }
+        }
+        else
+        {
+            label faceI = pp.start();            
+            forAll(pp, fcI)
+            {                
+                weights[faceI] = 1.0;
+                pw[fcI] = 1.0;
+                faceI++;                
+            }
+        }
+    }
 }
 
 

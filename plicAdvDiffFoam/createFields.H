@@ -340,18 +340,47 @@ for(label i=0; i<(nSpecies - 1); i++)
     );
 }
 
-const scalarField& rho1Cells = rho1.internalField();
-const scalarField& rho0Cells = rho0.internalField();
-const scalarField& alpha1Cells = alpha1.internalField();
-const scalarField& alpha0Cells = alpha0.internalField();
+scalarField& rho1Cells = rho1.internalField();
+scalarField& rho0Cells = rho0.internalField();
+scalarField& alpha1Cells = alpha1.internalField();
+scalarField& alpha0Cells = alpha0.internalField();
 
 // Y diffusion
+
+surfaceScalarField rho1f
+(
+    IOobject
+    (
+        "rho1f",
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    linearInterpolate(rho1)
+);
+
+surfaceScalarField rho0f
+(
+    IOobject
+    (
+        "rho0f",
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    linearInterpolate(rho0)
+);
 
 PtrList<dimensionedScalar> D1_0(nSpecies);
 PtrList<dimensionedScalar> D0_0(nSpecies);
 
 PtrList<volScalarField> D1(nSpecies);
 PtrList<volScalarField> D0(nSpecies);
+
+PtrList<surfaceScalarField> D1f(nSpecies);
+PtrList<surfaceScalarField> D0f(nSpecies);
 
 for(label i=0; i<nSpecies; i++)
 {
@@ -378,9 +407,29 @@ for(label i=0; i<nSpecies; i++)
                 mesh.time().timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
+            mesh,
             D1_0[i]            
+        )
+    );
+
+    fieldName = "D1f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            linearInterpolate(D1[i])
         )
     );
 
@@ -407,9 +456,29 @@ for(label i=0; i<nSpecies; i++)
                 mesh.time().timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
+            mesh,
             D0_0[i]            
+        )
+    );
+
+    fieldName = "D0f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            linearInterpolate(D0[i])
         )
     );
 }
@@ -503,14 +572,42 @@ for(label i=0; i<nSpecies; i++)
     );
 }
 
+surfaceScalarField w_ph1
+(
+    IOobject
+    (
+        "w_ph1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("w_ph1", dimless, 1)
+);
+
+surfaceScalarField w_ph0
+(
+    IOobject
+    (
+        "w_ph0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("w_ph0", dimless, 1)
+);
+
 centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
 const labelListList& diffCellStencil = diffCellStencilObject.stencil();
 
-const labelList& own = mesh.owner();
-const labelList& nei = mesh.neighbour();
+//const labelList& own = mesh.owner();
+//const labelList& nei = mesh.neighbour();
 //const vectorField& meshC = mesh.C();
-const vectorField& meshSf = mesh.Sf();
-const scalarField& meshMagSf = mesh.magSf();
+//const vectorField& meshSf = mesh.Sf();
+//const scalarField& meshMagSf = mesh.magSf();
 
 const mapDistribute& diffMap = diffCellStencilObject.map();
 label n_flatFld_diff = diffMap.constructSize();
@@ -533,21 +630,33 @@ List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 
 // tolerances and max iters
-label ALPHA_BOUND_ITERS_MAX = 108;
+//label ALPHA_BOUND_ITERS_MAX = 108;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
+scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
+scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 
 // debug bool switches
+/*
 bool debug;
 debug = transPropDict.lookupOrDefault("debug", false);
+*/
 bool unbound_debug;
 unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+/*
 bool adv_debug;
 adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
+*/
 bool adv_debug2;
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
+/*
+bool diff_debug;
+diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
+*/
+bool diff_debug2;
+diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 
 // 2-D bool switch
 bool twoD;

@@ -38,6 +38,7 @@ Description
 #include "plicFuncs.H"
 #include "IOdictionary.H"
 #include "centredCPCCellToCellStencilObject.H"
+#include "centredCFCCellToCellStencilObject.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
     //#include "initContinuityErrs.H"
     #include "createFields.H"
     #include "CourantNo.H"
+    #include "diffCourantNo.H"
     #include "setInitialDeltaT.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -67,7 +69,8 @@ int main(int argc, char *argv[])
         // and Diff Courant numbers. Use a "setDeltaT.H" file which scales dt
         // according to both Adv and Diff Courant numbers
         #include "readTimeControls.H"
-        #include "CourantNo.H"        
+        #include "CourantNo.H"
+        #include "diffCourantNo.H"
         #include "setDeltaT.H"
         //--------------------------------------------------------------------//
 
