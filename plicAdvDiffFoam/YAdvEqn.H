@@ -130,17 +130,17 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     Info<< "Phase-0 Yi= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C0i) = " << min(C0i).value()
+        << endl;
+    Info<< "Min(C0i) = " << min(C0i).value()
         << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
+        << endl;
+    Info<< "Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()
-        << nl
-        << "C0i undershoot = " << min(min(C0i).value(), 0)
+        << endl;
+    Info<< "C0i undershoot = " << min(min(C0i).value(), 0)
         << "  C0i overshoot = " << max((max(C0i).value() - rho0_0.value()), 0)
-        << nl
-        << "Y0i undershoot = " << min(min(Y0i).value(), 0)
+        << endl;
+    Info<< "Y0i undershoot = " << min(min(Y0i).value(), 0)
         << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
         << endl;        
           

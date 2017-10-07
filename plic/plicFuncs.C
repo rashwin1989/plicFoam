@@ -1575,7 +1575,7 @@ void calc_2ph_gradf
     scalar d;
     label bndFaceI;
 
-    forAll(patches,patchI)
+    forAll(patches, patchI)
     {
         const polyPatch& pp = patches[patchI];
 
@@ -1740,7 +1740,7 @@ void calc_2ph_gradf
 
     scalar faceGrad = 0;
 
-    forAll(patches,patchI)
+    forAll(Y1i.boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];        
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
@@ -2165,7 +2165,7 @@ void calc_2ph_diffFluxes_Yi_Fick
     //patch face
     //--------------------------------------------------------------//
     
-    forAll(patches, patchI)
+    forAll(Y1i.boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
@@ -2501,7 +2501,7 @@ void linearInterpolate_2ph
         {
             const Field<Type>& pYOwn = pY.patchInternalField();
             const Field<Type>& pYNei = pY.patchNeighbourField();
-            forAll(pp, fcI)
+            forAll(pYf, fcI)
             {
                 scalar wf = pw[fcI];
                 pYf[fcI] = wf*pYOwn[fcI] + (1.0 - wf)*pYNei[fcI];
@@ -2509,7 +2509,7 @@ void linearInterpolate_2ph
         }
         else
         {
-            forAll(pp, fcI)
+            forAll(pYf, fcI)
             {
                 scalar wf = pw[fcI];
                 pYf[fcI] = wf*pY[fcI] + (1.0 - wf)*pY[fcI];
@@ -2567,7 +2567,7 @@ void calc_2ph_linearInterpolation_weights
     //coupled patch face
     //--------------------------------------------------------------//
 
-    forAll(patches, patchI)
+    forAll(weights.boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];
         fvsPatchScalarField& pw = weights.boundaryField()[patchI];
@@ -2575,24 +2575,20 @@ void calc_2ph_linearInterpolation_weights
         {
             label faceI = pp.start();
             label bndFaceI = pp.start() - mesh.nInternalFaces();
-            forAll(pp, fcI)
-            {
+            forAll(pw, fcI)
+            {                
                 scalar SfdOwn = mag(Sf[faceI] & (Cf_ph[faceI] - C_ph[own[faceI]]));
-                scalar SfdNei = mag(Sf[faceI] & (CNei[bndFaceI] - Cf_ph[faceI]));
-                weights[faceI] = SfdNei/(SfdOwn + SfdNei);
+                scalar SfdNei = mag(Sf[faceI] & (CNei[bndFaceI] - Cf_ph[faceI]));                
                 pw[fcI] = SfdNei/(SfdOwn + SfdNei);
                 faceI++;
                 bndFaceI++;
             }
         }
         else
-        {
-            label faceI = pp.start();            
-            forAll(pp, fcI)
+        {            
+            forAll(pw, fcI)
             {                
-                weights[faceI] = 1.0;
-                pw[fcI] = 1.0;
-                faceI++;                
+                pw[fcI] = 1.0;                
             }
         }
     }

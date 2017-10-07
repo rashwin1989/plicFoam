@@ -323,4 +323,4 @@ Y0[nSpecies - 1].max(0.0);
 Y0[nSpecies - 1].min(1.0);
 C0[nSpecies - 1] = rho0*alpha0*Y0[nSpecies - 1];
 
-Info<< "Done YEqns" << endl;
+Info<< "Done YDiffEqns" << endl;

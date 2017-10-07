@@ -24,7 +24,7 @@
     Author
     Ashwin Raghavan
 
-\*---------------------------------------------------------------------------*/
+    \*---------------------------------------------------------------------------*/
 
 //May all your coding and simulations work perfectly to bring you Success in all your work.
 
@@ -800,7 +800,7 @@ void Foam::plic::plane_cell_intersect
             {
                 FatalErrorIn("void plic::plane_cell_intersect(const Plane&,const cell&,const faceList&,const pointField&,cell&,cell&,faceList&,pointField&,face&,labelList&,labelList&)")
                     << "Intfc face construction failed"
-                    << abort(FatalError);
+                        << abort(FatalError);
             }
 
         }while(intfc_pts_lbls.size() > 0);
@@ -1185,7 +1185,7 @@ void Foam::plic::calcFaceFluxTets
 
     scalar den = (niHat & B);
     /*if(mag(den)<VSMALL)
-    {
+        {
         den += VSMALL;
         }*/
 
@@ -1700,35 +1700,35 @@ Foam::scalar Foam::plic::tet_cell_intersect
     }
 
     /*    if(alpha_cellI < ALPHA_2PH_MIN)
-    {
+        {
         if(debugF2_)
         {
-            Info<< "Flux contribution from cell " << cellI << ":  " << 0 << nl << endl;
+        Info<< "Flux contribution from cell " << cellI << ":  " << 0 << nl << endl;
         }
 
         return 0;
-    }
-    else
-    {
+        }
+        else
+        {
         scalar V_alpha1 = 0;
         List<Plane> cellPlns = cellPlns_flatFld_[cellI];
 
         if((alpha_cellI < ALPHA_2PH_MAX) && (nHat_cellI_mag > GRADALPHA_MIN))
         {
-            Plane intfcPln(C_intfc_flatFld_[cellI], nHat_flatFld_[cellI]);
-            cellPlns.resize(cellPlns.size()+1);
-            cellPlns[cellPlns.size()-1] = intfcPln;
+        Plane intfcPln(C_intfc_flatFld_[cellI], nHat_flatFld_[cellI]);
+        cellPlns.resize(cellPlns.size()+1);
+        cellPlns[cellPlns.size()-1] = intfcPln;
         }
 
         tet_slice_with_plns(curTet, cellPlns, V_alpha1, 0);
 
         if(debugF2_)
         {
-            Info<< "Flux contribution from cell " << cellI << ":  " << V_alpha1 << nl << endl;
+        Info<< "Flux contribution from cell " << cellI << ":  " << V_alpha1 << nl << endl;
         }
 
         return V_alpha1;
-    }
+        }
         */
 }
 
@@ -2256,40 +2256,40 @@ Foam::plic::plic
     forAll(fY1_, i)
     {
         fY1_.set
-        (
-            i,
-            new surfaceScalarField
             (
-                IOobject
+                i,
+                new surfaceScalarField
                 (
-                    "fY1"+Foam::name(i),
-                    mesh.time().timeName(),
+                    IOobject
+                    (
+                        "fY1"+Foam::name(i),
+                        mesh.time().timeName(),
+                        mesh,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
                     mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedScalar("zeroY", dimless, 0)
-            )
-        );
+                    dimensionedScalar("zeroY", dimless, 0)
+                )
+            );
 
         fY0_.set
-        (
-            i,
-            new surfaceScalarField
             (
-                IOobject
+                i,
+                new surfaceScalarField
                 (
-                    "fY0"+Foam::name(i),
-                    mesh.time().timeName(),
+                    IOobject
+                    (
+                        "fY0"+Foam::name(i),
+                        mesh.time().timeName(),
+                        mesh,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
                     mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                dimensionedScalar("zeroY", dimless, 0)
-            )
-        );
+                    dimensionedScalar("zeroY", dimless, 0)
+                )
+            );
     }
 
     rho1_flatFld_.setSize(nflatFld);
@@ -2366,20 +2366,20 @@ Foam::plic::plic
     }
 
     /*    if(debug_)
-    {
+        {
         Info<< "//====================================================================\\" << nl
-            << "                   Begin 2-phase flux calculation" << nl
-            << "\\====================================================================//" << nl << endl;
-    }
+        << "                   Begin 2-phase flux calculation" << nl
+        << "\\====================================================================//" << nl << endl;
+        }
 
-    calc_face_phaseFluxes();
+        calc_face_phaseFluxes();
 
-    if(debug_)
-    {
+        if(debug_)
+        {
         Info<< "//====================================================================\\" << nl
-            << "                   Done 2-phase flux calculation" << nl
-            << "\\====================================================================//" << nl << endl;
-    }
+        << "                   Done 2-phase flux calculation" << nl
+        << "\\====================================================================//" << nl << endl;
+        }
         */
 }
 
@@ -2719,20 +2719,20 @@ void Foam::plic::intfc_correct()
             }
 
             intfc_cell_reconstruct
-            (
-                nHatCells[cellI],
-                alpha1Cells[cellI],
-                curCell,
-                faces,
-                points,
-                ph1_cell,
-                ph0_cell,
-                fcs,
-                pts,
-                intfc_face,
-                ph1_fcLbls,
-                ph0_fcLbls
-            ); 
+                (
+                    nHatCells[cellI],
+                    alpha1Cells[cellI],
+                    curCell,
+                    faces,
+                    points,
+                    ph1_cell,
+                    ph0_cell,
+                    fcs,
+                    pts,
+                    intfc_face,
+                    ph1_fcLbls,
+                    ph0_fcLbls
+                ); 
 
             if(brent_iters_tmp_ > brent_iters_max_)
             {
@@ -2980,20 +2980,20 @@ void Foam::plic::intfc_correct()
                     }
 
                     intfc_cell_reconstruct
-                    (
-                        pnHat[faceI],
-                        pAlpha1[faceI],
-                        curCell,
-                        curCellInfo.faces(),
-                        curCellInfo.points(),
-                        ph1_cell,
-                        ph0_cell,
-                        fcs,
-                        pts,
-                        intfc_face,
-                        ph1_fcLbls,
-                        ph0_fcLbls
-                    );
+                        (
+                            pnHat[faceI],
+                            pAlpha1[faceI],
+                            curCell,
+                            curCellInfo.faces(),
+                            curCellInfo.points(),
+                            ph1_cell,
+                            ph0_cell,
+                            fcs,
+                            pts,
+                            intfc_face,
+                            ph1_fcLbls,
+                            ph0_fcLbls
+                        );
 
                     if(brent_iters_tmp_ > brent_iters_max_)
                     {
@@ -4015,6 +4015,36 @@ void Foam::plic::calc_2ph_advFluxes
     {
         fY1_[i] = fvc::interpolate(Y1[i], "Yi");
         fY0_[i] = fvc::interpolate(Y0[i], "Yi");
+        //plicFuncs::display_surfaceField(fY0_[i], mesh());
+
+        /*
+        forAll(fY0_[i].boundaryField(), patchI)
+        {
+            const polyPatch& pp = mesh().boundaryMesh()[patchI];
+            fvsPatchScalarField& pfY0i = fY0_[i].boundaryField()[patchI];
+            fvsPatchScalarField& pfY1i = fY0_[i].boundaryField()[patchI];
+            const fvPatchScalarField& pY0i = Y0[i].boundaryField()[patchI];
+            const fvPatchScalarField& pY1i = Y1[i].boundaryField()[patchI];
+            if(isA<zeroGradientFvPatchScalarField>(pY0i))
+            {
+                label faceI = pp.start();
+
+                forAll(pY0i, fcI)
+                {
+                    label faceOwn = own[faceI];
+                    Info<< "face " << faceI
+                        << nl
+                        << "pfY0i[fcI]: " << pfY0i[fcI]
+                        << "  Y0i[faceOwn]: " << Y0[i].internalField()[faceOwn]
+                        << "  pY0i[fcI]: " << pY0i[fcI]
+                        << endl;
+                    pfY0i[fcI] = Y0[i].internalField()[faceOwn];
+                    pfY1i[fcI] = Y1[i].internalField()[faceOwn];
+                    faceI++;
+                }
+            }
+        }
+            */
     }
 
     if(debugF_)
@@ -4304,7 +4334,7 @@ void Foam::plic::calc_2ph_advFluxes
             << "========================================================================" << nl << endl;
     }
 
-    forAll(patches, patchI)
+    forAll(phi_.boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];
         const fvsPatchScalarField& pphi = phi_.boundaryField()[patchI];
@@ -4572,11 +4602,12 @@ void Foam::plic::calc_2ph_advFluxes
                     for(label i=0; i<(nSpecies_ - 1); i++)
                     {
                         advFlux_Y1[i].boundaryField()[patchI][fcI] = 0;
-                        advFlux_Y0[i].boundaryField()[patchI][fcI] = phi_[faceI]*frho0_.boundaryField()[patchI][fcI]*fY0_[i].boundaryField()[patchI][fcI];
+                        advFlux_Y0[i].boundaryField()[patchI][fcI] = pphi[fcI]*frho0_.boundaryField()[patchI][fcI]*fY0_[i].boundaryField()[patchI][fcI];
 
                         if(debugF_)
                         {
                             Info<< "Total Y1[" << i << "] face flux:  " << advFlux_Y1[i].boundaryField()[patchI][fcI] << nl
+                                << "frho0: " << frho0_.boundaryField()[patchI][fcI] << "  fY0i: " <<  fY0_[i].boundaryField()[patchI][fcI] << nl
                                 << "Total Y0[" << i << "] face flux:  " << advFlux_Y0[i].boundaryField()[patchI][fcI] << endl;                        
                         }
                     }
