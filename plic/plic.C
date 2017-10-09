@@ -2772,7 +2772,7 @@ void Foam::plic::intfc_correct()
 
             for(label faceI=0; faceI<curCell.size(); faceI++)
             {
-                label curFc_lbl = curCell[faceI];
+                label curFc_lbl = curCell[faceI];                
 
                 if(ph1_fcLbls[faceI] == -1)
                 {
