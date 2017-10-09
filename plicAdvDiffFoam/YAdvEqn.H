@@ -2,6 +2,8 @@
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
+const cellList& meshCells = mesh.cells();
+
 for(label i=0; i<(nSpecies - 1); i++)
 {
     volScalarField& Y1i = Y1[i];
@@ -16,19 +18,42 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     surfaceScalarField& advFlux_Y1i = advFlux_Y1[i];
     surfaceScalarField& advFlux_Y0i = advFlux_Y0[i];
-    
 
     //Phase-1
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
     scalarField& surfInt_advFlux_Y1iCells = surfInt_advFlux_Y1i.internalField();
 
     forAll(C1iCells,cellI)
-    {
+    {        
         if(adv_debug2)
         {
-            Info<< "Solving Y1[" << i << "] eqn in cell " << cellI << nl
-                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << nl
-                << "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y1[" << i << "] adv eqn in cell " << cellI << nl
+                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    << "face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
+                        << nl
+                        << "Af_ph1: " << Af_ph1[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -103,9 +128,33 @@ for(label i=0; i<(nSpecies - 1); i++)
     {
         if(adv_debug2)
         {
-            Info<< "Solving Y0[" << i << "] eqn in cell " << cellI << nl
-                << "Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << nl
-                << "div(advFlux) = " << surfInt_advFlux_Y0iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y0[" << i << "] adv eqn in cell " << cellI << nl
+                << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;           
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
+                        << nl
+                        << "Af_ph0: " << Af_ph0[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(advFlux) = " << surfInt_advFlux_Y0iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 

@@ -11,18 +11,6 @@ plicFuncs::makeFlatFld(interface.C_ph0(), diffMap, C_ph0_flatFld_diff);
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
-//Obtain references to phase centroids, phase face centres, phase face areas, face phase states
-const scalarField& Af_ph1 = interface.Af_ph1();
-const scalarField& Af_ph0 = interface.Af_ph0();
-const vectorField& Cf_ph1 = interface.Cf_ph1();
-const vectorField& Cf_ph0 = interface.Cf_ph0();
-const vectorField& C_ph1 = interface.C_ph1();
-const vectorField& C_ph0 = interface.C_ph0();
-const labelList& face_phaseState = interface.face_phaseState();
-//Done obtain references to phase centroids, phase face centres, phase face areas, face phase states
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
 //Linear interpolate density and diffusivity to faces in both phases
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
@@ -126,7 +114,7 @@ for(label i=0; i<nSpecies; i++)
 //Solve species diffusion equations in both phases
 for(label i=0; i<(nSpecies - 1); i++)
 {
-    if(diff_debug2)
+    if(diff_debug)
     {
         Info<< "-----------------------------------" << nl
             << "              Field Y[" << i << "]" << nl
@@ -154,11 +142,35 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     forAll(C1iCells,cellI)
     {
-        if(diff_debug2)
+        if(diff_debug)
         {
-            Info<< "Solving Y1[" << i << "] eqn in cell " << cellI << nl
-                << "Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << nl
-                << "div(diffFlux) = " << surfInt_diffFlux_Y1iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y1[" << i << "] diff eqn in cell " << cellI << nl
+                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    <<"face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
+                        << nl
+                        << "Af_ph1: " << Af_ph1[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(diffFlux) = " << surfInt_diffFlux_Y1iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -173,7 +185,7 @@ for(label i=0; i<(nSpecies - 1); i++)
             Y1iCells[cellI] = C1iCells[cellI]/alpha1Cells[cellI]/rho1Cells[cellI];
         }
 
-        if(diff_debug2)
+        if(diff_debug)
         {
             Info<< "C1i = " << C1iCells[cellI] << nl
                 << "Y1i = " << Y1iCells[cellI] << nl
@@ -234,11 +246,35 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     forAll(C0iCells,cellI)
     {
-        if(diff_debug2)
+        if(diff_debug)
         {
-            Info<< "Solving Y0[" << i << "] eqn in cell " << cellI << nl
-                << "Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << nl
-                << "div(diffFlux) = " << surfInt_diffFlux_Y0iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y0[" << i << "] diff eqn in cell " << cellI << nl
+                << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
+                        << nl
+                        << "Af_ph0: " << Af_ph0[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(diffFlux) = " << surfInt_diffFlux_Y0iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -253,7 +289,7 @@ for(label i=0; i<(nSpecies - 1); i++)
             Y0iCells[cellI] = C0iCells[cellI]/alpha0Cells[cellI]/rho0Cells[cellI];
         }
 
-        if(diff_debug2)
+        if(diff_debug)
         {
             Info<< "C0i = " << C0iCells[cellI] << nl
                 << "Y0i = " << Y0iCells[cellI] << nl

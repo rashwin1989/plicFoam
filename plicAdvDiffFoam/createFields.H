@@ -603,11 +603,23 @@ surfaceScalarField w_ph0
 centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
 const labelListList& diffCellStencil = diffCellStencilObject.stencil();
 
-//const labelList& own = mesh.owner();
-//const labelList& nei = mesh.neighbour();
+const labelList& own = mesh.owner();
+const labelList& nei = mesh.neighbour();
 //const vectorField& meshC = mesh.C();
 //const vectorField& meshSf = mesh.Sf();
 //const scalarField& meshMagSf = mesh.magSf();
+
+//------------------------------------------------------------------//
+//Obtain references to phase centroids, phase face centres, phase face areas, face phase states
+const scalarField& Af_ph1 = interface.Af_ph1();
+const scalarField& Af_ph0 = interface.Af_ph0();
+const vectorField& Cf_ph1 = interface.Cf_ph1();
+const vectorField& Cf_ph0 = interface.Cf_ph0();
+const vectorField& C_ph1 = interface.C_ph1();
+const vectorField& C_ph0 = interface.C_ph0();
+const labelList& face_phaseState = interface.face_phaseState();
+//Done obtain references to phase centroids, phase face centres, phase face areas, face phase states
+//------------------------------------------------------------------//
 
 const mapDistribute& diffMap = diffCellStencilObject.map();
 label n_flatFld_diff = diffMap.constructSize();
@@ -651,10 +663,10 @@ adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 */
 bool adv_debug2;
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
-/*
+
 bool diff_debug;
 diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
-*/
+
 bool diff_debug2;
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 
