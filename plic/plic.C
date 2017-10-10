@@ -2719,20 +2719,20 @@ void Foam::plic::intfc_correct()
             }
 
             intfc_cell_reconstruct
-                (
-                    nHatCells[cellI],
-                    alpha1Cells[cellI],
-                    curCell,
-                    faces,
-                    points,
-                    ph1_cell,
-                    ph0_cell,
-                    fcs,
-                    pts,
-                    intfc_face,
-                    ph1_fcLbls,
-                    ph0_fcLbls
-                ); 
+            (
+                nHatCells[cellI],
+                alpha1Cells[cellI],
+                curCell,
+                faces,
+                points,
+                ph1_cell,
+                ph0_cell,
+                fcs,
+                pts,
+                intfc_face,
+                ph1_fcLbls,
+                ph0_fcLbls
+            ); 
 
             if(brent_iters_tmp_ > brent_iters_max_)
             {
@@ -2772,74 +2772,111 @@ void Foam::plic::intfc_correct()
 
             for(label faceI=0; faceI<curCell.size(); faceI++)
             {
-                label curFc_lbl = curCell[faceI];                
+                label curFc_lbl = curCell[faceI];
+                label curFcOwn = own[curFc_lbl];
 
-                if(ph1_fcLbls[faceI] == -1)
+                if(curFcOwn == cellI)
                 {
-                    face ph0_curFc = fcs[ph0_fcLbls[faceI]];
-                    Cf_ph0_[curFc_lbl] = ph0_curFc.centre(pts);
-                    Af_ph0_[curFc_lbl] = ph0_curFc.mag(pts);
-                    Cf_ph1_[curFc_lbl] = Cf_ph0_[curFc_lbl];
-                    Af_ph1_[curFc_lbl] = 0;
-                    face_phaseState_[curFc_lbl] = 0;
-                    fc_set[curFc_lbl] = true;
-                }//end if(ph1_fcLbls[faceI] == -1) 
-                else if(ph0_fcLbls[faceI] == -1)
-                {
-                    face ph1_curFc = fcs[ph1_fcLbls[faceI]];
-                    Cf_ph1_[curFc_lbl] = ph1_curFc.centre(pts);
-                    Af_ph1_[curFc_lbl] = ph1_curFc.mag(pts);
-                    Cf_ph0_[curFc_lbl] = Cf_ph1_[curFc_lbl];
-                    Af_ph0_[curFc_lbl] = 0;
-                    face_phaseState_[curFc_lbl] = 1;
-                    fc_set[curFc_lbl] = true;
-                }//end if(ph1_fcLbls[faceI] == -1)
-                else if(ph1_fcLbls[faceI] == -2)
-                {
-                    Cf_ph1_[curFc_lbl] = faces[curFc_lbl].centre(points);
-                    Af_ph1_[curFc_lbl] = 0;
-                    Cf_ph0_[curFc_lbl] = faces[curFc_lbl].centre(points);
-                    Af_ph0_[curFc_lbl] = 0;
-                    face_phaseState_[curFc_lbl] = 3;
-                    fc_set[curFc_lbl] = true;
-                }//end if(ph1_fcLbls[faceI] == -1)
-                else
-                {
-                    face ph0_curFc = fcs[ph0_fcLbls[faceI]];
-                    face ph1_curFc = fcs[ph1_fcLbls[faceI]];
-                    if(fc_set[curFc_lbl])
+                    if(ph1_fcLbls[faceI] == -1)
                     {
-                        Cf_ph0_[curFc_lbl] += ph0_curFc.centre(pts);
-                        Af_ph0_[curFc_lbl] += ph0_curFc.mag(pts);
-                        Cf_ph0_[curFc_lbl] *= 0.5;
-                        Af_ph0_[curFc_lbl] *= 0.5;
-                        Cf_ph1_[curFc_lbl] += ph1_curFc.centre(pts);
-                        Af_ph1_[curFc_lbl] += ph1_curFc.mag(pts);
-                        Cf_ph1_[curFc_lbl] *= 0.5;
-                        Af_ph1_[curFc_lbl] *= 0.5;
-                    }
+                        face ph0_curFc = fcs[ph0_fcLbls[faceI]];
+                        Cf_ph0_own_[curFc_lbl] = ph0_curFc.centre(pts);
+                        Af_ph0_own_[curFc_lbl] = ph0_curFc.mag(pts);
+                        Cf_ph1_own_[curFc_lbl] = Cf_ph0_[curFc_lbl];
+                        Af_ph1_own_[curFc_lbl] = 0;
+                        face_phaseState_own_[curFc_lbl] = 0;                        
+                    }//end if(ph1_fcLbls[faceI] == -1) 
+                    else if(ph0_fcLbls[faceI] == -1)
+                    {
+                        face ph1_curFc = fcs[ph1_fcLbls[faceI]];
+                        Cf_ph1_own_[curFc_lbl] = ph1_curFc.centre(pts);
+                        Af_ph1_own_[curFc_lbl] = ph1_curFc.mag(pts);
+                        Cf_ph0_own_[curFc_lbl] = Cf_ph1_[curFc_lbl];
+                        Af_ph0_own_[curFc_lbl] = 0;
+                        face_phaseState_own_[curFc_lbl] = 1;                        
+                    }//end if(ph1_fcLbls[faceI] == -1)
+                    else if(ph1_fcLbls[faceI] == -2)
+                    {
+                        Cf_ph1_own_[curFc_lbl] = faces[curFc_lbl].centre(points);
+                        Af_ph1_own_[curFc_lbl] = 0;
+                        Cf_ph0_own_[curFc_lbl] = faces[curFc_lbl].centre(points);
+                        Af_ph0_own_[curFc_lbl] = 0;
+                        face_phaseState_own_[curFc_lbl] = 3;                        
+                    }//end if(ph1_fcLbls[faceI] == -1)
                     else
                     {
-                        Cf_ph0_[curFc_lbl] = ph0_curFc.centre(pts);
-                        Af_ph0_[curFc_lbl] = ph0_curFc.mag(pts);
-                        Cf_ph1_[curFc_lbl] = ph1_curFc.centre(pts);
-                        Af_ph1_[curFc_lbl] = ph1_curFc.mag(pts);
-                        fc_set[curFc_lbl] = true;
+                        face ph0_curFc = fcs[ph0_fcLbls[faceI]];
+                        face ph1_curFc = fcs[ph1_fcLbls[faceI]];                        
+                        Cf_ph0_own_[curFc_lbl] = ph0_curFc.centre(pts);
+                        Af_ph0_own_[curFc_lbl] = ph0_curFc.mag(pts);
+                        Cf_ph1_own_[curFc_lbl] = ph1_curFc.centre(pts);
+                        Af_ph1_own_[curFc_lbl] = ph1_curFc.mag(pts);                        
+                        face_phaseState_own_[curFc_lbl] = 2;
+                    }//end if(ph1_fcLbls[faceI] == -1)
+                    if(debugIR_)
+                    {
+                        Info<< "------------------------------------------------------------" << nl
+                            << "  Cell face index: " << faceI << "    Global face index: " << curFc_lbl << nl                            
+                            << "------------------------------------------------------------" << nl
+                            << "Face own: " << curFcOwn << "  cur cell: " << cellI << nl
+                            << "Phase 1 centroid: " << Cf_ph1_own_[curFc_lbl] << "    Phase 0 centroid: " << Cf_ph0_own_[curFc_lbl] << nl   
+                            << "Phase 1 area: " << Af_ph1_own_[curFc_lbl] << "    Phase 0 area: " << Af_ph0_own_[curFc_lbl] << nl
+                            << "Face phase state:  " << face_phaseState_own_[curFc_lbl] << nl
+                            << "------------------------------------------------------------" << nl 
+                            << endl;
                     }
-                    face_phaseState_[curFc_lbl] = 2;
-                }//end if(ph1_fcLbls[faceI] == -1)
-
-                if(debugIR_)
+                }// end if(curFcOwn == cellI)
+                else
                 {
-                    Info<< "------------------------------------------------------------" << nl
-                        << "  Cell face index: " << faceI << "    Global face index: " << curFc_lbl << nl
-                        << "------------------------------------------------------------" << nl
-                        << "Phase 1 centroid: " << Cf_ph1_[curFc_lbl] << "    Phase 0 centroid: " << Cf_ph0_[curFc_lbl] << nl   
-                        << "Phase 1 area: " << Af_ph1_[curFc_lbl] << "    Phase 0 area: " << Af_ph0_[curFc_lbl] << nl
-                        << "Face phase state:  " << face_phaseState_[curFc_lbl] << nl
-                        << "------------------------------------------------------------" << nl 
-                        << endl;
-                }
+                    if(ph1_fcLbls[faceI] == -1)
+                    {
+                        face ph0_curFc = fcs[ph0_fcLbls[faceI]];
+                        Cf_ph0_nei_[curFc_lbl] = ph0_curFc.centre(pts);
+                        Af_ph0_nei_[curFc_lbl] = ph0_curFc.mag(pts);
+                        Cf_ph1_nei_[curFc_lbl] = Cf_ph0_[curFc_lbl];
+                        Af_ph1_nei_[curFc_lbl] = 0;
+                        face_phaseState_nei_[curFc_lbl] = 0;                        
+                    }//end if(ph1_fcLbls[faceI] == -1) 
+                    else if(ph0_fcLbls[faceI] == -1)
+                    {
+                        face ph1_curFc = fcs[ph1_fcLbls[faceI]];
+                        Cf_ph1_nei_[curFc_lbl] = ph1_curFc.centre(pts);
+                        Af_ph1_nei_[curFc_lbl] = ph1_curFc.mag(pts);
+                        Cf_ph0_nei_[curFc_lbl] = Cf_ph1_[curFc_lbl];
+                        Af_ph0_nei_[curFc_lbl] = 0;
+                        face_phaseState_nei_[curFc_lbl] = 1;                        
+                    }//end if(ph1_fcLbls[faceI] == -1)
+                    else if(ph1_fcLbls[faceI] == -2)
+                    {
+                        Cf_ph1_nei_[curFc_lbl] = faces[curFc_lbl].centre(points);
+                        Af_ph1_nei_[curFc_lbl] = 0;
+                        Cf_ph0_nei_[curFc_lbl] = faces[curFc_lbl].centre(points);
+                        Af_ph0_nei_[curFc_lbl] = 0;
+                        face_phaseState_nei_[curFc_lbl] = 3;                        
+                    }//end if(ph1_fcLbls[faceI] == -1)
+                    else
+                    {
+                        face ph0_curFc = fcs[ph0_fcLbls[faceI]];
+                        face ph1_curFc = fcs[ph1_fcLbls[faceI]];                        
+                        Cf_ph0_nei_[curFc_lbl] = ph0_curFc.centre(pts);
+                        Af_ph0_nei_[curFc_lbl] = ph0_curFc.mag(pts);
+                        Cf_ph1_nei_[curFc_lbl] = ph1_curFc.centre(pts);
+                        Af_ph1_nei_[curFc_lbl] = ph1_curFc.mag(pts);                        
+                        face_phaseState_nei_[curFc_lbl] = 2;
+                    }//end if(ph1_fcLbls[faceI] == -1)
+                    if(debugIR_)
+                    {
+                        Info<< "------------------------------------------------------------" << nl
+                            << "  Cell face index: " << faceI << "    Global face index: " << curFc_lbl << nl                            
+                            << "------------------------------------------------------------" << nl
+                            << "Face own: " << curFcOwn << "  cur cell: " << cellI << nl
+                            << "Phase 1 centroid: " << Cf_ph1_nei_[curFc_lbl] << "    Phase 0 centroid: " << Cf_ph0_nei_[curFc_lbl] << nl   
+                            << "Phase 1 area: " << Af_ph1_nei_[curFc_lbl] << "    Phase 0 area: " << Af_ph0_nei_[curFc_lbl] << nl
+                            << "Face phase state:  " << face_phaseState_nei_[curFc_lbl] << nl
+                            << "------------------------------------------------------------" << nl 
+                            << endl;
+                    }
+                }// end if(curFcOwn == cellI)
             }//end for(label faceI=0; faceI<curCell.size(); faceI++)
         }//end if(cell_phaseState_[cellI] == 2)
         else
@@ -2852,21 +2889,42 @@ void Foam::plic::intfc_correct()
             for(label faceI=0; faceI<curCell.size(); faceI++)
             {
                 label curFc_lbl = curCell[faceI];
-                Cf_ph0_[curFc_lbl] = meshCf[curFc_lbl];
-                Cf_ph1_[curFc_lbl] = meshCf[curFc_lbl];
-                if(cell_phaseState_[cellI] == 0)
+                label curFcOwn = own[curFc_lbl];
+
+                if(curFcOwn == cellI)
                 {
-                    Af_ph0_[curFc_lbl] = meshMagSf[curFc_lbl];
-                    Af_ph1_[curFc_lbl] = 0;
-                    face_phaseState_[curFc_lbl] = 0;
-                }//end if(cell_phaseState_[cellI] == 0)
+                    Cf_ph0_own_[curFc_lbl] = meshCf[curFc_lbl];
+                    Cf_ph1_own_[curFc_lbl] = meshCf[curFc_lbl];
+                    if(cell_phaseState_[cellI] == 0)
+                    {
+                        Af_ph0_own_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph1_own_[curFc_lbl] = 0;
+                        face_phaseState_own_[curFc_lbl] = 0;
+                    }//end if(cell_phaseState_[cellI] == 0)
+                    else
+                    {
+                        Af_ph0_own_[curFc_lbl] = 0;
+                        Af_ph1_own_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        face_phaseState_own_[curFc_lbl] = 1;
+                    }//end if(cell_phaseState_[cellI] == 0)
+                }// end if(curFcOwn == cellI)
                 else
                 {
-                    Af_ph0_[curFc_lbl] = 0;
-                    Af_ph1_[curFc_lbl] = meshMagSf[curFc_lbl];
-                    face_phaseState_[curFc_lbl] = 1;
-                }//end if(cell_phaseState_[cellI] == 0)
-                fc_set[curFc_lbl] = true;
+                    Cf_ph0_nei_[curFc_lbl] = meshCf[curFc_lbl];
+                    Cf_ph1_nei_[curFc_lbl] = meshCf[curFc_lbl];
+                    if(cell_phaseState_[cellI] == 0)
+                    {
+                        Af_ph0_nei_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph1_nei_[curFc_lbl] = 0;
+                        face_phaseState_nei_[curFc_lbl] = 0;
+                    }//end if(cell_phaseState_[cellI] == 0)
+                    else
+                    {
+                        Af_ph0_nei_[curFc_lbl] = 0;
+                        Af_ph1_nei_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        face_phaseState_nei_[curFc_lbl] = 1;
+                    }//end if(cell_phaseState_[cellI] == 0)
+                }// end if(curFcOwn == cellI)
             }//end for(label faceI=0; faceI<curCell.size(); faceI++)
         }//end if(cell_phaseState_[cellI] == 2)        
 
@@ -2889,21 +2947,24 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< " Face        " << "Own         " << "alpha1Own        " << "nei          " << "alpha1Nei        " << "phaseState" << endl;
+        Info<< " Face        " << "Own         " << "alpha1Own        " << "nei          " << "alpha1Nei        " << "phaseStateOwn" << "        phaseStateNei" << endl;
     }
 
     for(label faceI=0; faceI<mesh().nInternalFaces(); faceI++)
     {
         if((alpha1Cells[own[faceI]] < ALPHA_2PH_MIN && alpha1Cells[nei[faceI]] > ALPHA_2PH_MAX) || (alpha1Cells[nei[faceI]] < ALPHA_2PH_MIN && alpha1Cells[own[faceI]] > ALPHA_2PH_MAX))
         {
-            Af_ph0_[faceI] = 0;
-            Af_ph1_[faceI] = 0;
-            face_phaseState_[faceI] = 3;
+            Af_ph0_own_[faceI] = 0;
+            Af_ph1_own_[faceI] = 0;
+            face_phaseState_own_[faceI] = 3;
+            Af_ph0_nei_[faceI] = 0;
+            Af_ph1_nei_[faceI] = 0;
+            face_phaseState_nei_[faceI] = 3;
         }
         
         if(debugIR_)
         {
-            Info<< "  " << faceI << "         " << own[faceI] << "      " << alpha1Cells[own[faceI]] << "          " << nei[faceI] << "      " << alpha1Cells[nei[faceI]] << "        " << face_phaseState_[faceI] << endl;
+            Info<< "  " << faceI << "         " << own[faceI] << "      " << alpha1Cells[own[faceI]] << "          " << nei[faceI] << "      " << alpha1Cells[nei[faceI]] << "        " << face_phaseState_own_[faceI] << face_phaseState_nei_[faceI] << endl;
         }
     }
 
@@ -2980,20 +3041,20 @@ void Foam::plic::intfc_correct()
                     }
 
                     intfc_cell_reconstruct
-                        (
-                            pnHat[faceI],
-                            pAlpha1[faceI],
-                            curCell,
-                            curCellInfo.faces(),
-                            curCellInfo.points(),
-                            ph1_cell,
-                            ph0_cell,
-                            fcs,
-                            pts,
-                            intfc_face,
-                            ph1_fcLbls,
-                            ph0_fcLbls
-                        );
+                    (
+                        pnHat[faceI],
+                        pAlpha1[faceI],
+                        curCell,
+                        curCellInfo.faces(),
+                        curCellInfo.points(),
+                        ph1_cell,
+                        ph0_cell,
+                        fcs,
+                        pts,
+                        intfc_face,
+                        ph1_fcLbls,
+                        ph0_fcLbls
+                    );
 
                     if(brent_iters_tmp_ > brent_iters_max_)
                     {
