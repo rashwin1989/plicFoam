@@ -2,10 +2,7 @@
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
-const scalarField& alpha1Cells = alpha1.internalField();
-const scalarField& alpha0Cells = alpha0.internalField();
-const scalarField& rho1Cells = rho1.internalField();
-const scalarField& rho0Cells = rho0.internalField();
+const cellList& meshCells = mesh.cells();
 
 for(label i=0; i<(nSpecies - 1); i++)
 {
@@ -21,19 +18,42 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     surfaceScalarField& advFlux_Y1i = advFlux_Y1[i];
     surfaceScalarField& advFlux_Y0i = advFlux_Y0[i];
-    
 
     //Phase-1
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
     scalarField& surfInt_advFlux_Y1iCells = surfInt_advFlux_Y1i.internalField();
 
     forAll(C1iCells,cellI)
-    {
+    {        
         if(adv_debug2)
         {
-            Info<< "Solving Y1[" << i << "] eqn in cell " << cellI << nl
-                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << nl
-                << "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y1[" << i << "] adv eqn in cell " << cellI << nl
+                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    << "face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
+                        << nl
+                        << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -108,9 +128,33 @@ for(label i=0; i<(nSpecies - 1); i++)
     {
         if(adv_debug2)
         {
-            Info<< "Solving Y0[" << i << "] eqn in cell " << cellI << nl
-                << "Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << nl
-                << "div(advFlux) = " << surfInt_advFlux_Y0iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue()
+            const cell& curCell = meshCells[cellI];
+
+            Info<< "Solving Y0[" << i << "] adv eqn in cell " << cellI << nl
+                << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;           
+
+            forAll(curCell, faceI)
+            {
+                label curFaceLbl = curCell[faceI];
+                label curOwn = own[curFaceLbl];
+
+                Info<< "cell face label: " << curFaceLbl 
+                    << nl
+                    << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
+                    << endl;
+                if(curFaceLbl < mesh.nInternalFaces())
+                {
+                    label curNei = nei[curFaceLbl];
+                    Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
+                        << nl
+                        << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
+                        << endl;
+                }                
+            }
+
+            Info<< "cell V: " << meshV[cellI] << endl;
+
+            Info<< "div(advFlux) = " << surfInt_advFlux_Y0iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -131,17 +175,24 @@ for(label i=0; i<(nSpecies - 1); i++)
                 << "Y0i = " << Y0iCells[cellI] << nl
                 << endl;
         }
-    }    
-    /*
+    }
+
     Info<< "Phase-0 Yi= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
-        << "  Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << nl
-        << "Y0i undershoot = " << min(min(Y0i).value(), 0)
-        << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
         << endl;
-        */  
+    Info<< "Min(C0i) = " << min(C0i).value()
+        << "  Max(C0i) = " << max(C0i).value()
+        << endl;
+    Info<< "Min(Y0i) = " << min(Y0i).value()
+        << "  Max(Y0i) = " << max(Y0i).value()
+        << endl;
+    Info<< "C0i undershoot = " << min(min(C0i).value(), 0)
+        << "  C0i overshoot = " << max((max(C0i).value() - rho0_0.value()), 0)
+        << endl;
+    Info<< "Y0i undershoot = " << min(min(Y0i).value(), 0)
+        << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
+        << endl;        
+          
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < 0)
@@ -166,13 +217,17 @@ for(label i=0; i<(nSpecies - 1); i++)
             }
         }        
     }
-    /*
+
     Info<< "Phase-0 Yi after correction= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
-        << "  Min(Y0i) = " << min(Y0i).value()
+        << nl
+        << "Min(C0i) = " << min(C0i).value()
+        << "  Max(C0i) = " << max(C0i).value()
+        << nl
+        << "Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()        
         << endl;
-        */
+        
     C0i.correctBoundaryConditions();
     Y0i.correctBoundaryConditions();
 

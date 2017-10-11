@@ -340,113 +340,39 @@ for(label i=0; i<(nSpecies - 1); i++)
     );
 }
 
-// Y diffusion
-/*
-PtrList<dimensionedScalar> D1(nSpecies);
-PtrList<dimensionedScalar> D0(nSpecies);
-
-word DName;
-for(label i=0; i<nSpecies; i++)
-{
-    DName = "D1" + Foam::name(i);
-    Info<< "Reading diffusivity " << DName << endl;
-    D1.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(DName)
-        )
-    );
-
-    DName = "D0" + Foam::name(i);
-    Info<< "Reading diffusivity " << DName << endl;
-    D0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(DName)
-        )
-    );
-}
-
-// scalarField diffWeightsOwn_ph1(mesh.nFaces());
-// scalarField diffWeightsNei_ph1(mesh.nFaces());
-// scalarField diffWeightsOwn_ph0(mesh.nFaces());
-// scalarField diffWeightsNei_ph0(mesh.nFaces());
-
-surfaceScalarField diffFlux_ph1
-(
-    IOobject
-    (
-        "diffFlux_ph1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedScalar("diffFlux_ph1", dimVol/dimTime, 0)
-);
-
-surfaceScalarField diffFlux_ph0
-(
-    IOobject
-    (
-        "diffFlux_ph0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh,
-    dimensionedScalar("diffFlux_ph0", dimVol/dimTime, 0)
-);
-
-centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
-const labelListList& diffCellStencil = diffCellStencilObject.stencil();
-
+scalarField& rho1Cells = rho1.internalField();
+scalarField& rho0Cells = rho0.internalField();
+scalarField& alpha1Cells = alpha1.internalField();
+scalarField& alpha0Cells = alpha0.internalField();
 
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
-//const vectorField& meshC = mesh.C();
-const vectorField& meshSf = mesh.Sf();
-const scalarField& meshMagSf = mesh.magSf();
 
-const mapDistribute& diffMap = diffCellStencilObject.map();
-label n_flatFld_diff = diffMap.constructSize();
-
-List<scalar> alpha1_flatFld_diff(n_flatFld_diff, 0.0);
-
-List<List<scalar> > Y1_flatFld_diff(nSpecies); 
-List<List<scalar> > Y0_flatFld_diff(nSpecies);
-List<scalar> Y_flatFld_diff(n_flatFld_diff, 0.0);     
-
-for(label i=0; i<nSpecies; i++)
-{
-    Y1_flatFld_diff[i] = Y_flatFld_diff;    
-    Y0_flatFld_diff[i] = Y_flatFld_diff;        
-}
-
-List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
-List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
-*/
+//------------------------------------------------------------------//
+//Obtain references to phase centroids, phase face centres, phase face areas, face phase states
+const scalarField& Af_ph1_own = interface.Af_ph1_own();
+const scalarField& Af_ph0_own = interface.Af_ph0_own();
+const scalarField& Af_ph1_nei = interface.Af_ph1_nei();
+const scalarField& Af_ph0_nei = interface.Af_ph0_nei();
 
 // tolerances and max iters
-label ALPHA_BOUND_ITERS_MAX = 108;
+label ALPHA_BOUND_ITERS_MAX = 12;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 
 // debug bool switches
 bool debug;
 debug = transPropDict.lookupOrDefault("debug", false);
+bool redist_alpha;
+redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
 bool unbound_debug;
 unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+/*
 bool adv_debug;
 adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
+    */
 bool adv_debug2;
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 

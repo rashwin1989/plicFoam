@@ -655,17 +655,17 @@ List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 
 // tolerances and max iters
-//label ALPHA_BOUND_ITERS_MAX = 108;
+label ALPHA_BOUND_ITERS_MAX = 12;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 
 // debug bool switches
-/*
 bool debug;
 debug = transPropDict.lookupOrDefault("debug", false);
-*/
+bool redist_alpha;
+redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
 bool unbound_debug;
 unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
 bool phi_interp_debug;

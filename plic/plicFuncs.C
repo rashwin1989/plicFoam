@@ -1375,8 +1375,8 @@ void calc_2ph_gradf
 {   
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
-    const vectorField& meshSf = mesh.Sf();
-    const scalarField& meshMagSf = mesh.magSf();    
+    const surfaceVectorField& meshSf = mesh.Sf();
+    const surfaceScalarField& meshMagSf = mesh.magSf();    
 
     if(debug)
     {
@@ -1568,6 +1568,8 @@ void calc_2ph_gradf
     forAll(patches, patchI)
     {
         const polyPatch& pp = patches[patchI];
+        const fvsPatchVectorField& pSf = meshSf.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];
 
         if(pp.coupled())
         {
@@ -1585,7 +1587,7 @@ void calc_2ph_gradf
             {
                 bndFaceI = faceI - mesh.nInternalFaces();                
 
-                nf = meshSf[faceI]/meshMagSf[faceI];
+                nf = pSf[fcI]/pMagSf[fcI];
                 faceOwn = own[faceI];
                 const labelList& ownCells = diffCellStencil[faceOwn];
                 curPhaseState = face_phaseState_diff[faceI];
@@ -1794,6 +1796,8 @@ void calc_2ph_gradf
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
         fvsPatchScalarField& pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
         fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
+        const fvsPatchVectorField& pSf = meshSf.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];
         label faceI = pp.start();        
 
         if(pp.coupled())
@@ -1911,7 +1915,7 @@ void calc_2ph_gradf
         {
             forAll(pY1i, fcI)
             {
-                nf = meshSf[faceI]/meshMagSf[faceI];
+                nf = pSf[fcI]/pMagSf[fcI];
                 faceOwn = own[faceI];
                 const labelList& ownCells = diffCellStencil[faceOwn];
                 curPhaseState = face_phaseState_diff[faceI];                                
@@ -2038,7 +2042,7 @@ void calc_2ph_diffFluxes_Yi_Fick
 {
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();    
-    const scalarField& meshMagSf = mesh.magSf();    
+    const surfaceScalarField& meshMagSf = mesh.magSf();    
     const scalarField& meshV = mesh.V();
         
     scalar curMagSf_ph1;
@@ -2254,6 +2258,7 @@ void calc_2ph_diffFluxes_Yi_Fick
         const fvsPatchScalarField& pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
         const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
         const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];        
         
         label faceI = pp.start();
 
@@ -2310,11 +2315,11 @@ void calc_2ph_diffFluxes_Yi_Fick
 
                 if(debug)
                 {
-                    Info<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
-                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
-                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
-                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
-                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                    Info<< "Face: " << faceI << "  mag(Sf) = " << pMagSf[fcI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/pMagSf[fcI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/pMagSf[fcI] << nl
                         << "face phase state for diffusion flux calculation: " << curPhaseState << nl
                         << "Own: " << faceOwn << nl
                         << "Own Y1" << i << ": " << Y1iOwn[fcI] << "  Nei Y1" << i << ": " << Y1iNei[fcI] << nl
@@ -2452,11 +2457,11 @@ void calc_2ph_diffFluxes_Yi_Fick
 
                 if(debug)
                 {
-                    Info<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
-                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
-                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
-                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
-                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                    Info<< "Face: " << faceI << "  mag(Sf) = " << pMagSf[faceI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/pMagSf[fcI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/pMagSf[fcI] << nl
                         << "face phase state for diffusion flux calculation: " << curPhaseState << nl
                         << "Own: " << faceOwn << nl
                         << "Own Y1" << i << ": " << pY1i[fcI] << nl
@@ -2813,13 +2818,11 @@ void calc_face_phaseState_diff
     scalar curMagSf_ph0_nei;
     scalar curAlpha1f_nei; 
     scalar curAlpha0f_nei;
-    label curPhaseState;
-
-    const scalarField& meshMagSf = mesh.magSf();
+    label curPhaseState;    
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {        
-        curMagSf = meshMagSf[faceI];       
+        curMagSf = mesh.magSf()[faceI];       
         curMagSf_ph1_own = magSf_ph1_own[faceI];
         curMagSf_ph0_own = magSf_ph0_own[faceI];
         curMagSf_ph1_nei = magSf_ph1_nei[faceI];
@@ -2837,7 +2840,7 @@ void calc_face_phaseState_diff
 
         if(debug)
         {
-            Info<< "Face: " << faceI << "  magSf = " << meshMagSf[faceI] << nl
+            Info<< "Face: " << faceI << "  magSf = " << mesh.magSf()[faceI] << nl
                 << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl
                 << "alpha1f_own = " << curAlpha1f_own << "  alpha1f_nei = " << curAlpha1f_nei << nl
                 << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI] << nl
@@ -2853,6 +2856,7 @@ void calc_face_phaseState_diff
     {
         const polyPatch& pp = patches[patchI];        
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];        
+        const fvsPatchScalarField& pMagSf = mesh.magSf().boundaryField()[patchI];
         label faceI = pp.start();        
 
         if(pp.coupled())
@@ -2861,13 +2865,13 @@ void calc_face_phaseState_diff
             {
                 if(debug)
                 {
-                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << meshMagSf[faceI] << nl
+                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << pMagSf[fcI] << nl
                         << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl                       
                         << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI]                       
                         << endl;
                 }
 
-                curMagSf = meshMagSf[faceI];       
+                curMagSf = pMagSf[fcI];       
                 curMagSf_ph1_own = magSf_ph1_own[faceI];
                 curMagSf_ph0_own = magSf_ph0_own[faceI];
                 curMagSf_ph1_nei = magSf_ph1_nei[faceI];
@@ -2898,13 +2902,13 @@ void calc_face_phaseState_diff
             {
                 if(debug)
                 {
-                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << meshMagSf[faceI] << nl
+                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << pMagSf[fcI] << nl
                         << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl                       
                         << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI] 
                         << endl;
                 }
 
-                curMagSf = meshMagSf[faceI];       
+                curMagSf = pMagSf[fcI];       
                 curMagSf_ph1_own = magSf_ph1_own[faceI];
                 curMagSf_ph0_own = magSf_ph0_own[faceI];                
 

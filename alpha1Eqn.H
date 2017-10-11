@@ -16,14 +16,12 @@ Info<< "Phase-1 volume fraction = "
     << endl;
 
 scalarField& alphaCells = alpha1.internalField();
-//label nCells = mesh.nCells();
+label nCells = mesh.nCells();
 
-/*
 scalar maxAlpha1 = 1;
 scalar minAlpha1 = 0;
 label maxAlpha1Cell = -1;
 label minAlpha1Cell = -1;
-*/
 
 scalar ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
 scalar ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
@@ -101,164 +99,166 @@ if(unbound_debug)
     }
 }
 
-/*
-forAll(alphaCells, cellI)
+if(redist_alpha)
 {
-    if(alphaCells[cellI] < ALPHA_MIN_BOUND)
+    forAll(alphaCells, cellI)
     {
-        if(debug)
+        if(alphaCells[cellI] < ALPHA_MIN_BOUND)
         {
-            Info<< "Correcting alpha1 in cell " << cellI << nl
-                << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
-        }
-
-        const labelList& curCellCells = cell_stencil.stencil()[cellI];
-        scalar minAlpha = 1;
-        label minAlphaCell = cellI;
-        label nIters = 0;
-        bool allNeiDone = true;
-        for(label i=0; i<curCellCells.size(); i++)
-        {
-            label curCell = curCellCells[i];
-
-            if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] > 0))
+            if(debug)
             {
-                allNeiDone = false;
-                break;
+                Info<< "Correcting alpha1 in cell " << cellI << nl
+                    << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
             }
-        }
 
-        if(!allNeiDone)
-        {
-            do
+            const labelList& curCellCells = cell_stencil.stencil()[cellI];
+            scalar minAlpha = 1;
+            label minAlphaCell = cellI;
+            label nIters = 0;
+            bool allNeiDone = true;
+            for(label i=0; i<curCellCells.size(); i++)
             {
-                if(debug)
-                {
-                    Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
-                }
-            
-                allNeiDone = true;
-                minAlpha = 1;
-                for(label i=0; i<curCellCells.size(); i++)
-                {
-                    label curCell = curCellCells[i];
+                label curCell = curCellCells[i];
 
-                    if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] > 0))
+                if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] > 0))
+                {
+                    allNeiDone = false;
+                    break;
+                }
+            }
+
+            if(!allNeiDone)
+            {
+                do
+                {
+                    if(debug)
                     {
-                        allNeiDone = false;
-                        if(alphaCells[curCell] < minAlpha)
-                        {
-                            minAlphaCell = curCell;
-                            minAlpha = alphaCells[curCell];
-                        }
+                        Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
                     }
-                }            
-
-                if(debug)
-                {
-                    Info<< "Nei cell with minimum non-zero alpha1: " << minAlphaCell << nl
-                        << "Nei cell alpha1: " << alphaCells[minAlphaCell] << endl;
-                }
-
-                scalar tAlpha = alphaCells[minAlphaCell] + alphaCells[cellI];
-                alphaCells[minAlphaCell] = max(tAlpha, 0);
-                alphaCells[cellI] = min(tAlpha, 0);
-
-                if(debug)
-                {
-                    Info<< "New nei cell alpha1: " << alphaCells[minAlphaCell] << nl
-                        << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
-                }
             
-                nIters++;
-            }while(alphaCells[cellI] < ALPHA_MIN_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
-        }        
-    }
+                    allNeiDone = true;
+                    minAlpha = 1;
+                    for(label i=0; i<curCellCells.size(); i++)
+                    {
+                        label curCell = curCellCells[i];
 
-    if(alphaCells[cellI] > ALPHA_MAX_BOUND)
-    {
-        if(debug)
-        {
-            Info<< "Correcting alpha1 in cell " << cellI << nl
-                << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
+                        if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] > 0))
+                        {
+                            allNeiDone = false;
+                            if(alphaCells[curCell] < minAlpha)
+                            {
+                                minAlphaCell = curCell;
+                                minAlpha = alphaCells[curCell];
+                            }
+                        }
+                    }            
+
+                    if(debug)
+                    {
+                        Info<< "Nei cell with minimum non-zero alpha1: " << minAlphaCell << nl
+                            << "Nei cell alpha1: " << alphaCells[minAlphaCell] << endl;
+                    }
+
+                    scalar tAlpha = alphaCells[minAlphaCell] + alphaCells[cellI];
+                    alphaCells[minAlphaCell] = max(tAlpha, 0);
+                    alphaCells[cellI] = min(tAlpha, 0);
+
+                    if(debug)
+                    {
+                        Info<< "New nei cell alpha1: " << alphaCells[minAlphaCell] << nl
+                            << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
+                    }
+            
+                    nIters++;
+                }while(alphaCells[cellI] < ALPHA_MIN_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+            }        
         }
 
-        const labelList& curCellCells = cell_stencil.stencil()[cellI];
-        scalar maxAlpha = 0;
-        label maxAlphaCell = cellI;
-        label nIters = 0;
-        bool allNeiDone = true;
-        for(label i=0; i<curCellCells.size(); i++)
+        if(alphaCells[cellI] > ALPHA_MAX_BOUND)
         {
-            label curCell = curCellCells[i];
-
-            if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
+            if(debug)
             {
-                allNeiDone = false;
-                break;
+                Info<< "Correcting alpha1 in cell " << cellI << nl
+                    << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
             }
-        }
+
+            const labelList& curCellCells = cell_stencil.stencil()[cellI];
+            scalar maxAlpha = 0;
+            label maxAlphaCell = cellI;
+            label nIters = 0;
+            bool allNeiDone = true;
+            for(label i=0; i<curCellCells.size(); i++)
+            {
+                label curCell = curCellCells[i];
+
+                if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
+                {
+                    allNeiDone = false;
+                    break;
+                }
+            }
         
-        if(!allNeiDone)
-        {
-            do
+            if(!allNeiDone)
             {
-                if(debug)
+                do
                 {
-                    Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
-                }
-
-                maxAlpha = 0;
-                allNeiDone = true;
-                for(label i=0; i<curCellCells.size(); i++)
-                {
-                    label curCell = curCellCells[i];
-
-                    if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
+                    if(debug)
                     {
-                        allNeiDone = false;
-                        if(alphaCells[curCell] > maxAlpha)
+                        Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
+                    }
+
+                    maxAlpha = 0;
+                    allNeiDone = true;
+                    for(label i=0; i<curCellCells.size(); i++)
+                    {
+                        label curCell = curCellCells[i];
+
+                        if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
                         {
-                            maxAlphaCell = curCell;
-                            maxAlpha = alphaCells[curCell];
+                            allNeiDone = false;
+                            if(alphaCells[curCell] > maxAlpha)
+                            {
+                                maxAlphaCell = curCell;
+                                maxAlpha = alphaCells[curCell];
+                            }
                         }
                     }
-                }
 
-                if(debug)
-                {
-                    Info<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell << nl
-                        << "Nei cell alpha1: " << alphaCells[maxAlphaCell] << endl;
-                }
+                    if(debug)
+                    {
+                        Info<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell << nl
+                            << "Nei cell alpha1: " << alphaCells[maxAlphaCell] << endl;
+                    }
             
-                scalar tAlpha = alphaCells[maxAlphaCell] + alphaCells[cellI] - 1;
-                alphaCells[maxAlphaCell] = min(tAlpha, 1);
-                alphaCells[cellI] = max(tAlpha, 1);
+                    scalar tAlpha = alphaCells[maxAlphaCell] + alphaCells[cellI] - 1;
+                    alphaCells[maxAlphaCell] = min(tAlpha, 1);
+                    alphaCells[cellI] = max(tAlpha, 1);
 
-                if(debug)
-                {
-                    Info<< "New nei cell alpha1: " << alphaCells[maxAlphaCell] << nl
-                        << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
-                }
+                    if(debug)
+                    {
+                        Info<< "New nei cell alpha1: " << alphaCells[maxAlphaCell] << nl
+                            << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
+                    }
 
-                nIters++;
-            }while(alphaCells[cellI] > ALPHA_MAX_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+                    nIters++;
+                }while(alphaCells[cellI] > ALPHA_MAX_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+            }
         }
-    }
 
-    if(alphaCells[cellI] < minAlpha1)
-    {
-        minAlpha1 = alphaCells[cellI];
-        minAlpha1Cell = cellI;
-    }
+        if(alphaCells[cellI] < minAlpha1)
+        {
+            minAlpha1 = alphaCells[cellI];
+            minAlpha1Cell = cellI;
+        }
 
-    if(alphaCells[cellI] > maxAlpha1)
-    {
-        maxAlpha1 = alphaCells[cellI];
-        maxAlpha1Cell = cellI;
+        if(alphaCells[cellI] > maxAlpha1)
+        {
+            maxAlpha1 = alphaCells[cellI];
+            maxAlpha1Cell = cellI;
+        }
     }
 }
-
+/*
 const vectorField& meshCi = mesh.C().internalField();
 vector minAlpha1CellC = vector::zero;
 vector maxAlpha1CellC = vector::zero;
@@ -270,6 +270,7 @@ if(maxAlpha1Cell >= 0)
 {
     maxAlpha1CellC = meshCi[maxAlpha1Cell];
 }
+*/
 
 alpha1.correctBoundaryConditions();
 
@@ -281,7 +282,6 @@ Info<< "Phase-1 volume fraction after correction= "
     << "alpha1 undershoot = " << min(alpha1).value()
     << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
     << endl;
-*/
 
 /*Info<< "alpha1 extrema locations: " << nl
 << "Min alpha1 cell: " << minAlpha1Cell << " Min cell loc: " << minAlpha1CellC << " Min alpha1 value: " << minAlpha1 << nl 

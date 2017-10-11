@@ -3197,7 +3197,7 @@ void Foam::plic::intfc_correct()
         }//end if(isA<zeroGradientFvPatchScalarField>(pAlpha1))
         else if(pAlpha1.coupled())
         {
-            label bndFaceI = nfCompact - -mesh().nInternalFaces();
+            label bndFaceI = nfCompact - mesh().nInternalFaces();
 
             forAll(pAlpha1, faceI)
             {
