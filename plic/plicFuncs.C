@@ -1364,9 +1364,8 @@ void calc_2ph_gradf
     const List<scalar>& Y0i_flatFld_diff,
     const List<scalar>& alpha1_flatFld_diff,
     const List<vector>& C_ph1_flatFld_diff,
-    const List<vector>& C_ph0_flatFld_diff,
-    const scalarField& magSf_ph1,
-    const scalarField& magSf_ph0,
+    const List<vector>& C_ph0_flatFld_diff,    
+    const labelList& face_phaseState_diff,
     surfaceScalarField& gradf_Y1i,
     surfaceScalarField& gradf_Y0i,
     const label& i,
@@ -1379,8 +1378,6 @@ void calc_2ph_gradf
     const vectorField& meshSf = mesh.Sf();
     const scalarField& meshMagSf = mesh.magSf();    
 
-    scalar MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;                
-
     if(debug)
     {
         Info<< "Gradient calculation" << nl
@@ -1389,11 +1386,8 @@ void calc_2ph_gradf
             << endl;
     }
 
-    scalar curMagSf; 
-    scalar curMagSf_ph1; 
-    scalar curMagSf_ph0;
-    scalar curAlpha1f; 
-    scalar curAlpha0f; 
+    scalar curMagSf;    
+    label curPhaseState;
     vector nf;
     label faceOwn; 
     label faceNei;     
@@ -1406,34 +1400,32 @@ void calc_2ph_gradf
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
-        curMagSf = meshMagSf[faceI];
-        curMagSf_ph1 = magSf_ph1[faceI];
-        curMagSf_ph0 = magSf_ph0[faceI];
-        curAlpha1f = curMagSf_ph1/curMagSf;
-        curAlpha0f = curMagSf_ph0/curMagSf;
+        curMagSf = meshMagSf[faceI];        
         nf = meshSf[faceI]/curMagSf;
         faceOwn = own[faceI];
-        faceNei = nei[faceI];        
+        faceNei = nei[faceI];
+        curPhaseState = face_phaseState_diff[faceI];
 
         if(debug)
         {
-            Info<< "Face: " << faceI << nl
+            Info<< "Face: " << faceI << "  mag(Sf) = " << curMagSf << nl                
+                << "phase state for gradient calculation: " << curPhaseState << nl
                 << "Own: " << faceOwn << "  Nei: " << faceNei << nl
-                << "Own Y_ph1: " << Y1i_flatFld_diff[faceOwn] << "  Nei Y_ph1: " << Y1i_flatFld_diff[faceNei] << nl
-                << "Own Y_ph0: " << Y0i_flatFld_diff[faceOwn] << "  Nei Y_ph0: " << Y0i_flatFld_diff[faceNei] << nl
-                << "mag(Sf) = " << curMagSf << "  mag(Sf)_ph1 =  " << curMagSf_ph1 << "  alpha1f = " << curAlpha1f << nl
+                << "Own Y_ph1 = " << Y1i_flatFld_diff[faceOwn] << "  Nei Y_ph1 = " << Y1i_flatFld_diff[faceNei] << nl
+                << "Own Y_ph0 = " << Y0i_flatFld_diff[faceOwn] << "  Nei Y_ph0 = " << Y0i_flatFld_diff[faceNei] << nl
+                
                 << endl;
         }
 
         wOwn = 1;
         wNei = 1;
 
-        if(curAlpha1f < MIN_ALPHA_DIFF && curAlpha0f < MIN_ALPHA_DIFF)
+        if(curPhaseState == 3)
         {
             gradf_Y0i[faceI] = 0;
             gradf_Y1i[faceI] = 0;
-        }
-        else if(curAlpha1f < MIN_ALPHA_DIFF)
+        }//end if(curPhaseState == 3)
+        else if(curPhaseState == 0)
         {
             plicFuncs::calcTwoSidedFaceGradWeights
             (
@@ -1452,11 +1444,10 @@ void calc_2ph_gradf
                 debug
             );
             
-            gradf_Y0i[faceI] = wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei];
-            
+            gradf_Y0i[faceI] = wOwn*Y0i_flatFld_diff[faceOwn] + wNei*Y0i_flatFld_diff[faceNei];            
             gradf_Y1i[faceI] = 0;
-        }//end if(curAlpha1f < MIN_ALPHA_DIFF)
-        else if(curAlpha1f > MAX_ALPHA_DIFF)
+        }//end if(curPhaseState == 0)        
+        else if(curPhaseState == 1)
         {
             plicFuncs::calcTwoSidedFaceGradWeights
             (
@@ -1475,10 +1466,9 @@ void calc_2ph_gradf
                 debug
             );
             
-            gradf_Y1i[faceI] = wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei];
-            
+            gradf_Y1i[faceI] = wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei];            
             gradf_Y0i[faceI] = 0;
-        }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
+        }//end if(curPhaseState == 1)
         else
         {
             plicFuncs::calcTwoSidedFaceGradWeights
@@ -1518,7 +1508,7 @@ void calc_2ph_gradf
             );
             
             gradf_Y1i[faceI] = wOwn*Y1i_flatFld_diff[faceOwn] + wNei*Y1i_flatFld_diff[faceNei];
-        }//end if(curAlpha1f < MIN_ALPHA_DIFF)
+        }//end if(curPhaseState == 2)
 
         if(debug)
         {
@@ -1581,24 +1571,31 @@ void calc_2ph_gradf
 
         if(pp.coupled())
         {
+            if(debug)
+            {
+                Info<< "---------------------------------------------------------------------------------" << nl
+                    << "Calculation of weights for own and nei cell gradient for coupled patch " << patchI << nl
+                    << "---------------------------------------------------------------------------------" << nl
+                    << endl;
+            }
+
             label faceI = pp.start();
 
             forAll(pp, fcI)
             {
-                bndFaceI = faceI - mesh.nInternalFaces();
-                curMagSf = meshMagSf[faceI];
-                curMagSf_ph1 = magSf_ph1[faceI];
-                curAlpha1f = curMagSf_ph1/curMagSf;
-                nf = meshSf[faceI]/curMagSf;
+                bndFaceI = faceI - mesh.nInternalFaces();                
+
+                nf = meshSf[faceI]/meshMagSf[faceI];
                 faceOwn = own[faceI];
                 const labelList& ownCells = diffCellStencil[faceOwn];
+                curPhaseState = face_phaseState_diff[faceI];
 
                 ownYi_ph1 = Y1iCells[faceOwn];
                 neiYi_ph1 = Y1iCells[faceOwn];
                 ownYi_ph0 = Y0iCells[faceOwn];
                 neiYi_ph0 = Y0iCells[faceOwn];                
 
-                if(curAlpha1f < MIN_ALPHA_DIFF)
+                if(curPhaseState == 0)
                 {                    
                     plicFuncs::calcCellGradWeights
                     (
@@ -1626,10 +1623,32 @@ void calc_2ph_gradf
                     neiBeta_ph0[bndFaceI] = beta;
                     neiMagt1_ph0[bndFaceI] = magt1;
                     neiMagt2_ph0[bndFaceI] = magt2;
-                    neiD_ph0[bndFaceI] = d;                    
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
-                else if(curAlpha1f > MAX_ALPHA_DIFF)
+                    neiD_ph0[bndFaceI] = d;
+
+                    ownAlpha_ph1[bndFaceI] = 0;
+                    ownBeta_ph1[bndFaceI] = 0;
+                    ownMagt1_ph1[bndFaceI] = 1;
+                    ownMagt2_ph1[bndFaceI] = 1;
+                    ownD_ph1[bndFaceI] = 1;
+                    neiAlpha_ph1[bndFaceI] = 0;
+                    neiBeta_ph1[bndFaceI] = 0;
+                    neiMagt1_ph1[bndFaceI] = 1;
+                    neiMagt2_ph1[bndFaceI] = 1;
+                    neiD_ph1[bndFaceI] = 1;
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
                 {
+                    ownAlpha_ph0[bndFaceI] = 0;
+                    ownBeta_ph0[bndFaceI] = 0;
+                    ownMagt1_ph0[bndFaceI] = 1;
+                    ownMagt2_ph0[bndFaceI] = 1;
+                    ownD_ph0[bndFaceI] = 1;
+                    neiAlpha_ph0[bndFaceI] = 0;
+                    neiBeta_ph0[bndFaceI] = 0;
+                    neiMagt1_ph0[bndFaceI] = 1;
+                    neiMagt2_ph0[bndFaceI] = 1;
+                    neiD_ph0[bndFaceI] = 1;
+
                     plicFuncs::calcCellGradWeights
                     (
                         faceOwn,
@@ -1657,8 +1676,8 @@ void calc_2ph_gradf
                     neiMagt1_ph1[bndFaceI] = magt1;
                     neiMagt2_ph1[bndFaceI] = magt2;
                     neiD_ph1[bndFaceI] = d;
-                }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
-                else
+                }//end else if(curPhaseState == 0)
+                else if(curPhaseState == 2)
                 {                    
                     plicFuncs::calcCellGradWeights
                     (
@@ -1715,7 +1734,31 @@ void calc_2ph_gradf
                     neiMagt1_ph1[bndFaceI] = magt1;
                     neiMagt2_ph1[bndFaceI] = magt2;
                     neiD_ph1[bndFaceI] = d;
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    ownAlpha_ph0[bndFaceI] = 0;
+                    ownBeta_ph0[bndFaceI] = 0;
+                    ownMagt1_ph0[bndFaceI] = 1;
+                    ownMagt2_ph0[bndFaceI] = 1;
+                    ownD_ph0[bndFaceI] = 1;
+                    neiAlpha_ph0[bndFaceI] = 0;
+                    neiBeta_ph0[bndFaceI] = 0;
+                    neiMagt1_ph0[bndFaceI] = 1;
+                    neiMagt2_ph0[bndFaceI] = 1;
+                    neiD_ph0[bndFaceI] = 1;
+
+                    ownAlpha_ph1[bndFaceI] = 0;
+                    ownBeta_ph1[bndFaceI] = 0;
+                    ownMagt1_ph1[bndFaceI] = 1;
+                    ownMagt2_ph1[bndFaceI] = 1;
+                    ownD_ph1[bndFaceI] = 1;
+                    neiAlpha_ph1[bndFaceI] = 0;
+                    neiBeta_ph1[bndFaceI] = 0;
+                    neiMagt1_ph1[bndFaceI] = 1;
+                    neiMagt2_ph1[bndFaceI] = 1;
+                    neiD_ph1[bndFaceI] = 1;
+                }//end if(curPhaseState == 3)
 
                 faceI++;
             }//end forAll(pp, fcI)
@@ -1736,7 +1779,12 @@ void calc_2ph_gradf
     syncTools::swapBoundaryFaceList(mesh, neiMagt2_ph1);
     syncTools::swapBoundaryFaceList(mesh, neiD_ph1);
 
-    //Info<< "Done syncing coupled info" << endl;
+    if(debug)
+    {
+        Info<< "Done calculation of weights for own and nei cell gradient for coupled patches" << nl
+            << "---------------------------------------------------------------------------------" << nl 
+            << endl;
+    }
 
     scalar faceGrad = 0;
 
@@ -1752,12 +1800,11 @@ void calc_2ph_gradf
         {
             forAll(pY1i, fcI)
             {
-                bndFaceI = faceI - mesh.nInternalFaces();
-                curMagSf = meshMagSf[faceI];
-                curMagSf_ph1 = magSf_ph1[faceI];
-                curAlpha1f = curMagSf_ph1/curMagSf;
+                bndFaceI = faceI - mesh.nInternalFaces();                                
 
-                if(curAlpha1f < MIN_ALPHA_DIFF)
+                curPhaseState = face_phaseState_diff[faceI];
+
+                if(curPhaseState == 0)
                 {                
                     plicFuncs::calcFaceGradFromWeights
                     (
@@ -1778,8 +1825,8 @@ void calc_2ph_gradf
                     );
                     pgradf_Y0i[fcI] = faceGrad;
                     pgradf_Y1i[fcI] = 0;
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
-                else if(curAlpha1f > MAX_ALPHA_DIFF)
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
                 {
                     plicFuncs::calcFaceGradFromWeights
                     (
@@ -1800,8 +1847,8 @@ void calc_2ph_gradf
                     );
                     pgradf_Y1i[fcI] = faceGrad;
                     pgradf_Y0i[fcI] = 0;
-                }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
-                else
+                }//end if(curPhaseState == 1)
+                else if(curPhaseState == 2)
                 {
                     plicFuncs::calcFaceGradFromWeights
                     (
@@ -1840,7 +1887,12 @@ void calc_2ph_gradf
                         debug
                     );
                     pgradf_Y1i[fcI] = faceGrad;
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    pgradf_Y0i[fcI] = 0;
+                    pgradf_Y1i[fcI] = 0;
+                }//end if(curPhaseState == 3)
                 
                 faceI++;
             }//end forAll(pY1i, fcI)
@@ -1858,16 +1910,14 @@ void calc_2ph_gradf
         else if(isA<fixedValueFvPatchScalarField>(pY1i))
         {
             forAll(pY1i, fcI)
-            {                
-                curMagSf = meshMagSf[faceI];
-                curMagSf_ph1 = magSf_ph1[faceI];
-                curAlpha1f = curMagSf_ph1/curMagSf;
-                nf = meshSf[faceI]/curMagSf;
+            {
+                nf = meshSf[faceI]/meshMagSf[faceI];
                 faceOwn = own[faceI];
                 const labelList& ownCells = diffCellStencil[faceOwn];
+                curPhaseState = face_phaseState_diff[faceI];                                
                 scalar ownCellGrad = 0;
                 
-                if(curAlpha1f < MIN_ALPHA_DIFF)
+                if(curPhaseState == 0)
                 {                
                     plicFuncs::calcCellGrad
                     (
@@ -1884,8 +1934,8 @@ void calc_2ph_gradf
                     );
                     pgradf_Y0i[fcI] = ownCellGrad;
                     pgradf_Y1i[fcI] = 0;
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
-                else if(curAlpha1f > MAX_ALPHA_DIFF)
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
                 {
                     plicFuncs::calcCellGrad
                     (
@@ -1902,8 +1952,8 @@ void calc_2ph_gradf
                     );
                     pgradf_Y1i[fcI] = ownCellGrad;
                     pgradf_Y0i[fcI] = 0;
-                }//end else if(curAlpha1f > MAX_ALPHA_DIFF)
-                else
+                }//end if(curPhaseState == 1)
+                else if(curPhaseState == 2)
                 {
                     plicFuncs::calcCellGrad
                     (
@@ -1934,11 +1984,16 @@ void calc_2ph_gradf
                         debug
                     );
                     pgradf_Y1i[fcI] = ownCellGrad;
-                }//end if(curAlpha1f < MIN_ALPHA_DIFF)
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    pgradf_Y0i[fcI] = 0;
+                    pgradf_Y1i[fcI] = 0;
+                }//end if(curPhaseState == 3)
 
                 faceI++;
             }//end forAll(pY1i, fcI)
-        }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
+        }//end if(isA<fixedValueFvPatchScalarField>(pY1i))
         else
         {
             forAll(pY1i, fcI)
@@ -1964,9 +2019,11 @@ void calc_2ph_diffFluxes_Yi_Fick
     const surfaceScalarField& D0fi,
     const surfaceScalarField& gradf_Y1i,
     const surfaceScalarField& gradf_Y0i,
-    const scalarField& magSf_ph1,
-    const scalarField& magSf_ph0,
-    const labelList& face_phaseState,
+    const scalarField& magSf_ph1_own,
+    const scalarField& magSf_ph0_own,
+    const scalarField& magSf_ph1_nei,
+    const scalarField& magSf_ph0_nei,
+    const labelList& face_phaseState_diff,
     const volScalarField& rho1,
     const volScalarField& alpha1,
     const volScalarField& Y1i,
@@ -1983,18 +2040,19 @@ void calc_2ph_diffFluxes_Yi_Fick
     const labelList& nei = mesh.neighbour();    
     const scalarField& meshMagSf = mesh.magSf();    
     const scalarField& meshV = mesh.V();
-    
-    scalar curMagSf; 
-    scalar curMagSf_ph1;    
-    scalar curAlpha1f;    
-    vector nf;
+        
+    scalar curMagSf_ph1;
+    scalar curMagSf_ph0;
+    label curPhaseState;    
     label faceOwn; 
     label faceNei;    
     scalar diffFlux_limiter;
 
     if(debug)
     {
-        Info<< "Diffusion flux calculation" << nl
+        Info<< "---------------------------------------------------------" << nl
+            << "Diffusion flux calculation" << nl
+            << "---------------------------------------------------------" << nl
             << nl
             << "Internal faces" << nl
             << endl;
@@ -2012,33 +2070,53 @@ void calc_2ph_diffFluxes_Yi_Fick
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
-        curMagSf = meshMagSf[faceI];
-        curMagSf_ph1 = magSf_ph1[faceI];
-        curAlpha1f = curMagSf_ph1/curMagSf;        
+        curMagSf_ph1 = min(magSf_ph1_own[faceI], magSf_ph1_nei[faceI]);
+        curMagSf_ph0 = min(magSf_ph0_own[faceI], magSf_ph0_nei[faceI]);
+        curPhaseState = face_phaseState_diff[faceI];
         faceOwn = own[faceI];
-        faceNei = nei[faceI];                
+        faceNei = nei[faceI];                        
 
-        if(debug)
+        if(curPhaseState == 3)
         {
-            Info<< "Face: " << faceI << nl
-                << "Own: " << faceOwn << "  Nei: " << faceNei << nl
-                << "Own Y1" << i << ": " << Y1i[faceOwn] << "  Nei Y1" << i << ": " << Y1i[faceNei] << nl
-                << "Own Y0" << i << ": " << Y0i[faceOwn] << "  Nei Y0" << i << ": " << Y0i[faceNei] << nl
-                << "mag(Sf) = " << curMagSf << "  mag(Sf)_ph1 =  " << curMagSf_ph1 << "  alpha1f = " << curAlpha1f << nl
-                << endl;
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = 0;
+        }
+        else if(curPhaseState == 0)
+        {
+            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*curMagSf_ph0*gradf_Y0i[faceI];
+            diffFlux_Y1i[faceI] = 0;
+        }
+        else if(curPhaseState == 1)
+        {
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*curMagSf_ph1*gradf_Y1i[faceI];
+        }
+        else if(curPhaseState == 2)
+        {
+            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*curMagSf_ph0*gradf_Y0i[faceI];
+            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*curMagSf_ph1*gradf_Y1i[faceI];
+        }
+        else
+        {
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = 0;
         }
 
-        diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*magSf_ph0[faceI]*gradf_Y0i[faceI];
-
-        diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*magSf_ph1[faceI]*gradf_Y1i[faceI];
-
         if(debug)
         {
-            Info<< nl
+            Info<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
+                << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
+                << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
+                << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
+                << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                << "Own: " << faceOwn << "  Nei: " << faceNei << nl
+                << "Own Y1" << i << ": " << Y1i[faceOwn] << "  Nei Y1" << i << ": " << Y1i[faceNei] << nl
+                << "Own Y0" << i << ": " << Y0i[faceOwn] << "  Nei Y0" << i << ": " << Y0i[faceNei] << nl               
                 << "diffusion flux ph1 for Y" << i << " = " << diffFlux_Y1i[faceI] << nl
                 << "diffusion flux ph0 for Y" << i << " = " << diffFlux_Y0i[faceI] << nl
                 << endl;
-        }
+        }        
 
         //----------------------------------------------------------//
         // check diffFlux > maxDiffFlux causing unboundedness and
@@ -2065,8 +2143,7 @@ void calc_2ph_diffFluxes_Yi_Fick
             if(debug)
             {
                 Info<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
-                    << nl
-                    << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                    << nl                    
                     << "Own " << faceOwn << "  Nei " << faceNei 
                     << nl
                     << "diffFlux_Y1" << i << ": " << diffFlux_Y1i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2104,8 +2181,7 @@ void calc_2ph_diffFluxes_Yi_Fick
             if(debug)
             {
                 Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
-                    << nl
-                    << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                    << nl                    
                     << "Own " << faceOwn << "  Nei " << faceNei 
                     << nl
                     << "diffFlux_Y0" << i << ": " << diffFlux_Y0i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2169,6 +2245,7 @@ void calc_2ph_diffFluxes_Yi_Fick
     {
         const polyPatch& pp = patches[patchI];
         const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
+        const fvPatchScalarField& pY0i = Y0i.boundaryField()[patchI];
         fvsPatchScalarField& pdiffFlux_Y1i = diffFlux_Y1i.boundaryField()[patchI];
         const fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
         const fvsPatchScalarField& prho1f = rho1f.boundaryField()[patchI];
@@ -2178,16 +2255,7 @@ void calc_2ph_diffFluxes_Yi_Fick
         const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
         const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
         
-        label faceI = pp.start();        
-
-        forAll(pY1i, fcI)
-        {            
-            pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*magSf_ph1[faceI]*pgradf_Y1i[fcI];
-            pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*magSf_ph0[faceI]*pgradf_Y0i[fcI];
-            faceI++;
-        }//end forAll(pY1i, fcI)
-
-        faceI = pp.start();
+        label faceI = pp.start();
 
         if(pp.coupled())
         {
@@ -2208,11 +2276,54 @@ void calc_2ph_diffFluxes_Yi_Fick
             const scalarField& Y0iNei = Y0i.boundaryField()[patchI].patchNeighbourField();
             
             forAll(pY1i, fcI)
-            {
-                curMagSf = meshMagSf[faceI];
-                curMagSf_ph1 = magSf_ph1[faceI];                
-                curAlpha1f = curMagSf_ph1/curMagSf;
-                faceOwn = own[faceI];
+            {                
+                curMagSf_ph1 = min(magSf_ph1_own[faceI], magSf_ph1_nei[faceI]);
+                curMagSf_ph0 = min(magSf_ph0_own[faceI], magSf_ph0_nei[faceI]);
+                curPhaseState = face_phaseState_diff[faceI];
+                faceOwn = own[faceI];                
+
+                if(curPhaseState == 3)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 0)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                if(curPhaseState == 1)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 2)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                else
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+
+                if(debug)
+                {
+                    Info<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                        << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                        << "Own: " << faceOwn << nl
+                        << "Own Y1" << i << ": " << Y1iOwn[fcI] << "  Nei Y1" << i << ": " << Y1iNei[fcI] << nl
+                        << "Own Y0" << i << ": " << Y0iOwn[fcI] << "  Nei Y0" << i << ": " << Y0iNei[fcI] << nl               
+                        << "diffusion flux ph1 for Y" << i << " = " << pdiffFlux_Y1i[fcI] << nl
+                        << "diffusion flux ph0 for Y" << i << " = " << pdiffFlux_Y0i[fcI] << nl
+                        << endl;
+                }
+
                 // check diffFlux > maxDiffFlux causing unboundedness and
                 // limit diffFlux if that is the case 
                 
@@ -2240,7 +2351,6 @@ void calc_2ph_diffFluxes_Yi_Fick
                     {
                         Info<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
                             << nl
-                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
                             << "Own " << faceOwn 
                             << nl
                             << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2278,8 +2388,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     if(debug)
                     {
                         Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
-                            << nl
-                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
+                            << nl                            
                             << "Own " << faceOwn 
                             << nl
                             << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2310,10 +2419,53 @@ void calc_2ph_diffFluxes_Yi_Fick
 
             forAll(pY1i, fcI)
             {                
-                curMagSf = meshMagSf[faceI];
-                curMagSf_ph1 = magSf_ph1[faceI];                
-                curAlpha1f = curMagSf_ph1/curMagSf;
-                faceOwn = own[faceI];
+                curMagSf_ph1 = magSf_ph1_own[faceI];
+                curMagSf_ph0 = magSf_ph0_own[faceI];
+                curPhaseState = face_phaseState_diff[faceI];
+                faceOwn = own[faceI];                
+
+                if(curPhaseState == 3)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 0)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                if(curPhaseState == 1)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 2)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                else
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+
+                if(debug)
+                {
+                    Info<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                        << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                        << "Own: " << faceOwn << nl
+                        << "Own Y1" << i << ": " << pY1i[fcI] << nl
+                        << "Own Y0" << i << ": " << pY0i[fcI] << nl               
+                        << "diffusion flux ph1 for Y" << i << " = " << pdiffFlux_Y1i[fcI] << nl
+                        << "diffusion flux ph0 for Y" << i << " = " << pdiffFlux_Y0i[fcI] << nl
+                        << endl;
+                }
+
                 // check diffFlux > maxDiffFlux causing unboundedness and
                 // limit diffFlux if that is the case 
                 
@@ -2344,7 +2496,6 @@ void calc_2ph_diffFluxes_Yi_Fick
                     {
                         Info<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
                             << nl
-                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
                             << "Own " << faceOwn 
                             << nl
                             << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2384,7 +2535,6 @@ void calc_2ph_diffFluxes_Yi_Fick
                     {
                         Info<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
                             << nl
-                            << "alpha1f: " << curAlpha1f << "  phaseState: " << face_phaseState[faceI] << nl
                             << "Own " << faceOwn 
                             << nl
                             << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
@@ -2400,6 +2550,15 @@ void calc_2ph_diffFluxes_Yi_Fick
                 faceI++;
             }//end forAll(pY1i, fcI)
         }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
+        else
+        {
+            forAll(pY1i, fcI)
+            {
+                pdiffFlux_Y1i[fcI] = 0;
+                pdiffFlux_Y0i[fcI] = 0;
+                faceI++;
+            }
+        }
     }//end forAll(patches,patchI)
 
     //end boundary faces
@@ -2412,13 +2571,13 @@ void calc_2ph_diffFluxes_Yi_Fick
             << endl;
 
         Info<< "-----------------------------------------------------------------------------------------------------" << nl
-            << " Face    face_phaseState        alpha1f                alpha0f        diffFlux_Y1i       diffFlux_Y0i" << nl
+            << " Face        face_phaseState            diffFlux_Y1i           diffFlux_Y0i" << nl
             << "-----------------------------------------------------------------------------------------------------" << nl
             << endl;
         
         for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
         {
-            Info<< "   " << faceI << "              " << face_phaseState[faceI] << "                " << magSf_ph1[faceI]/meshMagSf[faceI] << "                " << magSf_ph0[faceI]/meshMagSf[faceI] << "                " << diffFlux_Y1i[faceI] << "                " << diffFlux_Y0i[faceI] << endl;
+            Info<< "   " << faceI << "          " << face_phaseState_diff[faceI] << "                " << diffFlux_Y1i[faceI] << "                " << diffFlux_Y0i[faceI] << endl;
         }
 
         Info<< "------------------------------------------------------------------------------------------------------" << nl
@@ -2589,6 +2748,141 @@ void calc_2ph_linearInterpolation_weights
             forAll(pw, fcI)
             {                
                 pw[fcI] = 1.0;                
+            }
+        }
+    }
+}
+
+
+void calc_face_phaseState
+(
+    const scalar& curAlpha1f_own,
+    const scalar& curAlpha0f_own,
+    const scalar& curAlpha1f_nei,
+    const scalar& curAlpha0f_nei,
+    const scalar& MIN_ALPHA_DIFF,
+    label& curPhaseState
+)
+{
+    scalar MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;
+
+    if((curAlpha1f_own < MIN_ALPHA_DIFF && curAlpha0f_own < MIN_ALPHA_DIFF) || (curAlpha1f_nei < MIN_ALPHA_DIFF && curAlpha0f_nei < MIN_ALPHA_DIFF))
+    {
+        curPhaseState = 3;
+    }
+    else
+    {
+        if(curAlpha1f_own < MIN_ALPHA_DIFF || curAlpha1f_nei < MIN_ALPHA_DIFF)
+        {
+            curPhaseState = 0;
+        }
+        else
+        {
+            if(curAlpha1f_own > MAX_ALPHA_DIFF || curAlpha1f_nei > MAX_ALPHA_DIFF)
+            {
+                curPhaseState = 1;
+            }
+            else
+            {
+                curPhaseState = 2;
+            }
+        }
+    }
+}
+
+
+void calc_face_phaseState_diff
+(
+    const fvMesh& mesh,
+    const volScalarField& Y1i,
+    const scalarField& magSf_ph1_own,
+    const scalarField& magSf_ph0_own,
+    const scalarField& magSf_ph1_nei,
+    const scalarField& magSf_ph0_nei,
+    const scalar& MIN_ALPHA_DIFF,
+    labelList& face_phaseState
+)
+{
+    scalar curMagSf; 
+    scalar curMagSf_ph1_own; 
+    scalar curMagSf_ph0_own;
+    scalar curAlpha1f_own; 
+    scalar curAlpha0f_own; 
+    scalar curMagSf_ph1_nei; 
+    scalar curMagSf_ph0_nei;
+    scalar curAlpha1f_nei; 
+    scalar curAlpha0f_nei;
+    label curPhaseState;
+
+    const scalarField& meshMagSf = mesh.magSf();
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        curMagSf = meshMagSf[faceI];       
+        curMagSf_ph1_own = magSf_ph1_own[faceI];
+        curMagSf_ph0_own = magSf_ph0_own[faceI];
+        curMagSf_ph1_nei = magSf_ph1_nei[faceI];
+        curMagSf_ph0_nei = magSf_ph0_nei[faceI];
+
+        curAlpha1f_own = curMagSf_ph1_own/curMagSf;
+        curAlpha0f_own = curMagSf_ph0_own/curMagSf;                
+        curAlpha1f_nei = curMagSf_ph1_nei/curMagSf;
+        curAlpha0f_nei = curMagSf_ph0_nei/curMagSf;
+
+        curPhaseState = 2;
+        calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_nei, curAlpha0f_nei, MIN_ALPHA_DIFF, curPhaseState);
+
+        face_phaseState[faceI] = curPhaseState;
+    }
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    forAll(Y1i.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];        
+        const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];        
+        label faceI = pp.start();        
+
+        if(pp.coupled())
+        {
+            forAll(pY1i, fcI)
+            {
+                curMagSf = meshMagSf[faceI];       
+                curMagSf_ph1_own = magSf_ph1_own[faceI];
+                curMagSf_ph0_own = magSf_ph0_own[faceI];
+                curMagSf_ph1_nei = magSf_ph1_nei[faceI];
+                curMagSf_ph0_nei = magSf_ph0_nei[faceI];
+
+                curAlpha1f_own = curMagSf_ph1_own/curMagSf;
+                curAlpha0f_own = curMagSf_ph0_own/curMagSf;                
+                curAlpha1f_nei = curMagSf_ph1_nei/curMagSf;
+                curAlpha0f_nei = curMagSf_ph0_nei/curMagSf;
+
+                curPhaseState = 2;
+                calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_nei, curAlpha0f_nei, MIN_ALPHA_DIFF, curPhaseState);
+
+                face_phaseState[faceI] = curPhaseState;
+
+                faceI++;
+            }
+        }
+        else
+        {
+            forAll(pY1i, fcI)
+            {
+                curMagSf = meshMagSf[faceI];       
+                curMagSf_ph1_own = magSf_ph1_own[faceI];
+                curMagSf_ph0_own = magSf_ph0_own[faceI];                
+
+                curAlpha1f_own = curMagSf_ph1_own/curMagSf;
+                curAlpha0f_own = curMagSf_ph0_own/curMagSf;
+
+                curPhaseState = 2;
+                calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_own, curAlpha0f_own, MIN_ALPHA_DIFF, curPhaseState);
+
+                face_phaseState[faceI] = curPhaseState;
+
+                faceI++;
             }
         }
     }

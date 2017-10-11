@@ -77,9 +77,15 @@ inline const Foam::labelList& Foam::plic::cell_phaseState() const
 }
 
 
-inline const Foam::labelList& Foam::plic::face_phaseState() const
+inline const Foam::labelList& Foam::plic::face_phaseState_own() const
 {
-    return face_phaseState_;
+    return face_phaseState_own_;
+}
+
+
+inline const Foam::labelList& Foam::plic::face_phaseState_nei() const
+{
+    return face_phaseState_nei_;
 }
 
 
@@ -131,27 +137,51 @@ inline const Foam::volVectorField& Foam::plic::C_ph0() const
 }
 
 
-inline const Foam::vectorField& Foam::plic::Cf_ph1() const
+inline const Foam::vectorField& Foam::plic::Cf_ph1_own() const
 {
-    return Cf_ph1_;
+    return Cf_ph1_own_;
 }
 
 
-inline const Foam::vectorField& Foam::plic::Cf_ph0() const
+inline const Foam::vectorField& Foam::plic::Cf_ph0_own() const
 {
-    return Cf_ph0_;
+    return Cf_ph0_own_;
 }
 
 
-inline const Foam::scalarField& Foam::plic::Af_ph1() const
+inline const Foam::scalarField& Foam::plic::Af_ph1_own() const
 {
-    return Af_ph1_;
+    return Af_ph1_own_;
 }
 
 
-inline const Foam::scalarField& Foam::plic::Af_ph0() const
+inline const Foam::scalarField& Foam::plic::Af_ph0_own() const
 {
-    return Af_ph0_;
+    return Af_ph0_own_;
+}
+
+
+inline const Foam::vectorField& Foam::plic::Cf_ph1_nei() const
+{
+    return Cf_ph1_nei_;
+}
+
+
+inline const Foam::vectorField& Foam::plic::Cf_ph0_nei() const
+{
+    return Cf_ph0_nei_;
+}
+
+
+inline const Foam::scalarField& Foam::plic::Af_ph1_nei() const
+{
+    return Af_ph1_nei_;
+}
+
+
+inline const Foam::scalarField& Foam::plic::Af_ph0_nei() const
+{
+    return Af_ph0_nei_;
 }
 
 

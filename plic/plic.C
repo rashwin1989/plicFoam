@@ -34,6 +34,7 @@
 #include "fvcDiv.H"
 #include "surfaceInterpolate.H"
 #include "plane.H"
+#include "syncTools.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -2237,13 +2238,18 @@ Foam::plic::plic
     const label nFaces = mesh.nFaces();
 
     cell_phaseState_.setSize(nCells);
-    face_phaseState_.setSize(nFaces);
+    face_phaseState_own_.setSize(nFaces);
+    face_phaseState_nei_.setSize(nFaces);
     cell_near_intfc_.setSize(nCells);
     fc_2ph_flux_needed_.setSize(nFaces);
-    Cf_ph1_.setSize(nFaces);
-    Cf_ph0_.setSize(nFaces);
-    Af_ph1_.setSize(nFaces);
-    Af_ph0_.setSize(nFaces);
+    Cf_ph1_own_.setSize(nFaces);
+    Cf_ph0_own_.setSize(nFaces);
+    Af_ph1_own_.setSize(nFaces);
+    Af_ph0_own_.setSize(nFaces);
+    Cf_ph1_nei_.setSize(nFaces);
+    Cf_ph0_nei_.setSize(nFaces);
+    Af_ph1_nei_.setSize(nFaces);
+    Af_ph0_nei_.setSize(nFaces);
 
     const label nflatFld = faceStencil().map().constructSize();
     cells_flatFld_.setSize(nflatFld);
@@ -2782,7 +2788,7 @@ void Foam::plic::intfc_correct()
                         face ph0_curFc = fcs[ph0_fcLbls[faceI]];
                         Cf_ph0_own_[curFc_lbl] = ph0_curFc.centre(pts);
                         Af_ph0_own_[curFc_lbl] = ph0_curFc.mag(pts);
-                        Cf_ph1_own_[curFc_lbl] = Cf_ph0_[curFc_lbl];
+                        Cf_ph1_own_[curFc_lbl] = Cf_ph0_own_[curFc_lbl];
                         Af_ph1_own_[curFc_lbl] = 0;
                         face_phaseState_own_[curFc_lbl] = 0;                        
                     }//end if(ph1_fcLbls[faceI] == -1) 
@@ -2791,7 +2797,7 @@ void Foam::plic::intfc_correct()
                         face ph1_curFc = fcs[ph1_fcLbls[faceI]];
                         Cf_ph1_own_[curFc_lbl] = ph1_curFc.centre(pts);
                         Af_ph1_own_[curFc_lbl] = ph1_curFc.mag(pts);
-                        Cf_ph0_own_[curFc_lbl] = Cf_ph1_[curFc_lbl];
+                        Cf_ph0_own_[curFc_lbl] = Cf_ph1_own_[curFc_lbl];
                         Af_ph0_own_[curFc_lbl] = 0;
                         face_phaseState_own_[curFc_lbl] = 1;                        
                     }//end if(ph1_fcLbls[faceI] == -1)
@@ -2833,7 +2839,7 @@ void Foam::plic::intfc_correct()
                         face ph0_curFc = fcs[ph0_fcLbls[faceI]];
                         Cf_ph0_nei_[curFc_lbl] = ph0_curFc.centre(pts);
                         Af_ph0_nei_[curFc_lbl] = ph0_curFc.mag(pts);
-                        Cf_ph1_nei_[curFc_lbl] = Cf_ph0_[curFc_lbl];
+                        Cf_ph1_nei_[curFc_lbl] = Cf_ph0_nei_[curFc_lbl];
                         Af_ph1_nei_[curFc_lbl] = 0;
                         face_phaseState_nei_[curFc_lbl] = 0;                        
                     }//end if(ph1_fcLbls[faceI] == -1) 
@@ -2842,7 +2848,7 @@ void Foam::plic::intfc_correct()
                         face ph1_curFc = fcs[ph1_fcLbls[faceI]];
                         Cf_ph1_nei_[curFc_lbl] = ph1_curFc.centre(pts);
                         Af_ph1_nei_[curFc_lbl] = ph1_curFc.mag(pts);
-                        Cf_ph0_nei_[curFc_lbl] = Cf_ph1_[curFc_lbl];
+                        Cf_ph0_nei_[curFc_lbl] = Cf_ph1_nei_[curFc_lbl];
                         Af_ph0_nei_[curFc_lbl] = 0;
                         face_phaseState_nei_[curFc_lbl] = 1;                        
                     }//end if(ph1_fcLbls[faceI] == -1)
@@ -2976,7 +2982,16 @@ void Foam::plic::intfc_correct()
             << endl;
     }
 
-    wordList patchNames(mesh().boundaryMesh().names());
+    const polyBoundaryMesh& patches = mesh().boundaryMesh();
+    wordList patchNames(patches.names());
+
+    label nBnd = mesh().nFaces() - mesh().nInternalFaces();
+
+    List<vector> Cf_ph1_bndNei(nBnd);
+    List<vector> Cf_ph0_bndNei(nBnd);
+    List<scalar> Af_ph1_bndNei(nBnd);
+    List<scalar> Af_ph0_bndNei(nBnd);
+    List<label> face_phaseState_bndNei(nBnd);
 
     forAll(alpha_ph1_.boundaryField(), patchI)
     {
@@ -3001,7 +3016,7 @@ void Foam::plic::intfc_correct()
         label nCompact =
             nfCompact
             -mesh().nInternalFaces()
-            +mesh().nCells();
+            +mesh().nCells();        
 
         if(isA<zeroGradientFvPatchScalarField>(pAlpha1))
         {
@@ -3102,53 +3117,38 @@ void Foam::plic::intfc_correct()
                     if(ph1_fcLbls[0] == -1)
                     {
                         face ph0_curFc = fcs[ph0_fcLbls[0]];
-                        Cf_ph0_[nfCompact] = ph0_curFc.centre(pts);
-                        Af_ph0_[nfCompact] = ph0_curFc.mag(pts);
-                        Cf_ph1_[nfCompact] = Cf_ph0_[nfCompact];
-                        Af_ph1_[nfCompact] = 0;
-                        face_phaseState_[nfCompact] = 0;
+                        Cf_ph0_nei_[nfCompact] = ph0_curFc.centre(pts);
+                        Af_ph0_nei_[nfCompact] = ph0_curFc.mag(pts);
+                        Cf_ph1_nei_[nfCompact] = Cf_ph0_nei_[nfCompact];
+                        Af_ph1_nei_[nfCompact] = 0;
+                        face_phaseState_nei_[nfCompact] = 0;
                     }//end if(ph1_fcLbls[0] == -1)
                     else if(ph0_fcLbls[0] == -1)
                     {
                         face ph1_curFc = fcs[ph1_fcLbls[0]];
-                        Cf_ph1_[nfCompact] = ph1_curFc.centre(pts);
-                        Af_ph1_[nfCompact] = ph1_curFc.mag(pts);
-                        Cf_ph0_[nfCompact] = Cf_ph1_[nfCompact];
-                        Af_ph0_[nfCompact] = 0;
-                        face_phaseState_[nfCompact] = 1;
+                        Cf_ph1_nei_[nfCompact] = ph1_curFc.centre(pts);
+                        Af_ph1_nei_[nfCompact] = ph1_curFc.mag(pts);
+                        Cf_ph0_nei_[nfCompact] = Cf_ph1_nei_[nfCompact];
+                        Af_ph0_nei_[nfCompact] = 0;
+                        face_phaseState_nei_[nfCompact] = 1;
                     }//end if(ph1_fcLbls[0] == -1)
                     else if(ph1_fcLbls[0] == -2)
                     {
-                        Cf_ph1_[nfCompact] = faces[nfCompact].centre(points);
-                        Af_ph1_[nfCompact] = 0;
-                        Cf_ph0_[nfCompact] = faces[nfCompact].centre(points);
-                        Af_ph0_[nfCompact] = 0;
-                        face_phaseState_[nfCompact] = 3;
+                        Cf_ph1_nei_[nfCompact] = faces[nfCompact].centre(points);
+                        Af_ph1_nei_[nfCompact] = 0;
+                        Cf_ph0_nei_[nfCompact] = faces[nfCompact].centre(points);
+                        Af_ph0_nei_[nfCompact] = 0;
+                        face_phaseState_nei_[nfCompact] = 3;
                     }//end if(ph1_fcLbls[0] == -1)
                     else
                     {
                         face ph0_curFc = fcs[ph0_fcLbls[0]];
-                        face ph1_curFc = fcs[ph1_fcLbls[0]];
-                        if(fc_set[nfCompact])
-                        {
-                            Cf_ph0_[nfCompact] += ph0_curFc.centre(pts);
-                            Af_ph0_[nfCompact] += ph0_curFc.mag(pts);
-                            Cf_ph0_[nfCompact] *= 0.5;
-                            Af_ph0_[nfCompact] *= 0.5;
-                            Cf_ph1_[nfCompact] += ph1_curFc.centre(pts);
-                            Af_ph1_[nfCompact] += ph1_curFc.mag(pts);
-                            Cf_ph1_[nfCompact] *= 0.5;
-                            Af_ph1_[nfCompact] *= 0.5;
-                        }
-                        else
-                        {
-                            Cf_ph0_[nfCompact] = ph0_curFc.centre(pts);
-                            Af_ph0_[nfCompact] = ph0_curFc.mag(pts);
-                            Cf_ph1_[nfCompact] = ph1_curFc.centre(pts);
-                            Af_ph1_[nfCompact] = ph1_curFc.mag(pts);
-                            fc_set[nfCompact] = true;
-                        }
-                        face_phaseState_[nfCompact] = 2;
+                        face ph1_curFc = fcs[ph1_fcLbls[0]];                        
+                        Cf_ph0_nei_[nfCompact] = ph0_curFc.centre(pts);
+                        Af_ph0_nei_[nfCompact] = ph0_curFc.mag(pts);
+                        Cf_ph1_nei_[nfCompact] = ph1_curFc.centre(pts);
+                        Af_ph1_nei_[nfCompact] = ph1_curFc.mag(pts);
+                        face_phaseState_nei_[nfCompact] = 2;
                     }//end if(ph1_fcLbls[0] == -1)                    
                 }//end if((pAlpha1[faceI] < ALPHA_2PH_MAX) && (pAlpha1[faceI] > ALPHA_2PH_MIN) && (mag(pGradAlpha1[faceI]) > GRADALPHA_MIN))
                 else
@@ -3156,30 +3156,28 @@ void Foam::plic::intfc_correct()
                     pC_ph1[faceI] = curCellInfo.centre();
                     pC_ph0[faceI] = curCellInfo.centre();
                 
-                    Cf_ph0_[nfCompact] = meshCf[nfCompact];
-                    Cf_ph1_[nfCompact] = meshCf[nfCompact];
+                    Cf_ph0_nei_[nfCompact] = meshCf[nfCompact];
+                    Cf_ph1_nei_[nfCompact] = meshCf[nfCompact];
                     
                     if(pAlpha1[faceI] <= ALPHA_2PH_MIN)
                     {
-                        Af_ph0_[nfCompact] = meshMagSf[nfCompact];
-                        Af_ph1_[nfCompact] = 0;
-                        face_phaseState_[nfCompact] = 0;
+                        Af_ph0_nei_[nfCompact] = meshMagSf[nfCompact];
+                        Af_ph1_nei_[nfCompact] = 0;
+                        face_phaseState_nei_[nfCompact] = 0;
                     }
                     else
                     {
-                        Af_ph0_[nfCompact] = 0;
-                        Af_ph1_[nfCompact] = meshMagSf[nfCompact];
-                        face_phaseState_[nfCompact] = 1;
-                    }
-                    
-                    fc_set[nfCompact] = true;
+                        Af_ph0_nei_[nfCompact] = 0;
+                        Af_ph1_nei_[nfCompact] = meshMagSf[nfCompact];
+                        face_phaseState_nei_[nfCompact] = 1;
+                    }                    
                 }//end if((pAlpha1[faceI] < ALPHA_2PH_MAX) && (pAlpha1[faceI] > ALPHA_2PH_MIN) && (mag(pGradAlpha1[faceI]) > GRADALPHA_MIN))
 
                 if(debugIR_)
                 {                    
-                    Info<< "Phase 1 centroid: " << Cf_ph1_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_[nfCompact] << nl    
-                        << "Phase 1 area: " << Af_ph1_[nfCompact] << "    Phase 0 area: " << Af_ph0_[nfCompact] << nl
-                        << "Face phase state:  " << face_phaseState_[nfCompact] << nl
+                    Info<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
+                        << "Phase 1 area: " << Af_ph1_nei_[nfCompact] << "    Phase 0 area: " << Af_ph0_nei_[nfCompact] << nl
+                        << "Face phase state:  " << face_phaseState_nei_[nfCompact] << nl
                         << "-------------------------------------------------------" << nl 
                         << endl;
                 }
@@ -3195,6 +3193,21 @@ void Foam::plic::intfc_correct()
                 nCompact++;
             }//end forAll(pAlpha1, faceI)            
         }//end if(isA<zeroGradientFvPatchScalarField>(pAlpha1))
+        else if(pAlpha1.coupled())
+        {
+            label bndFaceI = nfCompact - -mesh().nInternalFaces();
+
+            forAll(pAlpha1, faceI)
+            {
+                Cf_ph1_bndNei[bndFaceI] = Cf_ph1_own_[nfCompact];
+                Cf_ph0_bndNei[bndFaceI] = Cf_ph0_own_[nfCompact];
+                Af_ph1_bndNei[bndFaceI] = Af_ph1_own_[nfCompact];
+                Af_ph0_bndNei[bndFaceI] = Af_ph0_own_[nfCompact];
+                face_phaseState_bndNei[bndFaceI] = face_phaseState_own_[nfCompact];
+                nfCompact++;
+                bndFaceI++;
+            }
+        }
         else if(pAlpha1.fixesValue())
         {
             forAll(pAlpha1, faceI)
@@ -3219,29 +3232,27 @@ void Foam::plic::intfc_correct()
                 pC_ph1[faceI] = curCellInfo.centre();
                 pC_ph0[faceI] = curCellInfo.centre();
                 
-                Cf_ph0_[nfCompact] = meshCf[nfCompact];
-                Cf_ph1_[nfCompact] = meshCf[nfCompact];
+                Cf_ph0_nei_[nfCompact] = meshCf[nfCompact];
+                Cf_ph1_nei_[nfCompact] = meshCf[nfCompact];
                     
                 if(pAlpha1[faceI] <= ALPHA_2PH_MIN)
                 {
-                    Af_ph0_[nfCompact] = meshMagSf[nfCompact];
-                    Af_ph1_[nfCompact] = 0;
-                    face_phaseState_[nfCompact] = 0;
+                    Af_ph0_nei_[nfCompact] = meshMagSf[nfCompact];
+                    Af_ph1_nei_[nfCompact] = 0;
+                    face_phaseState_nei_[nfCompact] = 0;
                 }
                 else
                 {
-                    Af_ph0_[nfCompact] = 0;
-                    Af_ph1_[nfCompact] = meshMagSf[nfCompact];
-                    face_phaseState_[nfCompact] = 1;
-                }
-                    
-                fc_set[nfCompact] = true;
+                    Af_ph0_nei_[nfCompact] = 0;
+                    Af_ph1_nei_[nfCompact] = meshMagSf[nfCompact];
+                    face_phaseState_nei_[nfCompact] = 1;
+                }                    
 
                 if(debugIR_)
                 {                    
-                    Info<< "Phase 1 centroid: " << Cf_ph1_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_[nfCompact] << nl    
-                        << "Phase 1 area: " << Af_ph1_[nfCompact] << "    Phase 0 area: " << Af_ph0_[nfCompact] << nl
-                        << "Face phase state:  " << face_phaseState_[nfCompact] << nl
+                    Info<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
+                        << "Phase 1 area: " << Af_ph1_nei_[nfCompact] << "    Phase 0 area: " << Af_ph0_nei_[nfCompact] << nl
+                        << "Face phase state:  " << face_phaseState_nei_[nfCompact] << nl
                         << "-------------------------------------------------------" << nl 
                         << endl;
                 }
@@ -3293,6 +3304,34 @@ void Foam::plic::intfc_correct()
             Info<< "=======================================================" << endl << endl;                
         }
     }//end forAll(alpha_ph1_.boundaryField(), patchI)   
+
+    syncTools::swapBoundaryFaceList(mesh(), Cf_ph1_bndNei);
+    syncTools::swapBoundaryFaceList(mesh(), Cf_ph0_bndNei);
+    syncTools::swapBoundaryFaceList(mesh(), Af_ph1_bndNei);
+    syncTools::swapBoundaryFaceList(mesh(), Af_ph0_bndNei);
+    syncTools::swapBoundaryFaceList(mesh(), face_phaseState_bndNei);
+
+    forAll(alpha_ph1_.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+
+        label nfCompact = pp.start();
+        label bndFaceI = nfCompact - mesh().nInternalFaces();
+
+        if(pp.coupled())
+        {
+            forAll(pp, faceI)
+            {
+                Cf_ph1_nei_[nfCompact] = Cf_ph1_bndNei[bndFaceI];
+                Cf_ph0_nei_[nfCompact] = Cf_ph0_bndNei[bndFaceI];
+                Af_ph1_nei_[nfCompact] = Af_ph1_bndNei[bndFaceI];
+                Af_ph0_nei_[nfCompact] = Af_ph0_bndNei[bndFaceI];
+                face_phaseState_nei_[nfCompact] = face_phaseState_bndNei[bndFaceI];
+                nfCompact++;
+                bndFaceI++;
+            }
+        }
+    }
 
     if(debugIR_)
     {

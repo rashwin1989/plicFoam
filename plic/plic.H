@@ -131,7 +131,10 @@ class plic
     labelList cell_phaseState_;
 
     //- Label to indicate phase state of faces
-    labelList face_phaseState_;
+    //- own side intfc reconstruction
+    labelList face_phaseState_own_;
+    //- nei side intfc reconstruction
+    labelList face_phaseState_nei_;
 
     //- Bool list to indicate if cell is a
     //- near interface cell
@@ -158,12 +161,20 @@ class plic
     volVectorField C_ph0_;
 
     //- Phase centroid fields on faces
-    vectorField Cf_ph1_;
-    vectorField Cf_ph0_;
+    //- own side intfc reconstruction
+    vectorField Cf_ph1_own_;
+    vectorField Cf_ph0_own_;
+    //- nei side intfc reconstruction
+    vectorField Cf_ph1_nei_;
+    vectorField Cf_ph0_nei_;
 
     //- Phase areas fields on faces
-    scalarField Af_ph1_;
-    scalarField Af_ph0_;
+    //- own side intfc reconstruction
+    scalarField Af_ph1_own_;
+    scalarField Af_ph0_own_;
+    //- nei side intfc reconstruction
+    scalarField Af_ph1_nei_;
+    scalarField Af_ph0_nei_;
 
     //- Cell center field including boundary cells
     volVectorField meshC_;
@@ -365,7 +376,9 @@ class plic
     
     inline const labelList& cell_phaseState() const;
 
-    inline const labelList& face_phaseState() const;
+    inline const labelList& face_phaseState_own() const;
+
+    inline const labelList& face_phaseState_nei() const;
 
     inline const boolList& cell_near_intfc() const;
 
@@ -388,13 +401,21 @@ class plic
 
     inline const volVectorField& C_ph0() const;
 
-    inline const vectorField& Cf_ph1() const;
+    inline const vectorField& Cf_ph1_own() const;
 
-    inline const vectorField& Cf_ph0() const;
+    inline const vectorField& Cf_ph0_own() const;
 
-    inline const scalarField& Af_ph1() const;
+    inline const scalarField& Af_ph1_own() const;
 
-    inline const scalarField& Af_ph0() const;
+    inline const scalarField& Af_ph0_own() const;
+
+    inline const vectorField& Cf_ph1_nei() const;
+
+    inline const vectorField& Cf_ph0_nei() const;
+
+    inline const scalarField& Af_ph1_nei() const;
+
+    inline const scalarField& Af_ph0_nei() const;
 
     inline const List<scalar>& alpha_ph1_flatFld() const;
 

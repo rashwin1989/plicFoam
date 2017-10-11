@@ -280,8 +280,7 @@ namespace plicFuncs
         const List<scalar>& alpha1_flatFld_diff,
         const List<vector>& C_ph1_flatFld_diff,
         const List<vector>& C_ph0_flatFld_diff,
-        const scalarField& magSf_ph1,
-        const scalarField& magSf_ph0,
+        const labelList& face_phaseState_diff,        
         surfaceScalarField& gradf_Y1i,
         surfaceScalarField& gradf_Y0i,
         const label& i,
@@ -298,9 +297,11 @@ namespace plicFuncs
         const surfaceScalarField& D0fi,
         const surfaceScalarField& gradf_Y1i,
         const surfaceScalarField& gradf_Y0i,
-        const scalarField& magSf_ph1,
-        const scalarField& magSf_ph0,
-        const labelList& face_phaseState,
+        const scalarField& magSf_ph1_own,
+        const scalarField& magSf_ph0_own,
+        const scalarField& magSf_ph1_nei,
+        const scalarField& magSf_ph0_nei,
+        const labelList& face_phaseState_diff,
         const volScalarField& rho1,
         const volScalarField& alpha1,
         const volScalarField& Y1i,
@@ -343,6 +344,28 @@ namespace plicFuncs
         const vectorField& C_ph,
         const vectorField& Cf_ph,
         surfaceScalarField& weights
+    );
+
+    void calc_face_phaseState
+    (
+        const scalar& curAlpha1f_own,
+        const scalar& curAlpha0f_own,
+        const scalar& curAlpha1f_nei,
+        const scalar& curAlpha0f_nei,
+        const scalar& MIN_ALPHA_DIFF,
+        label& curPhaseState
+    );
+
+    void calc_face_phaseState_diff
+    (
+        const fvMesh& mesh,
+        const volScalarField& Y1i,
+        const scalarField& magSf_ph1_own,
+        const scalarField& magSf_ph0_own,
+        const scalarField& magSf_ph1_nei,
+        const scalarField& magSf_ph0_nei,
+        const scalar& MIN_ALPHA_DIFF,
+        labelList& face_phaseState
     );
 }
 
