@@ -611,18 +611,31 @@ const labelList& nei = mesh.neighbour();
 
 //------------------------------------------------------------------//
 //Obtain references to phase centroids, phase face centres, phase face areas, face phase states
-const scalarField& Af_ph1 = interface.Af_ph1();
-const scalarField& Af_ph0 = interface.Af_ph0();
-const vectorField& Cf_ph1 = interface.Cf_ph1();
-const vectorField& Cf_ph0 = interface.Cf_ph0();
+const scalarField& Af_ph1_own = interface.Af_ph1_own();
+const scalarField& Af_ph0_own = interface.Af_ph0_own();
+const vectorField& Cf_ph1_own = interface.Cf_ph1_own();
+const vectorField& Cf_ph0_own = interface.Cf_ph0_own();
+//const labelList& face_phaseState_own = interface.face_phaseState_own();
+const scalarField& Af_ph1_nei = interface.Af_ph1_nei();
+const scalarField& Af_ph0_nei = interface.Af_ph0_nei();
+const vectorField& Cf_ph1_nei = interface.Cf_ph1_nei();
+const vectorField& Cf_ph0_nei = interface.Cf_ph0_nei();
+//const labelList& face_phaseState_nei = interface.face_phaseState_nei();
+
+label nFaces = mesh.nFaces();
+vectorField Cf_ph1(nFaces);
+vectorField Cf_ph0(nFaces);
+
 const vectorField& C_ph1 = interface.C_ph1();
 const vectorField& C_ph0 = interface.C_ph0();
-const labelList& face_phaseState = interface.face_phaseState();
+
 //Done obtain references to phase centroids, phase face centres, phase face areas, face phase states
 //------------------------------------------------------------------//
 
 const mapDistribute& diffMap = diffCellStencilObject.map();
 label n_flatFld_diff = diffMap.constructSize();
+
+labelList face_phaseState_diff(nFaces);
 
 List<scalar> alpha1_flatFld_diff(n_flatFld_diff, 0.0);
 

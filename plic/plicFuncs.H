@@ -367,6 +367,20 @@ namespace plicFuncs
         const scalar& MIN_ALPHA_DIFF,
         labelList& face_phaseState
     );
+
+    void calc_2ph_Cf
+    (
+        const vectorField& Cf_ph1_own,
+        const vectorField& Cf_ph0_own,
+        const vectorField& Cf_ph1_nei,
+        const vectorField& Cf_ph0_nei,
+        const scalarField& Af_ph1_own,
+        const scalarField& Af_ph0_own,
+        const scalarField& Af_ph1_nei,
+        const scalarField& Af_ph0_nei,
+        vectorField& Cf_ph1,
+        vectorField& Cf_ph0
+    );
 }
 
 

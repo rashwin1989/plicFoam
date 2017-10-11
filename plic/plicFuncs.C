@@ -2889,6 +2889,43 @@ void calc_face_phaseState_diff
 }
 
 
+void calc_2ph_Cf
+(
+    const vectorField& Cf_ph1_own,
+    const vectorField& Cf_ph0_own,
+    const vectorField& Cf_ph1_nei,
+    const vectorField& Cf_ph0_nei,
+    const scalarField& Af_ph1_own,
+    const scalarField& Af_ph0_own,
+    const scalarField& Af_ph1_nei,
+    const scalarField& Af_ph0_nei,
+    vectorField& Cf_ph1,
+    vectorField& Cf_ph0
+)
+{
+    forAll(Cf_ph1_own, faceI)
+    {
+        if(Af_ph1_nei[faceI] < Af_ph1_own[faceI])
+        {
+            Cf_ph1[faceI] = Cf_ph1_nei[faceI];
+        }
+        else
+        {
+            Cf_ph1[faceI] = Cf_ph1_own[faceI];
+        }
+
+        if(Af_ph0_nei[faceI] < Af_ph0_own[faceI])
+        {
+            Cf_ph0[faceI] = Cf_ph0_nei[faceI];
+        }
+        else
+        {
+            Cf_ph0[faceI] = Cf_ph0_own[faceI];
+        }
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace plicFuncs

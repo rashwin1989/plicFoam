@@ -11,7 +11,15 @@ plicFuncs::makeFlatFld(interface.C_ph0(), diffMap, C_ph0_flatFld_diff);
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
+//Determine phase state at faces for diffusion flux calculation
+plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff);
+//Done determine phase state at faces for diffusion flux calculation
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
 //Linear interpolate density and diffusivity to faces in both phases
+plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, Cf_ph1, Cf_ph0);
+
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
 
@@ -57,8 +65,7 @@ for(label i=0; i<nSpecies; i++)
         alpha1_flatFld_diff,
         C_ph1_flatFld_diff,
         C_ph0_flatFld_diff,
-        Af_ph1,
-        Af_ph0,
+        face_phaseState_diff,
         gradf_Y1i,
         gradf_Y0i,
         i,
@@ -92,9 +99,11 @@ for(label i=0; i<nSpecies; i++)
         D0fi,
         gradf_Y1i,
         gradf_Y0i,
-        Af_ph1,
-        Af_ph0,
-        face_phaseState,
+        Af_ph1_own,
+        Af_ph0_own,
+        Af_ph1_nei,
+        Af_ph0_nei,
+        face_phaseState_diff,
         rho1,
         alpha1,
         Y1i,
@@ -163,7 +172,7 @@ for(label i=0; i<(nSpecies - 1); i++)
                     label curNei = nei[curFaceLbl];
                     Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
                         << nl
-                        << "Af_ph1: " << Af_ph1[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
+                        << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
                         << endl;
                 }                
             }
@@ -267,7 +276,7 @@ for(label i=0; i<(nSpecies - 1); i++)
                     label curNei = nei[curFaceLbl];
                     Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
                         << nl
-                        << "Af_ph0: " << Af_ph0[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
+                        << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
                         << endl;
                 }                
             }

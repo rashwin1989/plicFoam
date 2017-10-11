@@ -46,7 +46,7 @@ for(label i=0; i<(nSpecies - 1); i++)
                     label curNei = nei[curFaceLbl];
                     Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
                         << nl
-                        << "Af_ph1: " << Af_ph1[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
+                        << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
                         << endl;
                 }                
             }
@@ -147,7 +147,7 @@ for(label i=0; i<(nSpecies - 1); i++)
                     label curNei = nei[curFaceLbl];
                     Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
                         << nl
-                        << "Af_ph0: " << Af_ph0[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
+                        << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
                         << endl;
                 }                
             }
