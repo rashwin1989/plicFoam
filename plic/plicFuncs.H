@@ -365,7 +365,8 @@ namespace plicFuncs
         const scalarField& magSf_ph1_nei,
         const scalarField& magSf_ph0_nei,
         const scalar& MIN_ALPHA_DIFF,
-        labelList& face_phaseState
+        labelList& face_phaseState,
+        const bool debug
     );
 
     void calc_2ph_Cf

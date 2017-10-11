@@ -12,7 +12,7 @@ plicFuncs::makeFlatFld(interface.C_ph0(), diffMap, C_ph0_flatFld_diff);
 
 //------------------------------------------------------------------//
 //Determine phase state at faces for diffusion flux calculation
-plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff);
+plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff, diff_debug);
 //Done determine phase state at faces for diffusion flux calculation
 //------------------------------------------------------------------//
 

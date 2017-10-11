@@ -2800,7 +2800,8 @@ void calc_face_phaseState_diff
     const scalarField& magSf_ph1_nei,
     const scalarField& magSf_ph0_nei,
     const scalar& MIN_ALPHA_DIFF,
-    labelList& face_phaseState
+    labelList& face_phaseState,
+    const bool debug
 )
 {
     scalar curMagSf; 
@@ -2817,7 +2818,7 @@ void calc_face_phaseState_diff
     const scalarField& meshMagSf = mesh.magSf();
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
-    {
+    {        
         curMagSf = meshMagSf[faceI];       
         curMagSf_ph1_own = magSf_ph1_own[faceI];
         curMagSf_ph0_own = magSf_ph0_own[faceI];
@@ -2833,6 +2834,17 @@ void calc_face_phaseState_diff
         calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_nei, curAlpha0f_nei, MIN_ALPHA_DIFF, curPhaseState);
 
         face_phaseState[faceI] = curPhaseState;
+
+        if(debug)
+        {
+            Info<< "Face: " << faceI << "  magSf = " << meshMagSf[faceI] << nl
+                << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl
+                << "alpha1f_own = " << curAlpha1f_own << "  alpha1f_nei = " << curAlpha1f_nei << nl
+                << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI] << nl
+                << "alpha0f_own = " << curAlpha0f_own << "  alpha0f_nei = " << curAlpha0f_nei << nl
+                << "face phase state: " << curPhaseState << nl
+                << endl;
+        }
     }
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
@@ -2847,6 +2859,14 @@ void calc_face_phaseState_diff
         {
             forAll(pY1i, fcI)
             {
+                if(debug)
+                {
+                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << meshMagSf[faceI] << nl
+                        << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl                       
+                        << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI]                       
+                        << endl;
+                }
+
                 curMagSf = meshMagSf[faceI];       
                 curMagSf_ph1_own = magSf_ph1_own[faceI];
                 curMagSf_ph0_own = magSf_ph0_own[faceI];
@@ -2863,6 +2883,12 @@ void calc_face_phaseState_diff
 
                 face_phaseState[faceI] = curPhaseState;
 
+                if(debug)
+                {
+                    Info<< "face phase state: " << curPhaseState << nl
+                        << endl;
+                }
+
                 faceI++;
             }
         }
@@ -2870,17 +2896,33 @@ void calc_face_phaseState_diff
         {
             forAll(pY1i, fcI)
             {
+                if(debug)
+                {
+                    Info<< "Face: " << faceI << "  patch face index: " << fcI << "  magSf = " << meshMagSf[faceI] << nl
+                        << "Af_ph1_own = " << magSf_ph1_own[faceI] << "  Af_ph1_nei = " << magSf_ph1_nei[faceI] << nl                       
+                        << "Af_ph0_own = " << magSf_ph0_own[faceI] << "  Af_ph0_nei = " << magSf_ph0_nei[faceI] 
+                        << endl;
+                }
+
                 curMagSf = meshMagSf[faceI];       
                 curMagSf_ph1_own = magSf_ph1_own[faceI];
                 curMagSf_ph0_own = magSf_ph0_own[faceI];                
 
                 curAlpha1f_own = curMagSf_ph1_own/curMagSf;
                 curAlpha0f_own = curMagSf_ph0_own/curMagSf;
+                curAlpha1f_nei = curAlpha1f_own;
+                curAlpha0f_nei = curAlpha0f_own;
 
                 curPhaseState = 2;
-                calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_own, curAlpha0f_own, MIN_ALPHA_DIFF, curPhaseState);
+                calc_face_phaseState(curAlpha1f_own, curAlpha0f_own, curAlpha1f_nei, curAlpha0f_nei, MIN_ALPHA_DIFF, curPhaseState);
 
-                face_phaseState[faceI] = curPhaseState;
+                face_phaseState[faceI] = curPhaseState;             
+
+                if(debug)
+                {
+                    Info<< "face phase state: " << curPhaseState << nl
+                        << endl;
+                }
 
                 faceI++;
             }
