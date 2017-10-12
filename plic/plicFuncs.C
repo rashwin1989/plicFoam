@@ -2693,7 +2693,7 @@ void calc_2ph_linearInterpolation_weights
 {
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
-    const vectorField& Sf = mesh.Sf();
+    const surfaceVectorField& Sf = mesh.Sf();
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {        
@@ -2734,6 +2734,7 @@ void calc_2ph_linearInterpolation_weights
     forAll(weights.boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];
+        const fvsPatchVectorField& pSf = Sf.boundaryField()[patchI];
         fvsPatchScalarField& pw = weights.boundaryField()[patchI];
         if(pp.coupled())
         {
@@ -2741,8 +2742,8 @@ void calc_2ph_linearInterpolation_weights
             label bndFaceI = pp.start() - mesh.nInternalFaces();
             forAll(pw, fcI)
             {                
-                scalar SfdOwn = mag(Sf[faceI] & (Cf_ph[faceI] - C_ph[own[faceI]]));
-                scalar SfdNei = mag(Sf[faceI] & (CNei[bndFaceI] - Cf_ph[faceI]));                
+                scalar SfdOwn = mag(pSf[fcI] & (Cf_ph[faceI] - C_ph[own[faceI]]));
+                scalar SfdNei = mag(pSf[fcI] & (CNei[bndFaceI] - Cf_ph[faceI]));                
                 pw[fcI] = SfdNei/(SfdOwn + SfdNei);
                 faceI++;
                 bndFaceI++;

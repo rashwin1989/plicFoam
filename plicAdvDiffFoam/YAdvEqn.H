@@ -23,6 +23,43 @@ for(label i=0; i<(nSpecies - 1); i++)
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
     scalarField& surfInt_advFlux_Y1iCells = surfInt_advFlux_Y1i.internalField();
 
+    if(adv_debug2)
+    {
+        Info<< "---------------------------------------------------------------------------------------" << nl
+            << "Advective fluxes Y1[" << i << "]" << nl
+            << "---------------------------------------------------------------------------------------" << nl
+            << endl;
+        
+        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+        {
+            Info<< "face: " << faceI << "  advFlux_Y1i = " << advFlux_Y1i[faceI]
+                << endl;
+        }
+        Info<< endl;
+        forAll(advFlux_Y1i.boundaryField(), patchI)
+        {
+            const polyPatch& pp = mesh.boundaryMesh()[patchI];
+            const fvsPatchScalarField& padvFlux_Y1i = advFlux_Y1i.boundaryField()[patchI];
+            const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
+            label faceI = pp.start();
+
+            Info<< "-----------------------------------------------------------------------------------------" << nl
+                << "Patch " << mesh.boundaryMesh().names()[patchI] << nl
+                << "-----------------------------------------------------------------------------------------"
+                << endl;
+
+            forAll(padvFlux_Y1i, fcI)
+            {
+                Info<< "face: " << faceI << "  patch face index: " << fcI << "  advFlux_Y1i = " << padvFlux_Y1i[fcI] << "  own Y1i = " << Y1iCells[own[faceI]] << "  nei Y1i = " << pY1i[fcI]
+                    << endl;
+                faceI++;
+            }
+            Info<< endl;
+        }
+        Info<< "----------------------------------------------------------------------------------------" << nl
+            << endl;
+    }
+
     forAll(C1iCells,cellI)
     {        
         if(adv_debug2)
@@ -48,7 +85,12 @@ for(label i=0; i<(nSpecies - 1); i++)
                         << nl
                         << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
                         << endl;
-                }                
+                }
+                else
+                {
+                    Info<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] 
+                        << endl;
+                }
             }
 
             Info<< "cell V: " << meshV[cellI] << endl;
@@ -124,6 +166,43 @@ for(label i=0; i<(nSpecies - 1); i++)
     volScalarField surfInt_advFlux_Y0i(fvc::surfaceIntegrate(advFlux_Y0i));
     scalarField& surfInt_advFlux_Y0iCells = surfInt_advFlux_Y0i.internalField();
 
+    if(adv_debug2)
+    {
+        Info<< "---------------------------------------------------------------------------------------" << nl
+            << "Advective fluxes Y0[" << i << "]" << nl
+            << "---------------------------------------------------------------------------------------" << nl
+            << endl;
+        
+        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+        {
+            Info<< "face: " << faceI << "  advFlux_Y0i = " << advFlux_Y0i[faceI]
+                << endl;
+        }
+        Info<< endl;
+        forAll(advFlux_Y0i.boundaryField(), patchI)
+        {
+            const polyPatch& pp = mesh.boundaryMesh()[patchI];
+            const fvsPatchScalarField& padvFlux_Y0i = advFlux_Y0i.boundaryField()[patchI];
+            const fvPatchScalarField& pY0i = Y0i.boundaryField()[patchI];
+            label faceI = pp.start();
+
+            Info<< "----------------------------------------------------------------------------------------" << nl
+                << "Patch " << mesh.boundaryMesh().names()[patchI] << nl
+                << "----------------------------------------------------------------------------------------"
+                << endl;
+
+            forAll(padvFlux_Y0i, fcI)
+            {
+                Info<< "face: " << faceI << "  patch face index: " << fcI << "  advFlux_Y0i = " << padvFlux_Y0i[fcI] << "  own Y0i = " << Y0iCells[own[faceI]] << "  nei Y0i = " << pY0i[fcI]
+                    << endl;
+                faceI++;
+            }
+            Info<< endl;
+        }
+        Info<< "---------------------------------------------------------------------------------------" << nl
+            << endl;
+    }
+
     forAll(C0iCells,cellI)
     {
         if(adv_debug2)
@@ -149,7 +228,12 @@ for(label i=0; i<(nSpecies - 1); i++)
                         << nl
                         << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
                         << endl;
-                }                
+                }            
+                else
+                {
+                    Info<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
+                        << endl;
+                }
             }
 
             Info<< "cell V: " << meshV[cellI] << endl;

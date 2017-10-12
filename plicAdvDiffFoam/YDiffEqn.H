@@ -174,7 +174,13 @@ for(label i=0; i<(nSpecies - 1); i++)
                         << nl
                         << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
                         << endl;
-                }                
+                }        
+                else
+                {
+                    Info<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl]
+                        << endl;
+                }    
+                
             }
 
             Info<< "cell V: " << meshV[cellI] << endl;
@@ -277,8 +283,13 @@ for(label i=0; i<(nSpecies - 1); i++)
                     Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
                         << nl
                         << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
+                        << endl;                        
+                }       
+                else
+                {
+                    Info<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
                         << endl;
-                }                
+                }
             }
 
             Info<< "cell V: " << meshV[cellI] << endl;

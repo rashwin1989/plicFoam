@@ -202,6 +202,11 @@ class plic
     List<List<scalar> > Y1_flatFld_;
     List<List<scalar> > Y0_flatFld_;
 
+    //-mesh faces info
+    vectorField Cf_;
+    vectorField Sf_;
+    scalarField magSf_;
+
     scalar ALPHA_2PH_MIN;
     scalar ALPHA_2PH_MAX;
     scalar GRADALPHA_MIN;
@@ -424,6 +429,21 @@ class plic
     inline const List<vector>& C_intfc_flatFld() const;
     
     bool isEq_pt(const point&, const point&);
+
+    const vectorField& meshCf() const
+    { 
+        return Cf_;
+    }
+
+    const vectorField& meshSf() const
+    { 
+        return Sf_;
+    }
+
+    const scalarField& meshMagSf() const
+    { 
+        return magSf_;
+    }
 };
 
 

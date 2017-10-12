@@ -1083,13 +1083,13 @@ void Foam::plic::calcFaceFluxTets
         }
     }
     U_fcCtr /= nFcPts;
-    vector curFcArea = mesh_.Sf()[curFcI];
+    vector curFcArea = Sf_[curFcI];
     scalar curFcCtrPhi = U_fcCtr & curFcArea;   
 
     if(debugF_)
     {
         Info<< "Face flux: " << curPhi << nl
-            << "Face vel. based on flux: " << curPhi*mesh_.Sf()[curFcI]/mesh_.magSf()[curFcI]/mesh_.magSf()[curFcI] << nl
+            << "Face vel. based on flux: " << curPhi*Sf_[curFcI]/magSf_[curFcI]/magSf_[curFcI] << nl
             << "Face vel. based on cells: " << (UCells[own[curFcI]]+UCells[nei[curFcI]])/2.0 << nl
             << "Face vel. based on points: " << U_fcCtr << nl
             << "Face own vel.: " << UCells[own[curFcI]] << "  Face nei vel.: " << UCells[nei[curFcI]] << nl
@@ -2251,6 +2251,37 @@ Foam::plic::plic
     Af_ph1_nei_.setSize(nFaces);
     Af_ph0_nei_.setSize(nFaces);
 
+    const surfaceVectorField& meshCf = mesh.Cf();
+    const surfaceVectorField& meshSf = mesh.Sf();
+    const surfaceScalarField& meshMagSf = mesh.magSf();
+    Cf_.setSize(nFaces);
+    Sf_.setSize(nFaces);
+    magSf_.setSize(nFaces);
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        Cf_[faceI] = meshCf[faceI];
+        Sf_[faceI] = meshSf[faceI];        
+        magSf_[faceI] = meshMagSf[faceI];        
+    }
+    
+    forAll(meshSf.boundaryField(), patchI)
+    {
+        const polyPatch& pp = mesh.boundaryMesh()[patchI];
+        const fvsPatchVectorField& pCf = meshCf.boundaryField()[patchI];
+        const fvsPatchVectorField& pSf = meshSf.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];
+        label faceI = pp.start();
+
+        forAll(pSf, fcI)
+        {
+            Cf_[faceI] = pCf[fcI];
+            Sf_[faceI] = pSf[fcI];        
+            magSf_[faceI] = pMagSf[fcI];
+            faceI++;
+        }
+    }
+
     const label nflatFld = faceStencil().map().constructSize();
     cells_flatFld_.setSize(nflatFld);
     cellPlns_flatFld_.setSize(nflatFld);
@@ -2899,35 +2930,35 @@ void Foam::plic::intfc_correct()
 
                 if(curFcOwn == cellI)
                 {
-                    Cf_ph0_own_[curFc_lbl] = meshCf[curFc_lbl];
-                    Cf_ph1_own_[curFc_lbl] = meshCf[curFc_lbl];
+                    Cf_ph0_own_[curFc_lbl] = Cf_[curFc_lbl];
+                    Cf_ph1_own_[curFc_lbl] = Cf_[curFc_lbl];
                     if(cell_phaseState_[cellI] == 0)
                     {
-                        Af_ph0_own_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph0_own_[curFc_lbl] = magSf_[curFc_lbl];
                         Af_ph1_own_[curFc_lbl] = 0;
                         face_phaseState_own_[curFc_lbl] = 0;
                     }//end if(cell_phaseState_[cellI] == 0)
                     else
                     {
                         Af_ph0_own_[curFc_lbl] = 0;
-                        Af_ph1_own_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph1_own_[curFc_lbl] = magSf_[curFc_lbl];
                         face_phaseState_own_[curFc_lbl] = 1;
                     }//end if(cell_phaseState_[cellI] == 0)
                 }// end if(curFcOwn == cellI)
                 else
                 {
-                    Cf_ph0_nei_[curFc_lbl] = meshCf[curFc_lbl];
-                    Cf_ph1_nei_[curFc_lbl] = meshCf[curFc_lbl];
+                    Cf_ph0_nei_[curFc_lbl] = Cf_[curFc_lbl];
+                    Cf_ph1_nei_[curFc_lbl] = Cf_[curFc_lbl];
                     if(cell_phaseState_[cellI] == 0)
                     {
-                        Af_ph0_nei_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph0_nei_[curFc_lbl] = magSf_[curFc_lbl];
                         Af_ph1_nei_[curFc_lbl] = 0;
                         face_phaseState_nei_[curFc_lbl] = 0;
                     }//end if(cell_phaseState_[cellI] == 0)
                     else
                     {
                         Af_ph0_nei_[curFc_lbl] = 0;
-                        Af_ph1_nei_[curFc_lbl] = meshMagSf[curFc_lbl];
+                        Af_ph1_nei_[curFc_lbl] = magSf_[curFc_lbl];
                         face_phaseState_nei_[curFc_lbl] = 1;
                     }//end if(cell_phaseState_[cellI] == 0)
                 }// end if(curFcOwn == cellI)
