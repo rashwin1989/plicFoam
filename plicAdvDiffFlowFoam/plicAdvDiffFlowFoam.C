@@ -50,7 +50,9 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createMesh.H"        
-    
+   
+    pimpleControl pimple(mesh);
+ 
     #include "readTimeControls.H"
     #include "initContinuityErrs.H"
     #include "createFields.H"
