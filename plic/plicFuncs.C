@@ -873,7 +873,7 @@ label findCellInFaceOrthDir
         {
             Info<< "Cell " << cellI << " in stencil: " << curCell << nl
                 << "C = " << Cp << "  C1 = " << C1 << "  Ci = " << C[curCell] << nl
-                << "CC1 = " << CC1 << "  CCi" << CCi << "  CC1_CCi_dir = " << CC1_CCi_dir << nl
+                << "CC1 = " << CC1 << "  CCi" << CCi << "  CC1_CCi_dir = " << CC1_CCi_dir
                 << endl;
         }
 
@@ -1007,9 +1007,11 @@ void calcCellGradWeights
             << endl;
     }
     
+    scalar Yp = Y[curCell_lbl];
     scalar Y1 = Y[C1_lbl];
     vector C2 = C[C2_lbl];
     scalar Y2 = Y[C2_lbl];
+    scalar Y2_1 = Y2;
 
     vector t1 = C1 - Cp;
     magt1 = mag(t1);
@@ -1029,6 +1031,7 @@ void calcCellGradWeights
     {
         theta2 = constant::mathematical::pi - acos((nf & t2)/magt2);
         theta2_1 = acos((nf & t2)/magt2);
+        Y2 = Yp + (Yp - Y2_1);
     }
 
     if(debug)
@@ -1037,19 +1040,15 @@ void calcCellGradWeights
             << "mag(t1) = " << magt1 << "  mag(t2) = " << magt2 << nl
             << "theta1 = " << theta1 << "  theta2_1 = " << theta2_1 << nl
             << "theta2_sign = " << theta2_sign << "  theta2 = " << theta2 << nl
-            << "Y1 = " << Y1 << "  Y2 = " << Y2 
+            << "Yp = " << Yp << "  Y1 = " << Y1 << "  Y2 = " << Y2 << "  Y2_1 = " << Y2_1 
             << endl;
     }
 
     alpha = sin(theta2)/sin(theta1 + theta2);
-    if(theta2_sign >= 0)
-    {
-        beta = sin(theta1)/sin(theta1 + theta2);
-    }
-    else
-    {
-        beta = -sin(theta1)/sin(theta1 + theta2);
-    }
+        
+    beta = sin(theta1)/sin(theta1 + theta2);            
+    //beta = -sin(theta1)/sin(theta1 + theta2);
+    
     //d = alpha*Y1/magt1 + beta*Y2/magt2;
     d = beta*Y2/magt2;
 
