@@ -56,6 +56,7 @@ SourceFiles
 #include "plic.H"
 #include "dimensionedTypes.H"
 #include "syncTools.H"
+#include "OFstream.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -181,7 +182,8 @@ namespace plicFuncs
         const vector&,
         const vector&,
         const label&,
-        bool
+        bool, 
+        OFstream&
     );
 
     label findCellInFaceOrthDir
@@ -191,7 +193,8 @@ namespace plicFuncs
         const vector&,
         const vector&,
         const label&,
-        bool
+        bool, 
+        OFstream&
     );    
 
     void calcCellGradWeights
@@ -209,7 +212,8 @@ namespace plicFuncs
         scalar&,
         scalar&,
         scalar&,
-        bool
+        bool, 
+        OFstream&
     );
 
     void calcCellGrad
@@ -223,7 +227,8 @@ namespace plicFuncs
         const scalar&,
         const label&,
         scalar&,
-        bool
+        bool, 
+        OFstream&
     );
 
     void calcTwoSidedFaceGradWeights
@@ -240,7 +245,8 @@ namespace plicFuncs
         const label&,
         scalar&,
         scalar&,        
-        bool
+        bool, 
+        OFstream&
     );
 
     void calcFaceGradFromWeights
@@ -258,7 +264,8 @@ namespace plicFuncs
         const scalar&,
         const scalar&,    
         scalar&, 
-        bool
+        bool, 
+        OFstream&
     );
 
     template<class Type>
@@ -285,7 +292,8 @@ namespace plicFuncs
         surfaceScalarField& gradf_Y0i,
         const label& i,
         const scalar& MIN_ALPHA_DIFF,
-        const bool debug
+        const bool debug, 
+        OFstream& os
     );
 
     void calc_2ph_diffFluxes_Yi_Fick
@@ -311,7 +319,8 @@ namespace plicFuncs
         surfaceScalarField& diffFlux_Y1i,
         surfaceScalarField& diffFlux_Y0i,
         const label& i,    
-        const bool debug
+        const bool debug, 
+        OFstream& os
     );
 
     void calc_diffFlux_limiter
@@ -366,7 +375,8 @@ namespace plicFuncs
         const scalarField& magSf_ph0_nei,
         const scalar& MIN_ALPHA_DIFF,
         labelList& face_phaseState,
-        const bool debug
+        const bool debug, 
+        OFstream& os
     );
 
     void calc_2ph_Cf

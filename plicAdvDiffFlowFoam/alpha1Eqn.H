@@ -1,4 +1,11 @@
 
+if(alpha_debug)
+{
+    osAlpha<< nl
+           << "Solution Time = " << runTime.timeName()
+           << nl << endl;
+}
+
 fvScalarMatrix alpha1Eqn
 (
     fvm::ddt(alpha1) + fvc::div(phiAlpha1)
@@ -30,21 +37,21 @@ const labelUList& owner = mesh.owner();
 const labelUList& neighbour = mesh.neighbour();
 const scalarField& meshV = mesh.V();
 
-if(unbound_debug)
+if(alpha_debug)
 {
-    Info<< endl;
+    osAlpha<< endl;
     forAll(alphaCells, cellI)
     {
         if(alphaCells[cellI] < ALPHA_MIN_BOUND || alphaCells[cellI] > ALPHA_MAX_BOUND)
         {
-            Info<< "Unbounded alpha in cell " << cellI << " alpha1 = " << alphaCells[cellI] << endl;
+            osAlpha<< "Unbounded alpha in cell " << cellI << " alpha1 = " << alphaCells[cellI] << endl;
             if(alphaCells[cellI] < ALPHA_MIN_BOUND)
             {
-                Info<< "alpha1 undershoot = " << alphaCells[cellI] << endl;
+                osAlpha<< "alpha1 undershoot = " << alphaCells[cellI] << endl;
             }
             else
             {
-                Info<< "alpha1 overshoot = " << (alphaCells[cellI] - 1) << endl;
+                osAlpha<< "alpha1 overshoot = " << (alphaCells[cellI] - 1) << endl;
             }
 
             scalar div_alpha1 = 0;
@@ -54,13 +61,13 @@ if(unbound_debug)
             {
                 if(owner[faceI] == cellI)
                 {
-                    Info<< "Face " << faceI << " owner  phiAlpha1 = " << phiAlpha1[faceI] << "  phi = " << phi[faceI] << endl;
+                    osAlpha<< "Face " << faceI << " owner  phiAlpha1 = " << phiAlpha1[faceI] << "  phi = " << phi[faceI] << endl;
                     div_alpha1 += phiAlpha1[faceI];
                     div_phi += phi[faceI];
                 }
                 else if(neighbour[faceI] == cellI)
                 {
-                    Info<< "Face " << faceI << " neighbour  phiAlpha1 = " << -phiAlpha1[faceI] << "  phi = " << -phi[faceI] << endl;
+                    osAlpha<< "Face " << faceI << " neighbour  phiAlpha1 = " << -phiAlpha1[faceI] << "  phi = " << -phi[faceI] << endl;
                     div_alpha1 -= phiAlpha1[faceI];
                     div_phi -= phi[faceI];
                 }
@@ -76,21 +83,21 @@ if(unbound_debug)
                 {
                     if(pFaceCells[faceI] == cellI)
                     {
-                        Info<< "Patch " << patchI << " face " << faceI << "  phiAlpha1 = " << pphiAlpha1[faceI] << "  phi = " << pphi[faceI] << endl;
+                        osAlpha<< "Patch " << patchI << " face " << faceI << "  phiAlpha1 = " << pphiAlpha1[faceI] << "  phi = " << pphi[faceI] << endl;
                         div_alpha1 += pphiAlpha1[faceI];
                         div_phi += pphi[faceI];
                     }
                 }
             }
 
-            Info<< "Cell alpha1 old time = " << alpha1.oldTime().internalField()[cellI] << nl
+            osAlpha<< "Cell alpha1 old time = " << alpha1.oldTime().internalField()[cellI] << nl
                 << "alpha1 face flux integrate = " << div_alpha1 << nl
                 << "face flux integrate = " << div_phi << endl;
 
             div_alpha1 /= meshV[cellI];
             div_phi /= meshV[cellI];
 
-            Info<< "divergence term in eqn = " << div_alpha1 << nl
+            osAlpha<< "divergence term in eqn = " << div_alpha1 << nl
                 << "div of velocity field = " << div_phi << nl
                 << "alpha1 solution update = " << div_alpha1*runTime.deltaT().value() << nl            
                 << "Cell alpha1 new time = " << alphaCells[cellI] << nl
@@ -105,9 +112,9 @@ if(redist_alpha)
     {
         if(alphaCells[cellI] < ALPHA_MIN_BOUND)
         {
-            if(debug)
+            if(alpha_debug)
             {
-                Info<< "Correcting alpha1 in cell " << cellI << nl
+                osAlpha<< "Correcting alpha1 in cell " << cellI << nl
                     << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
             }
 
@@ -131,9 +138,9 @@ if(redist_alpha)
             {
                 do
                 {
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
+                        osAlpha<< "alpha1 correction iteration no: " << nIters+1 << endl;
                     }
             
                     allNeiDone = true;
@@ -153,9 +160,9 @@ if(redist_alpha)
                         }
                     }            
 
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "Nei cell with minimum non-zero alpha1: " << minAlphaCell << nl
+                        osAlpha<< "Nei cell with minimum non-zero alpha1: " << minAlphaCell << nl
                             << "Nei cell alpha1: " << alphaCells[minAlphaCell] << endl;
                     }
 
@@ -163,9 +170,9 @@ if(redist_alpha)
                     alphaCells[minAlphaCell] = max(tAlpha, 0);
                     alphaCells[cellI] = min(tAlpha, 0);
 
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "New nei cell alpha1: " << alphaCells[minAlphaCell] << nl
+                        osAlpha<< "New nei cell alpha1: " << alphaCells[minAlphaCell] << nl
                             << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
                     }
             
@@ -176,9 +183,9 @@ if(redist_alpha)
 
         if(alphaCells[cellI] > ALPHA_MAX_BOUND)
         {
-            if(debug)
+            if(alpha_debug)
             {
-                Info<< "Correcting alpha1 in cell " << cellI << nl
+                osAlpha<< "Correcting alpha1 in cell " << cellI << nl
                     << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
             }
 
@@ -202,9 +209,9 @@ if(redist_alpha)
             {
                 do
                 {
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "alpha1 correction iteration no: " << nIters+1 << endl;
+                        osAlpha<< "alpha1 correction iteration no: " << nIters+1 << endl;
                     }
 
                     maxAlpha = 0;
@@ -224,9 +231,9 @@ if(redist_alpha)
                         }
                     }
 
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell << nl
+                        osAlpha<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell << nl
                             << "Nei cell alpha1: " << alphaCells[maxAlphaCell] << endl;
                     }
             
@@ -234,9 +241,9 @@ if(redist_alpha)
                     alphaCells[maxAlphaCell] = min(tAlpha, 1);
                     alphaCells[cellI] = max(tAlpha, 1);
 
-                    if(debug)
+                    if(alpha_debug)
                     {
-                        Info<< "New nei cell alpha1: " << alphaCells[maxAlphaCell] << nl
+                        osAlpha<< "New nei cell alpha1: " << alphaCells[maxAlphaCell] << nl
                             << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
                     }
 

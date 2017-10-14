@@ -37,7 +37,7 @@ if (adjustTimeStep)
 
     scalar maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactDiff);
 
-    scalar deltaTFact = min(min(maxDeltaTFact, 1.0 + 0.1*maxDeltaTFact), 1.2);
+    scalar deltaTFact = min(min(maxDeltaTFact, 1.0 + 0.1*maxDeltaTFact), 1.05);
 
     runTime.setDeltaT
     (

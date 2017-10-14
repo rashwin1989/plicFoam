@@ -1,4 +1,11 @@
 
+if(diff_debug)
+{
+    osDiff<< nl
+          << "Solution Time = " << runTime.timeName()
+          << nl << endl;
+}
+
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
@@ -12,7 +19,7 @@ plicFuncs::makeFlatFld(interface.C_ph0(), diffMap, C_ph0_flatFld_diff);
 
 //------------------------------------------------------------------//
 //Determine phase state at faces for diffusion flux calculation
-plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff, diff_debug);
+plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff, diff_debug, osDiff);
 //Done determine phase state at faces for diffusion flux calculation
 //------------------------------------------------------------------//
 
@@ -70,7 +77,8 @@ for(label i=0; i<nSpecies; i++)
         gradf_Y0i,
         i,
         MIN_ALPHA_DIFF,
-        diff_debug2
+        diff_debug2,
+        osDiff
     );
 }
 //Done calculate species mass fraction gradients for both phases
@@ -113,7 +121,8 @@ for(label i=0; i<nSpecies; i++)
         diffFlux_Y1i,
         diffFlux_Y0i,
         i,
-        diff_debug2
+        diff_debug2,
+        osDiff
     );
 }
 //Done calculate species diffusive fluxes for both phases
@@ -125,7 +134,7 @@ for(label i=0; i<(nSpecies - 1); i++)
 {
     if(diff_debug)
     {
-        Info<< "-----------------------------------" << nl
+        osDiff<< "-----------------------------------" << nl
             << "              Field Y[" << i << "]" << nl
             << "-----------------------------------" << nl
             << endl;
@@ -155,7 +164,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         {
             const cell& curCell = meshCells[cellI];
 
-            Info<< "Solving Y1[" << i << "] diff eqn in cell " << cellI << nl
+            osDiff<< "Solving Y1[" << i << "] diff eqn in cell " << cellI << nl
                 << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
 
             forAll(curCell, faceI)
@@ -163,29 +172,29 @@ for(label i=0; i<(nSpecies - 1); i++)
                 label curFaceLbl = curCell[faceI];
                 label curOwn = own[curFaceLbl];
 
-                Info<< "cell face label: " << curFaceLbl 
+                osDiff<< "cell face label: " << curFaceLbl 
                     << nl
                     <<"face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
                     << endl;
                 if(curFaceLbl < mesh.nInternalFaces())
                 {
                     label curNei = nei[curFaceLbl];
-                    Info<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
+                    osDiff<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
                         << nl
                         << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
                         << endl;
                 }        
                 else
                 {
-                    Info<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl]
+                    osDiff<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl]
                         << endl;
                 }    
                 
             }
 
-            Info<< "cell V: " << meshV[cellI] << endl;
+            osDiff<< "cell V: " << meshV[cellI] << endl;
 
-            Info<< "div(diffFlux) = " << surfInt_diffFlux_Y1iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue()
+            osDiff<< "div(diffFlux) = " << surfInt_diffFlux_Y1iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -202,13 +211,13 @@ for(label i=0; i<(nSpecies - 1); i++)
 
         if(diff_debug)
         {
-            Info<< "C1i = " << C1iCells[cellI] << nl
+            osDiff<< "C1i = " << C1iCells[cellI] << nl
                 << "Y1i = " << Y1iCells[cellI] << nl
                 << endl;
         }
     }
 
-    Info<< "Phase-1 Yi= "
+    Info<< "Phase-1 Ci= "
         << (C1i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C1i) = " << min(C1i).value()
@@ -217,29 +226,31 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "Min(Y1i) = " << min(Y1i).value()
         << "  Max(Y1i) = " << max(Y1i).value()
         << nl
-        << "C1i undershoot = " << min(min(C1i).value(), 0)
-        << "  C1i overshoot = " << max((max(C1i).value() - rho1_0.value()), 0)
+        << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
+        << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
         << nl
-        << "Y1i undershoot = " << min(min(Y1i).value(), 0)
-        << "  Y1i overshoot = " << max((max(Y1i).value() - 1), 0)
-        << endl;
+        << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
+        << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+        << endl;    
 
     forAll(C1iCells,cellI)
     {        
-        if(Y1iCells[cellI] < 0)
+        if(Y1iCells[cellI] < Y1min[i])
         {
-            Y1iCells[cellI] = 0;
-            C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+            Y1iCells[cellI] = Y1min[i];
+            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         }
         
-        if(Y1iCells[cellI] > 1)
+        if(Y1iCells[cellI] > Y1max[i])
         {
-            Y1iCells[cellI] = 1;
-            C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
-        }        
+            Y1iCells[cellI] = Y1max[i];
+            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+        }
+
+        C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
     }
 
-    Info<< "Phase-1 Yi after correction= "
+    Info<< "Phase-1 Ci after correction= "
         << (C1i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C1i) = " << min(C1i).value()
@@ -265,7 +276,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         {
             const cell& curCell = meshCells[cellI];
 
-            Info<< "Solving Y0[" << i << "] diff eqn in cell " << cellI << nl
+            osDiff<< "Solving Y0[" << i << "] diff eqn in cell " << cellI << nl
                 << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;
 
             forAll(curCell, faceI)
@@ -273,28 +284,28 @@ for(label i=0; i<(nSpecies - 1); i++)
                 label curFaceLbl = curCell[faceI];
                 label curOwn = own[curFaceLbl];
 
-                Info<< "cell face label: " << curFaceLbl 
+                osDiff<< "cell face label: " << curFaceLbl 
                     << nl
                     << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
                     << endl;
                 if(curFaceLbl < mesh.nInternalFaces())
                 {
                     label curNei = nei[curFaceLbl];
-                    Info<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
+                    osDiff<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
                         << nl
                         << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
                         << endl;                        
                 }       
                 else
                 {
-                    Info<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
+                    osDiff<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
                         << endl;
                 }
             }
 
-            Info<< "cell V: " << meshV[cellI] << endl;
+            osDiff<< "cell V: " << meshV[cellI] << endl;
 
-            Info<< "div(diffFlux) = " << surfInt_diffFlux_Y0iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue()
+            osDiff<< "div(diffFlux) = " << surfInt_diffFlux_Y0iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue()
                 << endl;
         }
                 
@@ -311,13 +322,13 @@ for(label i=0; i<(nSpecies - 1); i++)
 
         if(diff_debug)
         {
-            Info<< "C0i = " << C0iCells[cellI] << nl
+            osDiff<< "C0i = " << C0iCells[cellI] << nl
                 << "Y0i = " << Y0iCells[cellI] << nl
                 << endl;
         }
     }
 
-    Info<< "Phase-0 Yi= "
+    Info<< "Phase-0 Ci= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C0i) = " << min(C0i).value()
@@ -326,29 +337,31 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()
         << nl
-        << "C0i undershoot = " << min(min(C0i).value(), 0)
-        << "  C0i overshoot = " << max((max(C0i).value() - rho0_0.value()), 0)
+        << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
+        << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
         << nl
-        << "Y0i undershoot = " << min(min(Y0i).value(), 0)
-        << "  Y0i overshoot = " << max((max(Y0i).value() - 1), 0)
-        << endl;
+        << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
+        << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
+        << endl;            
 
     forAll(C0iCells,cellI)
     {        
-        if(Y0iCells[cellI] < 0)
+        if(Y0iCells[cellI] < Y0min[i])
         {
-            Y0iCells[cellI] = 0;
-            C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+            Y0iCells[cellI] = Y0min[i];
+            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
         }
         
-        if(Y0iCells[cellI] > 1)
+        if(Y0iCells[cellI] > Y0max[i])
         {
-            Y0iCells[cellI] = 1;
-            C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
-        }        
+            Y0iCells[cellI] = Y0max[i];
+            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+        }
+
+        C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
     }
 
-    Info<< "Phase-0 Yi after correction= "
+    Info<< "Phase-0 Ci after correction= "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C0i) = " << min(C0i).value()
