@@ -3127,6 +3127,7 @@ void redistribute_Ci_field
     }
 }
 
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace plicFuncs
