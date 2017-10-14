@@ -787,9 +787,9 @@ label findCellInFaceDir
 
     if(debug)
     {
-        Info<< "Finding cell in face normal direction" << nl 
-            << "nf: " << nf
-            << endl;
+        os<< "Finding cell in face normal direction" << nl 
+          << "nf: " << nf
+          << endl;
     }
 
     for(label cellI=0; cellI<cells.size(); cellI++)
@@ -800,10 +800,10 @@ label findCellInFaceDir
 
         if(debug)
         {
-            Info<< "Cell " << cellI << " in stencil: " << curCell << nl
-                << "C = " << Cp << "  Ci = " << Ci << nl
-                << "CCi" << CCi
-                << endl;
+            os<< "Cell " << cellI << " in stencil: " << curCell << nl
+              << "C = " << Cp << "  Ci = " << Ci << nl
+              << "CCi" << CCi
+              << endl;
         }
 
         if(curCell != C1_lbl)
@@ -813,7 +813,7 @@ label findCellInFaceDir
 
             if(debug)
             {
-                Info<< "costheta = " << cosTheta << endl;
+                os<< "costheta = " << cosTheta << endl;
             }
 
             if(cosTheta > cosThetaMax)
@@ -826,8 +826,8 @@ label findCellInFaceDir
 
     if(debug)
     {
-        Info<< "Cell in nf direction: " << cell_lbl << nl
-            << endl;
+        os<< "Cell in nf direction: " << cell_lbl << nl
+          << endl;
     }
 
     return cell_lbl;
@@ -1018,9 +1018,23 @@ void calcCellGradWeights
 
     vector t1 = C1 - Cp;
     magt1 = mag(t1);
+    if(magt1 < SMALL)
+    {
+        magt1 += SMALL;
+    }
     vector t2 = C2 - Cp;
     magt2 = mag(t2);
-    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/mag(t1)/mag(t2);
+    if(magt2 < SMALL)
+    {
+        magt2 += SMALL;
+    }    
+    scalar magt1t2 = magt1*magt2;
+    if(magt1t2 < SMALL)
+    {
+        magt1t2 += SMALL;
+    }    
+
+    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
 
     scalar theta1 = acos((nf & t1)/magt1);
     scalar theta2;
@@ -1047,9 +1061,15 @@ void calcCellGradWeights
             << endl;
     }
 
-    alpha = sin(theta2)/sin(theta1 + theta2);
+    scalar sintheta12 = sin(theta1 + theta2);
+    if(sintheta12 < SMALL)
+    {
+        sintheta12 += SMALL;
+    }
+
+    alpha = sin(theta2)/sintheta12;
         
-    beta = sin(theta1)/sin(theta1 + theta2);            
+    beta = sin(theta1)/sintheta12;            
     //beta = -sin(theta1)/sin(theta1 + theta2);
     
     //d = alpha*Y1/magt1 + beta*Y2/magt2;
@@ -1143,9 +1163,24 @@ void calcCellGrad
 
     vector t1 = C1 - Cp;
     scalar magt1 = mag(t1);
+    if(magt1 < SMALL)
+    {
+        magt1 += SMALL;
+    }
     vector t2 = C2 - Cp;
-    scalar magt2 = mag(t2);    
-    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/mag(t1)/mag(t2);
+    scalar magt2 = mag(t2);
+    magt2 = mag(t2);
+    if(magt2 < SMALL)
+    {
+        magt2 += SMALL;
+    }    
+    scalar magt1t2 = magt1*magt2;
+    if(magt1t2 < SMALL)
+    {
+        magt1t2 += SMALL;
+    }
+
+    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
 
     scalar theta1 = acos((nf & t1)/magt1);
     scalar theta2;
@@ -1171,15 +1206,21 @@ void calcCellGrad
             << endl;
     }
 
-    scalar alpha = sin(theta2)/sin(theta1 + theta2);
+    scalar sintheta12 = sin(theta1 + theta2);
+    if(sintheta12 < SMALL)
+    {
+        sintheta12 += SMALL;
+    }
+
+    scalar alpha = sin(theta2)/sintheta12;
     scalar beta;
     if(theta2_sign >= 0)
     {
-        beta = sin(theta1)/sin(theta1 + theta2);
+        beta = sin(theta1)/sintheta12;
     }
     else
     {
-        beta = -sin(theta1)/sin(theta1 + theta2);
+        beta = -sin(theta1)/sintheta12;
     }
 
     cellGrad = alpha*(Y1 - Yp)/magt1 + beta*(Y2 - Yp)/magt2;
@@ -1246,13 +1287,21 @@ void calcTwoSidedFaceGradWeights
 
     scalar mup;
     scalar mum;
+    scalar dmdp;
     if(mag(dm) < SMALL && mag(dp) < SMALL)
     {
         mup = 0.5;
     }
     else
     {
-        mup = dm/(dm + dp);
+        dmdp = dm + dp;
+        if(mag(dmdp) < SMALL)
+        {
+            dmdp = mag(dmdp) + SMALL;
+        }
+        mup = dm/dmdp;
+        mup = mag(mup);
+        mup = min(mup, 1);
     }
     mum = 1 - mup;
 
@@ -1296,14 +1345,23 @@ void calcFaceGradFromWeights
 
     scalar mup;
     scalar mum;
+    scalar dmdp;
     if(mag(dm) < SMALL && mag(dp) < SMALL)
     {
         mup = 0.5;
     }
     else
     {
-        mup = dm/(dm + dp);
-    }    
+        dmdp = dm + dp;
+        if(mag(dmdp) < SMALL)
+        {
+            dmdp = mag(dmdp) + SMALL;
+        }
+        mup = dm/dmdp;
+        mup = mag(mup);
+        mup = min(mup, 1);
+    }
+    
     mum = 1 - mup;
 
     scalar wOwn = -(mup*(alphap/magt1p + betap/magt2p) + mum*alpham/magt1m);
@@ -2638,7 +2696,7 @@ void calc_diffFlux_limiter
         
         if(mag(diffFlux) > maxDiffFlux)
         {
-            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + VSMALL);
+            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + SMALL);
         }        
     }
     else
@@ -2651,7 +2709,7 @@ void calc_diffFlux_limiter
 
         if(mag(diffFlux) > maxDiffFlux)
         {
-            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + VSMALL);
+            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + SMALL);
         }
     }        
 }
