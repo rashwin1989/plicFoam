@@ -3009,13 +3009,15 @@ void redistribute_Ci_field
     const scalarField& alphaCells,
     const scalarField& rhoCells,
     const labelListList& cellStencil,
-    const scalar& Y_MIN_BOUND,
-    const scalar& Y_MAX_BOUND
+    const scalar& Y_MIN,
+    const scalar& Y_MAX,
+    const scalar& ALPHA_MIN,
+    const label& Y_BOUND_ITERS_MAX
 )
 {
     forAll(YCells, cellI)
     {
-        if(YCells[cellI] < Y_MIN_BOUND)
+        if(YCells[cellI] < Y_MIN)
         {            
             const labelList& curCellCells = cellStencil[cellI];
             scalar minY;
@@ -3026,7 +3028,7 @@ void redistribute_Ci_field
             {
                 label curCell = curCellCells[i];
 
-                if(!(curCell==cellI) && (curCell < mesh.nCells()) && (YCells[curCell] > Y_MIN_BOUND))
+                if(!(curCell==cellI) && (curCell < mesh.nCells()) && (YCells[curCell] > Y_MIN) && (alphaCells[curCell] > ALPHA_MIN))
                 {
                     allNeiDone = false;
                     break;
@@ -3043,7 +3045,7 @@ void redistribute_Ci_field
                     {
                         label curCell = curCellCells[i];
 
-                        if(!(curCell==cellI) && (curCell < nCells) && (YCells[curCell] > Y_MIN_BOUND))
+                        if(!(curCell==cellI) && (curCell < mesh.nCells()) && (YCells[curCell] > Y_MIN) && (alphaCells[curCell] > ALPHA_MIN))
                         {
                             allNeiDone = false;
                             if(YCells[curCell] < minY)
@@ -3054,88 +3056,74 @@ void redistribute_Ci_field
                         }
                     }                                
 
-                    scalar tC = rhoCells[minYCell]*alphaCells[minYCell]*YCells[minYCell] + rhoCells[cellI]*alphaCells[cellI]*YCells[cellI];
+                    scalar tC1 = rhoCells[minYCell]*alphaCells[minYCell]*(YCells[minYCell] - Y_MIN);
+                    scalar tC2 = rhoCells[cellI]*alphaCells[cellI]*(Y_MIN - YCells[cellI]);
+                    scalar tC = min(tC1, tC2);
 
-                    CCells[minYCell] = max(tC, 0);
-                    CCells[cellI] = min(tC, 0);
+                    CCells[minYCell] -= tC;
+                    CCells[cellI] += tC;
 
-                    
+                    YCells[minYCell] = CCells[minYCell]/rhoCells[minYCell]/alphaCells[minYCell];
+                    YCells[cellI] = CCells[cellI]/rhoCells[cellI]/alphaCells[cellI];
             
                     nIters++;
-                }while(alphaCells[cellI] < ALPHA_MIN_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+                }while(YCells[cellI] < Y_MIN && !allNeiDone && nIters < Y_BOUND_ITERS_MAX);        
             }        
         }
 
-        if(alphaCells[cellI] > ALPHA_MAX_BOUND)
-        {
-            if(alpha_debug)
-            {
-                osAlpha<< "Correcting alpha1 in cell " << cellI << nl
-                    << "Cell alpha1:  " << alphaCells[cellI] << nl << endl;
-            }
-
-            const labelList& curCellCells = cell_stencil.stencil()[cellI];
-            scalar maxAlpha = 0;
-            label maxAlphaCell = cellI;
+        if(YCells[cellI] > Y_MAX)
+        {            
+            const labelList& curCellCells = cellStencil[cellI];
+            scalar maxY;
+            label maxYCell = cellI;
             label nIters = 0;
             bool allNeiDone = true;
             for(label i=0; i<curCellCells.size(); i++)
             {
                 label curCell = curCellCells[i];
 
-                if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
+                if(!(curCell==cellI) && (curCell < mesh.nCells()) && (YCells[curCell] < Y_MAX) && (alphaCells[curCell] > ALPHA_MIN))
                 {
                     allNeiDone = false;
                     break;
                 }
             }
-        
+
             if(!allNeiDone)
             {
                 do
-                {
-                    if(alpha_debug)
-                    {
-                        osAlpha<< "alpha1 correction iteration no: " << nIters+1 << endl;
-                    }
-
-                    maxAlpha = 0;
+                {                                
                     allNeiDone = true;
+                    maxY = -0.1;
                     for(label i=0; i<curCellCells.size(); i++)
                     {
                         label curCell = curCellCells[i];
 
-                        if(!(curCell==cellI) && (curCell < nCells) && (alphaCells[curCell] < 1))
+                        if(!(curCell==cellI) && (curCell < mesh.nCells()) && (YCells[curCell] < Y_MAX) && (alphaCells[curCell] > ALPHA_MIN))
                         {
                             allNeiDone = false;
-                            if(alphaCells[curCell] > maxAlpha)
+                            if(YCells[curCell] > maxY)
                             {
-                                maxAlphaCell = curCell;
-                                maxAlpha = alphaCells[curCell];
+                                maxYCell = curCell;
+                                maxY = YCells[curCell];
                             }
                         }
-                    }
+                    }                                
 
-                    if(alpha_debug)
-                    {
-                        osAlpha<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell << nl
-                            << "Nei cell alpha1: " << alphaCells[maxAlphaCell] << endl;
-                    }
+                    scalar tC1 = rhoCells[maxYCell]*alphaCells[maxYCell]*(Y_MAX - YCells[maxYCell]);
+                    scalar tC2 = rhoCells[cellI]*alphaCells[cellI]*(YCells[cellI] - Y_MAX);
+                    scalar tC = min(tC1, tC2);
+
+                    CCells[maxYCell] += tC;
+                    CCells[cellI] -= tC;
+
+                    YCells[maxYCell] = CCells[maxYCell]/rhoCells[maxYCell]/alphaCells[maxYCell];
+                    YCells[cellI] = CCells[cellI]/rhoCells[cellI]/alphaCells[cellI];
             
-                    scalar tAlpha = alphaCells[maxAlphaCell] + alphaCells[cellI] - 1;
-                    alphaCells[maxAlphaCell] = min(tAlpha, 1);
-                    alphaCells[cellI] = max(tAlpha, 1);
-
-                    if(alpha_debug)
-                    {
-                        osAlpha<< "New nei cell alpha1: " << alphaCells[maxAlphaCell] << nl
-                            << "New cell alpha1: " << alphaCells[cellI] << nl << endl;
-                    }
-
                     nIters++;
-                }while(alphaCells[cellI] > ALPHA_MAX_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
-            }
-        }        
+                }while(YCells[cellI] > Y_MAX && !allNeiDone && nIters < Y_BOUND_ITERS_MAX);        
+            }        
+        }       
     }
 }
 

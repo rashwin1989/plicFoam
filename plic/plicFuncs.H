@@ -392,6 +392,20 @@ namespace plicFuncs
         vectorField& Cf_ph1,
         vectorField& Cf_ph0
     );
+
+    void redistribute_Ci_field
+    (
+        const fvMesh& mesh,
+        scalarField& CCells,
+        scalarField& YCells,
+        const scalarField& alphaCells,
+        const scalarField& rhoCells,
+        const labelListList& cellStencil,
+        const scalar& Y_MIN,
+        const scalar& Y_MAX,
+        const scalar& ALPHA_MIN,
+        const label& Y_BOUND_ITERS_MAX
+    );
 }
 
 

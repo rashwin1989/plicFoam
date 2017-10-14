@@ -217,7 +217,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         }
     }
 
-    Info<< "Phase-1 Ci= "
+    Info<< "Phase-1 Ci = "
         << (C1i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C1i) = " << min(C1i).value()
@@ -250,7 +250,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
     }
 
-    Info<< "Phase-1 Ci after correction= "
+    Info<< "Phase-1 Ci after clipping = "
         << (C1i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C1i) = " << min(C1i).value()
@@ -328,7 +328,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         }
     }
 
-    Info<< "Phase-0 Ci= "
+    Info<< "Phase-0 Ci = "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C0i) = " << min(C0i).value()
@@ -361,7 +361,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
     }
 
-    Info<< "Phase-0 Ci after correction= "
+    Info<< "Phase-0 Ci after clipping = "
         << (C0i).weightedAverage(mesh.Vsc()).value()
         << nl
         << "Min(C0i) = " << min(C0i).value()
