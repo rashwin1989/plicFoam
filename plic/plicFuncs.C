@@ -3186,6 +3186,168 @@ void redistribute_Ci_field
 }
 
 
+void calc_cell_intfcGrad_coeffs
+(
+
+)
+{
+    if(debug)
+    {
+        os<< "Calculating cell intfc grad weights in cell " << curCell_lbl << nl
+            << endl;
+    }
+
+    scalar MAX_ALPHA_2PH = 1 - MIN_ALPHA_2PH;
+    
+    labelList curCells(curCellsAll.size());
+    label n_ph = 0;
+
+    if(debug)
+    {
+        os<< "Reducing cell stencil for phase " << phaseLbl << nl
+            << "Full cell stencil" << nl
+            << curCellsAll << nl
+            << endl;
+    }
+
+    if(phaseLbl == 1)
+    {
+        for(label cellI=0; cellI<curCellsAll.size(); cellI++)
+        {            
+            label cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MIN_ALPHA_2PH = " << MIN_ALPHA_2PH << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] > MIN_ALPHA_2PH && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = cellI_lbl;
+            }            
+        }        
+    }
+    else
+    {
+        for(label cellI=0; cellI<curCellsAll.size(); cellI++)
+        {
+            label cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MAX_ALPHA_2PH = " << MAX_ALPHA_2PH << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] < MAX_ALPHA_2PH && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = curCellsAll[cellI];
+            }            
+        }
+    }
+    
+    curCells.setSize(n_ph);
+
+    if(debug)
+    {
+        os<< "Cell reduced stencil" << nl
+            << curCells << nl
+            << endl;
+    }
+
+    // suffix 1: direction closest to nf
+    // suffix 2: direction closest orthogonal to nf in 2-D
+    // further improvements needed for 3-D calculation
+    vector Cp = C_intfc[curCell_lbl];
+    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,debug,os);
+    vector C1 = C[C1_lbl];
+    label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,debug,os);
+
+    if(debug)
+    {
+        os<< "Cell " << curCell_lbl << nl
+            << "Cell interface face centre: " << Cp << "  nf: " << nf << nl
+            << "C1_lbl: " << C1_lbl << "  C2_lbl: " << C2_lbl
+            << endl;
+    }
+        
+    vector C2 = C[C2_lbl];    
+
+    vector t1 = C1 - Cp;
+    magt1 = mag(t1);
+    if(magt1 < SMALL)
+    {
+        magt1 += SMALL;
+    }
+    vector t2 = C2 - Cp;
+    magt2 = mag(t2);
+    if(magt2 < SMALL)
+    {
+        magt2 += SMALL;
+    }    
+    scalar magt1t2 = magt1*magt2;
+    if(magt1t2 < SMALL)
+    {
+        magt1t2 += SMALL;
+    }    
+
+    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
+    scalar theta1 = acos((nf & t1)/magt1);
+    scalar theta2 = acos((nf & t2)/magt2);
+
+    scalar sintheta12 = sin(theta1 + theta2);
+    if(sintheta12 < SMALL)
+    {
+        sintheta12 += SMALL;
+    }
+
+    scalar alpha = sin(theta2)/sintheta12;        
+    scalar beta = sin(theta1)/sintheta12;
+    scalar at2bt1 = alpha*magt2 + beta*magt1;
+    if(mag(at2bt1) < SMALL)
+    {
+        at2bt1 += SMALL:
+    }
+    
+    dn = magt1t2/at2bt1;
+
+    if(debug)
+    {
+        os<< "t1 = " << t1 << "  t2 = " << t2 << nl
+            << "mag(t1) = " << magt1 << "  mag(t2) = " << magt2 << nl
+            << "theta1 = " << theta1 << "  theta2 = " << theta2 << nl
+            << "theta2_sign = " << theta2_sign << nl
+            << "alpha = " << alpha << "  beta = " << beta << nl
+            << "dn = " << dn << nl
+            << endl;
+    }
+
+    scalar Y1;
+    scalar Y2;
+    for(label i=0; i<nSpecies; i++)
+    {
+        Y1 = Y[i][C1_lbl];
+        Y2 = Y[i][C2_lbl];
+        Yeff[i] = alpha*magt2*Y1 + beta*magt1*Y2;
+
+        if(debug)
+        {
+            os<< "Species index: " << i << nl
+                << "Y1 = " << Y1 << "  Y2 = " << Y2 << "  Yeff = " << Yeff
+                << endl;
+        }
+    }    
+
+    if(debug)
+    {
+        os<< endl;
+    }
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace plicFuncs
