@@ -4085,8 +4085,8 @@ void calc_mS_alphaS
 
             for(label i=0; i<nSpecies; i++)
             {
-                mS1[i].internalField()[cellI] = limiter_min*mS1_cellI[i];
-                mS0[i].internalField()[cellI] = limiter_min*mS0_cellI[i];
+                mS1[i].internalField()[cellI] = limiter_min*mS1_cellI[i]/V_cellI;
+                mS0[i].internalField()[cellI] = limiter_min*mS0_cellI[i]/V_cellI;;
 
                 mS1Tot_cellI += mS1[i].internalField()[cellI];
                 mS0Tot_cellI += mS0[i].internalField()[cellI];                
@@ -4094,6 +4094,155 @@ void calc_mS_alphaS
 
             mS1Tot.internalField()[cellI] = mS1Tot_cellI;
             mS0Tot.internalField()[cellI] = mS0Tot_cellI;
+
+            alphaS1.internalField()[cellI] = mS1Tot_cellI/rho1Cells[cellI];
+            alphaS0.internalField()[cellI] = mS0Tot_cellI/rho0Cells[cellI];
+        }
+    }
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        label faceOwn = own[faceI];
+        label faceNei = nei[faceI];
+        scalar alpha1Own = alpha1Cells[faceOwn];
+        scalar alpha1Nei = alpha1Cells[faceNei];
+        scalar VOwn = V[faceOwn];
+        scalar VNei = V[faceNei];
+
+        if(debug)
+        {
+            os<< "Face: " << faceI << nl
+                << "own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
+        }        
+
+        if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
+        {
+            scalar mS1Tot_cellI = 0;
+            scalar mS0Tot_cellI = 0;
+            List<scalar> mS1_cellI(nSpecies);
+            List<scalar> mS0_cellI(nSpecies);            
+            scalar max_mSTot;
+            scalar weight;
+            
+            for(label i=0; i<nSpecies; i++)
+            {
+                mS1_cellI[i] = (Js0[i].internalField()[cellI] - Js1[i].internalField()[cellI])*dt;
+                mS0_cellI[i] = -mS1_cellI[i];
+                mS1Tot_cellI += mS1_cellI[i];
+                mS0Tot_cellI += mS0_cellI[i];
+            }
+
+            if(mS1Tot_cellI > 0)
+            {
+                max_mSTot = rho0Own*(1 - alpha1Own)*VOwn;
+                if(mS1Tot_cellI > max_mSTot)
+                {
+                    weight = max_mSTot/mS1Tot_cellI;
+                }
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceNei] = (1 -  weight)*mS1_cellI[i]/VNei;
+                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];                   
+                }
+
+                mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
+                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                mS1Tot.internalField()[faceNei] = (1 - weight)*mS1Tot_cellI/VNei;
+                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
+            }
+            else if(mS1Tot_cellI < 0)
+            {
+                max_mSTot = rho1Nei*alpha1Nei*VNei;
+                if(mS0Tot_cellI > max_mSTot)
+                {
+                    weight = max_mSTot/mS0Tot_cellI;
+                }
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceNei] = weight*mS1_cellI[i]/VNei;
+                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];
+                    mS1[i].internalField()[faceOwn] = (1 -  weight)*mS1_cellI[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                   
+                }
+
+                mS1Tot.internalField()[faceNei] = weight*mS1Tot_cellI/VNei;
+                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
+                mS1Tot.internalField()[faceOwn] = (1 - weight)*mS1Tot_cellI/VOwn;
+                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+            }
+            else
+            {
+                weight = 1;
+            }
+        }
+
+        if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
+        {
+            scalar mS1Tot_cellI = 0;
+            scalar mS0Tot_cellI = 0;
+            List<scalar> mS1_cellI(nSpecies);
+            List<scalar> mS0_cellI(nSpecies);            
+            scalar max_mSTot;
+            scalar weight;
+            
+            for(label i=0; i<nSpecies; i++)
+            {
+                mS1_cellI[i] = (Js0[i].internalField()[cellI] - Js1[i].internalField()[cellI])*dt;
+                mS0_cellI[i] = -mS1_cellI[i];
+                mS1Tot_cellI += mS1_cellI[i];
+                mS0Tot_cellI += mS0_cellI[i];
+            }
+
+            if(mS1Tot_cellI > 0)
+            {
+                max_mSTot = rho0Own*(1 - alpha1Own)*VOwn;
+                if(mS1Tot_cellI > max_mSTot)
+                {
+                    weight = max_mSTot/mS1Tot_cellI;
+                }
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceNei] = (1 -  weight)*mS1_cellI[i]/VNei;
+                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];                   
+                }
+
+                mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
+                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                mS1Tot.internalField()[faceNei] = (1 - weight)*mS1Tot_cellI/VNei;
+                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
+            }
+            else if(mS1Tot_cellI < 0)
+            {
+                max_mSTot = rho1Nei*alpha1Nei*VNei;
+                if(mS0Tot_cellI > max_mSTot)
+                {
+                    weight = max_mSTot/mS0Tot_cellI;
+                }
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceNei] = weight*mS1_cellI[i]/VNei;
+                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];
+                    mS1[i].internalField()[faceOwn] = (1 -  weight)*mS1_cellI[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                   
+                }
+
+                mS1Tot.internalField()[faceNei] = weight*mS1Tot_cellI/VNei;
+                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
+                mS1Tot.internalField()[faceOwn] = (1 - weight)*mS1Tot_cellI/VOwn;
+                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+            }
+            else
+            {
+                weight = 1;
+            }
         }
     }
 }
