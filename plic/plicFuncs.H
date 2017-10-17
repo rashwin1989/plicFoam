@@ -406,6 +406,51 @@ namespace plicFuncs
         const scalar& ALPHA_MIN,
         const label& Y_BOUND_ITERS_MAX
     );
+
+    void calc_cell_intfcGrad_coeffs
+    (
+        const label& curCell_lbl,
+        const vector& nf,
+        const vector& C_intfc,
+        const List<List<scalar> >& Y,
+        const List<scalar>& alpha1,
+        const List<vector>& C,
+        const labelList& curCellsAll,
+        const label& nSpecies,
+        const scalar& MIN_ALPHA_2PH,
+        const label& phaseLbl,
+        scalar& dn,
+        List<scalar>& Yeff,    
+        bool debug, 
+        OFstream& os
+    );
+
+    void calc_Js
+    (
+        const fvMesh& mesh,
+        const labelListList& cellStencil,
+        const List<List<scalar> >& Y1_flatFld,
+        const List<List<scalar> >& Y0_flatFld,
+        const List<scalar>& alpha1_flatFld,
+        const volScalarField& alpha1,
+        const volScalarField& rho1,
+        const volScalarField& rho0,
+        const PtrList<volScalarField>& D1,
+        const PtrList<volScalarField>& D0,
+        const List<vector>& C_ph1_flatFld,
+        const List<vector>& C_ph0_flatFld,
+        const volVectorField& C_intfc,
+        const volScalarField& A_intfc,
+        const volVectorField& nHat,
+        const PtrList<volScalarField>& Ys1,
+        const PtrList<volScalarField>& Ys0,
+        PtrList<volScalarField>& Js1,
+        PtrList<volScalarField>& Js0,
+        const label& nSpecies,
+        const scalar& ALPHA_2PH_MIN,
+        const bool debug,
+        OFstream& os
+    );
 }
 
 
