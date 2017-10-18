@@ -137,7 +137,19 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
 
-                interface.intfc_correct();
+                interface.intfc_correct();                
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+
+                #include "ist.H"
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+
+                interface.intfc_correct();                
 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
