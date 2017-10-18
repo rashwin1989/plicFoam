@@ -451,6 +451,29 @@ namespace plicFuncs
         const bool debug,
         OFstream& os
     );
+
+    void calc_mS_alphaS
+    (
+        const fvMesh& mesh,
+        const PtrList<volScalarField>& C1,
+        const PtrList<volScalarField>& C0,
+        const volScalarField& alpha1,
+        const volScalarField& rho1,
+        const volScalarField& rho0,
+        const PtrList<volScalarField>& Js1,
+        const PtrList<volScalarField>& Js0,
+        const label& nSpecies,
+        const scalar& ALPHA_2PH_MIN,
+        PtrList<volScalarField>& mS1,
+        PtrList<volScalarField>& mS0,
+        volScalarField& mS1Tot,
+        volScalarField& mS0Tot,
+        volScalarField& alphaS1,
+        volScalarField& alphaS0,
+        const bool debug,
+        OFstream& os
+    );
+
 }
 
 

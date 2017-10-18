@@ -4005,12 +4005,29 @@ void calc_Js
 
 void calc_mS_alphaS
 (
-
+    const fvMesh& mesh,
+    const PtrList<volScalarField>& C1,
+    const PtrList<volScalarField>& C0,
+    const volScalarField& alpha1,
+    const volScalarField& rho1,
+    const volScalarField& rho0,
+    const PtrList<volScalarField>& Js1,
+    const PtrList<volScalarField>& Js0,
+    const label& nSpecies,
+    const scalar& ALPHA_2PH_MIN,
+    PtrList<volScalarField>& mS1,
+    PtrList<volScalarField>& mS0,
+    volScalarField& mS1Tot,
+    volScalarField& mS0Tot,
+    volScalarField& alphaS1,
+    volScalarField& alphaS0,
+    const bool debug,
+    OFstream& os
 )
 {
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
     scalar dt = mesh.time().deltaTValue();
-    const volScalarField& V = mesh.V();
+    const scalarField& V = mesh.V();
 
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
@@ -4045,16 +4062,23 @@ void calc_mS_alphaS
         scalar mS0Tot_cellI = 0;
         List<scalar> mS1_cellI(nSpecies);
         List<scalar> mS0_cellI(nSpecies);
-        scalar limiter;
+        scalar limiter = 1;
         scalar limiter_min = 1;
         scalar max_mSi;
 
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
-        {            
+        {                                    
             for(label i=0; i<nSpecies; i++)
-            {
+            {                                
                 mS1_cellI[i] = (Js0[i].internalField()[cellI] - Js1[i].internalField()[cellI])*dt;
                 mS0_cellI[i] = -mS1_cellI[i];
+
+                if(debug)
+                {
+                    os<< "Species: " << i << nl
+                        << "Js1i = " << Js1[i].internalField()[cellI] << "  Js0i = " << Js0[i].internalField()[cellI] << "  dt = " << dt << nl
+                        << "mS1i = " << mS1_cellI[i] << "  mS0i = " << mS0_cellI[i] << endl;
+                }
                 
                 if(mS1_cellI[i] > 0)
                 {
@@ -4065,6 +4089,12 @@ void calc_mS_alphaS
                         limiter = max_mSi/mS1_cellI[i];
                         limiter_min = min(limiter, limiter_min);                        
                     }
+
+                    if(debug)
+                    {
+                        os<< "C0i = " << C0[i].internalField()[cellI] << "  V_cellI = " << V_cellI << "  max_mSi = " << max_mSi << nl
+                            << "limiter = " << limiter << "  limiter_min = " << limiter_min << endl;
+                    }
                 }
                 else if(mS1_cellI[i] < 0)
                 {
@@ -4074,6 +4104,12 @@ void calc_mS_alphaS
                     {
                         limiter = max_mSi/mS0_cellI[i];
                         limiter_min = min(limiter, limiter_min);
+                    }
+
+                    if(debug)
+                    {
+                        os<< "C1i = " << C1[i].internalField()[cellI] << "  V_cellI = " << V_cellI << "  max_mSi = " << max_mSi << nl
+                            << "limiter = " << limiter << "  limiter_min = " << limiter_min << endl;
                     }
                 }
                 else
@@ -4086,7 +4122,7 @@ void calc_mS_alphaS
             for(label i=0; i<nSpecies; i++)
             {
                 mS1[i].internalField()[cellI] = limiter_min*mS1_cellI[i]/V_cellI;
-                mS0[i].internalField()[cellI] = limiter_min*mS0_cellI[i]/V_cellI;;
+                mS0[i].internalField()[cellI] = limiter_min*mS0_cellI[i]/V_cellI;
 
                 mS1Tot_cellI += mS1[i].internalField()[cellI];
                 mS0Tot_cellI += mS0[i].internalField()[cellI];                
@@ -4098,6 +4134,43 @@ void calc_mS_alphaS
             alphaS1.internalField()[cellI] = mS1Tot_cellI/rho1Cells[cellI];
             alphaS0.internalField()[cellI] = mS0Tot_cellI/rho0Cells[cellI];
         }
+        else
+        {
+            for(label i=0; i<nSpecies; i++)
+            {
+                mS1[i].internalField()[cellI] = 0;
+                mS0[i].internalField()[cellI] = 0;
+            }
+
+            mS1Tot.internalField()[cellI] = 0;
+            mS0Tot.internalField()[cellI] = 0;
+
+            alphaS1.internalField()[cellI] = 0;
+            alphaS0.internalField()[cellI] = 0;
+        }
+
+        if(debug)
+        {
+            os<< "-----------------------------------------------------------------------------------" << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << mS0[i].internalField()[cellI] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << mS0Tot.internalField()[cellI] << nl
+                << "rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << nl
+                << "alphaS1 = " << alphaS1.internalField()[cellI] << "alphaS0 = " << alphaS0.internalField()[cellI] << nl
+                << "-----------------------------------------------------------------------------------" << nl
+                << endl;
+        }        
+    }
+
+    if(debug)
+    {
+        os<< "-------------------------------------------------------------------------" << nl
+            << "Internal faces" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
 
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
@@ -4108,28 +4181,43 @@ void calc_mS_alphaS
         scalar alpha1Nei = alpha1Cells[faceNei];
         scalar VOwn = V[faceOwn];
         scalar VNei = V[faceNei];
+        scalar rho1Own  = rho1Cells[faceOwn];
+        scalar rho0Own  = rho0Cells[faceOwn];
+        scalar rho1Nei = rho1Cells[faceNei];
+        scalar rho0Nei = rho0Cells[faceNei];
 
         if(debug)
         {
             os<< "Face: " << faceI << nl
                 << "own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
-        }        
+        }
+
+        scalar mS1Tot_cellI = 0;
+        scalar mS0Tot_cellI = 0;
+        List<scalar> mS1_cellI(nSpecies);
+        List<scalar> mS0_cellI(nSpecies);            
+        scalar max_mSTot;
+        scalar weight;                    
 
         if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
         {
-            scalar mS1Tot_cellI = 0;
-            scalar mS0Tot_cellI = 0;
-            List<scalar> mS1_cellI(nSpecies);
-            List<scalar> mS0_cellI(nSpecies);            
-            scalar max_mSTot;
-            scalar weight;
-            
             for(label i=0; i<nSpecies; i++)
             {
-                mS1_cellI[i] = (Js0[i].internalField()[cellI] - Js1[i].internalField()[cellI])*dt;
+                mS1_cellI[i] = (Js0[i].internalField()[faceOwn] - Js1[i].internalField()[faceOwn])*dt;
                 mS0_cellI[i] = -mS1_cellI[i];
                 mS1Tot_cellI += mS1_cellI[i];
                 mS0Tot_cellI += mS0_cellI[i];
+
+                if(debug)
+                {
+                    os<< "Species: " << i << nl
+                        << "Js1i = " << Js1[i].internalField()[faceOwn] << "  Js0i = " << Js0[i].internalField()[faceOwn] << "  dt = " << dt << nl
+                        << "mS1i = " << mS1_cellI[i] << "  mS0i = " << mS0_cellI[i] << endl;
+                }
+            }
+            if(debug)
+            {
+                os<< "mS1Tot = " << mS1Tot_cellI << "  mS0Tot = " << mS0Tot_cellI << endl;  
             }
 
             if(mS1Tot_cellI > 0)
@@ -4138,6 +4226,16 @@ void calc_mS_alphaS
                 if(mS1Tot_cellI > max_mSTot)
                 {
                     weight = max_mSTot/mS1Tot_cellI;
+                }
+                else
+                {
+                    weight = 1;
+                }
+
+                if(debug)
+                {
+                    os<< "rho0Own = " << rho0Own << "  (1 - alpha1Own) = " << (1 - alpha1Own) << "  VOwn = " << VOwn << nl
+                        << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
                 }
 
                 for(label i=0; i<nSpecies; i++)
@@ -4159,6 +4257,16 @@ void calc_mS_alphaS
                 if(mS0Tot_cellI > max_mSTot)
                 {
                     weight = max_mSTot/mS0Tot_cellI;
+                }
+                else
+                {
+                    weight = 1;
+                }
+
+                if(debug)
+                {
+                    os<< "rho1Nei = " << rho1Nei << "  alpha1Nei = " << alpha1Nei << "  VNei = " << VNei << nl
+                        << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
                 }
 
                 for(label i=0; i<nSpecies; i++)
@@ -4181,49 +4289,42 @@ void calc_mS_alphaS
         }
 
         if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
-        {
-            scalar mS1Tot_cellI = 0;
-            scalar mS0Tot_cellI = 0;
-            List<scalar> mS1_cellI(nSpecies);
-            List<scalar> mS0_cellI(nSpecies);            
-            scalar max_mSTot;
-            scalar weight;
-            
+        {            
             for(label i=0; i<nSpecies; i++)
             {
-                mS1_cellI[i] = (Js0[i].internalField()[cellI] - Js1[i].internalField()[cellI])*dt;
+                mS1_cellI[i] = (Js0[i].internalField()[faceOwn] - Js1[i].internalField()[faceOwn])*dt;
                 mS0_cellI[i] = -mS1_cellI[i];
                 mS1Tot_cellI += mS1_cellI[i];
                 mS0Tot_cellI += mS0_cellI[i];
+
+                if(debug)
+                {
+                    os<< "Species: " << i << nl
+                        << "Js1i = " << Js1[i].internalField()[faceOwn] << "  Js0i = " << Js0[i].internalField()[faceOwn] << "  dt = " << dt << nl
+                        << "mS1i = " << mS1_cellI[i] << "  mS0i = " << mS0_cellI[i] << endl;
+                }
+            }
+            if(debug)
+            {
+                os<< "mS1Tot = " << mS1Tot_cellI << "  mS0Tot = " << mS0Tot_cellI << endl;  
             }
 
             if(mS1Tot_cellI > 0)
             {
-                max_mSTot = rho0Own*(1 - alpha1Own)*VOwn;
+                max_mSTot = rho0Nei*(1 - alpha1Nei)*VNei;
                 if(mS1Tot_cellI > max_mSTot)
                 {
                     weight = max_mSTot/mS1Tot_cellI;
                 }
-
-                for(label i=0; i<nSpecies; i++)
+                else
                 {
-                    mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
-                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];
-                    mS1[i].internalField()[faceNei] = (1 -  weight)*mS1_cellI[i]/VNei;
-                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];                   
+                    weight = 1;
                 }
 
-                mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
-                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
-                mS1Tot.internalField()[faceNei] = (1 - weight)*mS1Tot_cellI/VNei;
-                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
-            }
-            else if(mS1Tot_cellI < 0)
-            {
-                max_mSTot = rho1Nei*alpha1Nei*VNei;
-                if(mS0Tot_cellI > max_mSTot)
+                if(debug)
                 {
-                    weight = max_mSTot/mS0Tot_cellI;
+                    os<< "rho0Nei = " << rho0Nei << "  (1 - alpha1Nei) = " << (1 - alpha1Nei) << "  VNei = " << VNei << nl
+                        << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
                 }
 
                 for(label i=0; i<nSpecies; i++)
@@ -4239,9 +4340,341 @@ void calc_mS_alphaS
                 mS1Tot.internalField()[faceOwn] = (1 - weight)*mS1Tot_cellI/VOwn;
                 mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
             }
+            else if(mS1Tot_cellI < 0)
+            {
+                max_mSTot = rho1Own*alpha1Own*VOwn;
+                if(mS0Tot_cellI > max_mSTot)
+                {
+                    weight = max_mSTot/mS0Tot_cellI;
+                }
+                else
+                {
+                    weight = 1;
+                }
+
+                if(debug)
+                {
+                    os<< "rho1Own = " << rho1Own << "  alpha1Own = " << alpha1Own << "  VOwn = " << VOwn << nl
+                        << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
+                }
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceNei] = (1 -  weight)*mS1_cellI[i]/VNei;
+                    mS0[i].internalField()[faceNei] = -mS1[i].internalField()[faceNei];                   
+                }
+
+                mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
+                mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                mS1Tot.internalField()[faceNei] = (1 - weight)*mS1Tot_cellI/VNei;
+                mS0Tot.internalField()[faceNei] = -mS1Tot.internalField()[faceNei];
+            }
             else
             {
                 weight = 1;
+            }
+        }
+
+        alphaS1.internalField()[faceOwn] = mS1Tot.internalField()[faceOwn]/rho1Cells[faceOwn];
+        alphaS0.internalField()[faceOwn] = mS0Tot.internalField()[faceOwn]/rho0Cells[faceOwn];
+
+        alphaS1.internalField()[faceNei] = mS1Tot.internalField()[faceNei]/rho1Cells[faceNei];
+        alphaS0.internalField()[faceNei] = mS0Tot.internalField()[faceNei]/rho0Cells[faceNei];
+
+        if(debug)
+        {
+            os<< "-----------------------------------------------------------------------------------" << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "mS1[" << i << "] = " << mS1[i].internalField()[faceOwn] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceOwn] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[faceOwn] << "  mS0Tot = " << mS0Tot.internalField()[faceOwn] << nl
+                << "rho1 = " << rho1Cells[faceOwn] << "  rho0 = " << rho0Cells[faceOwn] << nl
+                << "alphaS1 = " << alphaS1.internalField()[faceOwn] << "alphaS0 = " << alphaS0.internalField()[faceOwn] << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "mS1[" << i << "] = " << mS1[i].internalField()[faceNei] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceNei] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[faceNei] << "  mS0Tot = " << mS0Tot.internalField()[faceNei] << nl
+                << "rho1 = " << rho1Cells[faceNei] << "  rho0 = " << rho0Cells[faceNei] << nl
+                << "alphaS1 = " << alphaS1.internalField()[faceNei] << "alphaS0 = " << alphaS0.internalField()[faceNei] << endl;
+            os<< "-----------------------------------------------------------------------------------" << nl
+                << endl;
+        }
+    }
+
+    //boundary faces
+    if(debug)
+    {
+        os<< "-------------------------------------------------------------------------" << nl
+          << "Boundary coupled faces" << nl
+          << "-------------------------------------------------------------------------" << nl
+          << endl;
+    }
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    const wordList& patchNames = patches.names();
+
+    //--------------------------------------------------------------//
+    //Need volume of cell neighbour on neighbouring processor for 
+    //each coupled patch face in order to calculate flux limiter
+    //for that face
+    const label nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<scalar> VNeiFld(nBnd);
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                const label& faceOwn = own[faceI];
+                VNeiFld[bndFaceI] = V[faceOwn];
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, VNeiFld);
+    //VNei now has cell volume of neighbouring cell for each coupled
+    //patch face
+    //--------------------------------------------------------------//
+
+    forAll(mS1Tot.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pmS1Tot = mS1Tot.boundaryField()[patchI];
+
+        if(debug)
+        {
+            os<< "-------------------------------------------------------------------------" << nl
+                << "Patch: " << patchNames[patchI] << nl
+                << "-------------------------------------------------------------------------" << nl
+                << endl;
+        }
+
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            const scalarField& alpha1NeiFld = alpha1.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& rho1NeiFld = rho1.boundaryField()[patchI].patchNeighbourField();            
+            const scalarField& rho0NeiFld = rho0.boundaryField()[patchI].patchNeighbourField();            
+
+            forAll(pmS1Tot, fcI)
+            {
+                label faceOwn = own[faceI];                
+                scalar alpha1Own = alpha1Cells[faceOwn];
+                scalar alpha1Nei = alpha1NeiFld[fcI];
+                scalar VOwn = V[faceOwn];
+                scalar VNei = VNeiFld[bndFaceI];
+                scalar rho1Own  = rho1Cells[faceOwn];
+                scalar rho0Own  = rho0Cells[faceOwn];
+                scalar rho1Nei = rho1NeiFld[fcI];
+                scalar rho0Nei = rho0NeiFld[fcI];
+
+                if(debug)
+                {
+                    os<< "Face: " << faceI << "  patch face index: " << fcI << nl
+                        << "own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  alpha1Nei = " << alpha1Nei << endl;
+                }
+
+                scalar mS1Tot_cellI = 0;
+                scalar mS0Tot_cellI = 0;
+                List<scalar> mS1_cellI(nSpecies);
+                List<scalar> mS0_cellI(nSpecies);            
+                scalar max_mSTot;
+                scalar weight;                            
+
+                if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
+                {
+                    for(label i=0; i<nSpecies; i++)
+                    {
+                        mS1_cellI[i] = (Js0[i].internalField()[faceOwn] - Js1[i].internalField()[faceOwn])*dt;
+                        mS0_cellI[i] = -mS1_cellI[i];
+                        mS1Tot_cellI += mS1_cellI[i];
+                        mS0Tot_cellI += mS0_cellI[i];
+
+                        if(debug)
+                        {
+                            os<< "Species: " << i << nl
+                                << "Js1i = " << Js1[i].internalField()[faceOwn] << "  Js0i = " << Js0[i].internalField()[faceOwn] << "  dt = " << dt << nl
+                                << "mS1i = " << mS1_cellI[i] << "  mS0i = " << mS0_cellI[i] << endl;
+                        }
+                    }                    
+                    if(debug)
+                    {
+                        os<< "mS1Tot = " << mS1Tot_cellI << "  mS0Tot = " << mS0Tot_cellI << endl;  
+                    }
+
+                    if(mS1Tot_cellI > 0)
+                    {
+                        max_mSTot = rho0Own*(1 - alpha1Own)*VOwn;
+                        if(mS1Tot_cellI > max_mSTot)
+                        {
+                            weight = max_mSTot/mS1Tot_cellI;
+                        }
+                        else
+                        {
+                            weight = 1;
+                        }
+
+                        if(debug)
+                        {
+                            os<< "rho0Own = " << rho0Own << "  (1 - alpha1Own) = " << (1 - alpha1Own) << "  VOwn = " << VOwn << nl
+                                << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
+                        }
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                            
+                        }
+
+                        mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
+                        mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                    }
+                    else if(mS1Tot_cellI < 0)
+                    {
+                        max_mSTot = rho1Nei*alpha1Nei*VNei;
+                        if(mS0Tot_cellI > max_mSTot)
+                        {
+                            weight = max_mSTot/mS0Tot_cellI;
+                        }
+                        else
+                        {
+                            weight = 1;
+                        }
+
+                        if(debug)
+                        {
+                            os<< "rho1Nei = " << rho1Nei << "  alpha1Nei = " << alpha1Nei << "  VNei = " << VNei << nl
+                                << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
+                        }
+
+                        for(label i=0; i<nSpecies; i++)
+                        {                            
+                            mS1[i].internalField()[faceOwn] = (1 -  weight)*mS1_cellI[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                   
+                        }
+                        
+                        mS1Tot.internalField()[faceOwn] = (1 - weight)*mS1Tot_cellI/VOwn;
+                        mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                    }
+                    else
+                    {
+                        weight = 1;
+                    }
+                }
+
+                if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
+                {            
+                    for(label i=0; i<nSpecies; i++)
+                    {
+                        mS1_cellI[i] = (Js0[i].internalField()[faceOwn] - Js1[i].internalField()[faceOwn])*dt;
+                        mS0_cellI[i] = -mS1_cellI[i];
+                        mS1Tot_cellI += mS1_cellI[i];
+                        mS0Tot_cellI += mS0_cellI[i];
+                        
+                        if(debug)
+                        {
+                            os<< "Species: " << i << nl
+                                << "Js1i = " << Js1[i].internalField()[faceOwn] << "  Js0i = " << Js0[i].internalField()[faceOwn] << "  dt = " << dt << nl
+                                << "mS1i = " << mS1_cellI[i] << "  mS0i = " << mS0_cellI[i] << endl;
+                        }
+                    }
+                    if(debug)
+                    {
+                        os<< "mS1Tot = " << mS1Tot_cellI << "  mS0Tot = " << mS0Tot_cellI << endl;  
+                    }
+
+                    if(mS1Tot_cellI > 0)
+                    {
+                        max_mSTot = rho0Nei*(1 - alpha1Nei)*VNei;
+                        if(mS1Tot_cellI > max_mSTot)
+                        {
+                            weight = max_mSTot/mS1Tot_cellI;
+                        }
+                        else
+                        {
+                            weight = 1;
+                        }
+
+                        if(debug)
+                        {
+                            os<< "rho0Nei = " << rho0Nei << "  (1 - alpha1Nei) = " << (1 - alpha1Nei) << "  VNei = " << VNei << nl
+                                << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
+                        }
+
+                        for(label i=0; i<nSpecies; i++)
+                        {                            
+                            mS1[i].internalField()[faceOwn] = (1 -  weight)*mS1_cellI[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                   
+                        }
+                        
+                        mS1Tot.internalField()[faceOwn] = (1 - weight)*mS1Tot_cellI/VOwn;
+                        mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];
+                    }
+                    else if(mS1Tot_cellI < 0)
+                    {
+                        max_mSTot = rho1Own*alpha1Own*VOwn;
+                        if(mS0Tot_cellI > max_mSTot)
+                        {
+                            weight = max_mSTot/mS0Tot_cellI;
+                        }
+                        else
+                        {
+                            weight = 1;
+                        }
+
+                        if(debug)
+                        {
+                            os<< "rho1Own = " << rho1Own << "  alpha1Own = " << alpha1Own << "  VOwn = " << VOwn << nl
+                                << "max_mSTot = " << max_mSTot << "  weight = " << weight << endl;
+                        }
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            mS1[i].internalField()[faceOwn] = weight*mS1_cellI[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = -mS1[i].internalField()[faceOwn];                            
+                        }
+
+                        mS1Tot.internalField()[faceOwn] = weight*mS1Tot_cellI/VOwn;
+                        mS0Tot.internalField()[faceOwn] = -mS1Tot.internalField()[faceOwn];                        
+                    }
+                    else
+                    {
+                        weight = 1;
+                    }
+                }
+
+                alphaS1.internalField()[faceOwn] = mS1Tot.internalField()[faceOwn]/rho1Cells[faceOwn];
+                alphaS0.internalField()[faceOwn] = mS0Tot.internalField()[faceOwn]/rho0Cells[faceOwn];
+
+                if(debug)
+                {
+                    os<< "-----------------------------------------------------------------------------------" << endl;
+                    for(label i=0; i<nSpecies; i++)
+                    {
+                        os<< "mS1[" << i << "] = " << mS1[i].internalField()[faceOwn] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceOwn] 
+                            << endl;
+                    }
+                    os<< "mS1Tot = " << mS1Tot.internalField()[faceOwn] << "  mS0Tot = " << mS0Tot.internalField()[faceOwn] << nl
+                        << "rho1 = " << rho1Cells[faceOwn] << "  rho0 = " << rho0Cells[faceOwn] << nl
+                        << "alphaS1 = " << alphaS1.internalField()[faceOwn] << "alphaS0 = " << alphaS0.internalField()[faceOwn] << nl
+                        << "-----------------------------------------------------------------------------------" << nl
+                        << endl;
+                }
+
+                faceI++;
+                bndFaceI++;
             }
         }
     }
