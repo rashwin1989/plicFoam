@@ -153,5 +153,19 @@ for(label i=0; i<nSpecies; i++)
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 //------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Reset the allowable limits for concentrations and mass fractions in the phases
+for(label i=0; i<nSpecies; i++)
+{
+    C1max[i] = max(C1[i]).value();
+    C0max[i] = max(C0[i]).value();
+    C1min[i] = min(C1[i]).value();
+    C0min[i] = min(C0[i]).value();
+
+    Y1max[i] = max(Y1[i]).value();
+    Y0max[i] = max(Y0[i]).value();
+    Y1min[i] = min(Y1[i]).value();
+    Y0min[i] = min(Y0[i]).value();
+}
 
 Info<< "Done Interfacial Species Transfer" << endl;

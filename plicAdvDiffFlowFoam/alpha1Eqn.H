@@ -281,7 +281,7 @@ if(maxAlpha1Cell >= 0)
 
 alpha1.correctBoundaryConditions();
 
-Info<< "Phase-1 volume fraction after correction= "
+Info<< "Phase-1 volume fraction after redistribution = "
     << alpha1.weightedAverage(mesh.Vsc()).value()
     << "  Min(alpha1) = " << min(alpha1).value()
     << "  Max(alpha1) = " << max(alpha1).value()
@@ -297,7 +297,7 @@ Info<< "Phase-1 volume fraction after correction= "
 alpha1.max(0.0);
 alpha1.min(1.0);
 
-Info<< "Phase-1 volume fraction after correction= "
+Info<< "Phase-1 volume fraction after clipping = "
     << alpha1.weightedAverage(mesh.Vsc()).value()
     << "  Min(alpha1) = " << min(alpha1).value()
     << "  Max(alpha1) = " << max(alpha1).value()

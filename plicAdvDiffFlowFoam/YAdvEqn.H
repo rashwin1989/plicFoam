@@ -140,7 +140,15 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
         << endl;
 
-    plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX);
+    if(adv_debug2)
+    {
+        osAdv<< "---------------------------------------------------------------------" << nl
+            << "Redistributing C1[" << i << "] field" << nl
+            << "---------------------------------------------------------------------" << nl
+            << endl;
+    }
+
+    plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
 
     Info<< "Phase-1 Ci after redistribution = "
         << (C1i).weightedAverage(mesh.Vsc()).value()
@@ -303,7 +311,15 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
         << endl;      
 
-    plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX);
+    if(adv_debug2)
+    {
+        osAdv<< "---------------------------------------------------------------------" << nl
+            << "Redistributing C0[" << i << "] field" << nl
+            << "---------------------------------------------------------------------" << nl
+            << endl;
+    }
+
+    plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
 
     Info<< "Phase-0 Ci after redistribution = "
         << (C0i).weightedAverage(mesh.Vsc()).value()

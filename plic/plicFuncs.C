@@ -3070,13 +3070,21 @@ void redistribute_Ci_field
     const scalar& Y_MIN,
     const scalar& Y_MAX,
     const scalar& ALPHA_MIN,
-    const label& Y_BOUND_ITERS_MAX
+    const label& Y_BOUND_ITERS_MAX,
+    const bool debug,
+    OFstream& os
 )
-{
+{    
     forAll(YCells, cellI)
     {
-        if(YCells[cellI] < Y_MIN)
+        if(YCells[cellI] < Y_MIN && alphaCells[cellI] > ALPHA_MIN)
         {            
+            if(debug)
+            {
+                os<< "---------------------------------------------------------------------" << nl
+                    << "Cell: " << cellI << "  alpha = " << alphaCells[cellI] << "  Ci = " << CCells[cellI] << "  Yi = " << YCells[cellI] << endl; 
+            }
+
             const labelList& curCellCells = cellStencil[cellI];
             scalar minY;
             label minYCell = cellI;
@@ -3096,7 +3104,7 @@ void redistribute_Ci_field
             if(!allNeiDone)
             {
                 do
-                {                                
+                {                     
                     allNeiDone = true;
                     minY = 1.1;
                     for(label i=0; i<curCellCells.size(); i++)
@@ -3112,7 +3120,13 @@ void redistribute_Ci_field
                                 minY = YCells[curCell];
                             }
                         }
-                    }                                
+                    }
+
+                    if(debug)
+                    {
+                        os<< "Redist iteration: " << nIters << nl
+                            << "minYCell: " << minYCell << "  minY = " << minY << endl;
+                    }
 
                     scalar tC1 = rhoCells[minYCell]*alphaCells[minYCell]*(YCells[minYCell] - Y_MIN);
                     scalar tC2 = rhoCells[cellI]*alphaCells[cellI]*(Y_MIN - YCells[cellI]);
@@ -3126,11 +3140,22 @@ void redistribute_Ci_field
             
                     nIters++;
                 }while(YCells[cellI] < Y_MIN && !allNeiDone && nIters < Y_BOUND_ITERS_MAX);        
-            }        
+            }
+
+            if(debug)
+            {
+                os<< "---------------------------------------------------------------------" << endl;
+            }
         }
 
-        if(YCells[cellI] > Y_MAX)
-        {            
+        if(YCells[cellI] > Y_MAX && alphaCells[cellI] > ALPHA_MIN)
+        {    
+            if(debug)
+            {
+                os<< "---------------------------------------------------------------------" << nl
+                    << "Cell: " << cellI << "  alpha = " << alphaCells[cellI] << "  Ci = " << CCells[cellI] << "  Yi = " << YCells[cellI] << endl; 
+            }
+        
             const labelList& curCellCells = cellStencil[cellI];
             scalar maxY;
             label maxYCell = cellI;
@@ -3166,7 +3191,13 @@ void redistribute_Ci_field
                                 maxY = YCells[curCell];
                             }
                         }
-                    }                                
+                    }
+
+                    if(debug)
+                    {
+                        os<< "Redist iteration: " << nIters << nl
+                            << "maxYCell: " << maxYCell << "  maxY = " << maxY << endl;
+                    }
 
                     scalar tC1 = rhoCells[maxYCell]*alphaCells[maxYCell]*(Y_MAX - YCells[maxYCell]);
                     scalar tC2 = rhoCells[cellI]*alphaCells[cellI]*(YCells[cellI] - Y_MAX);
@@ -3180,7 +3211,12 @@ void redistribute_Ci_field
             
                     nIters++;
                 }while(YCells[cellI] > Y_MAX && !allNeiDone && nIters < Y_BOUND_ITERS_MAX);        
-            }        
+            }
+        
+            if(debug)
+            {
+                os<< "---------------------------------------------------------------------" << endl;
+            }
         }       
     }
 }

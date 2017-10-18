@@ -404,7 +404,9 @@ namespace plicFuncs
         const scalar& Y_MIN,
         const scalar& Y_MAX,
         const scalar& ALPHA_MIN,
-        const label& Y_BOUND_ITERS_MAX
+        const label& Y_BOUND_ITERS_MAX,
+        const bool debug,
+        OFstream& os
     );
 
     void calc_cell_intfcGrad_coeffs
