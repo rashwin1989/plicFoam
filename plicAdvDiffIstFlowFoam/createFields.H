@@ -501,6 +501,260 @@ scalarField& rho0Cells = rho0.internalField();
 scalarField& alpha1Cells = alpha1.internalField();
 scalarField& alpha0Cells = alpha0.internalField();
 
+// Interfacial species transfer
+PtrList<dimensionedScalar> Ys1_0(nSpecies);
+PtrList<dimensionedScalar> Ys0_0(nSpecies);
+PtrList<volScalarField> Ys1(nSpecies);
+PtrList<volScalarField> Ys0(nSpecies);
+PtrList<volScalarField> Js1(nSpecies);
+PtrList<volScalarField> Js0(nSpecies);
+PtrList<volScalarField> mS1(nSpecies);
+PtrList<volScalarField> mS0(nSpecies);
+
+for(label i=0; i<nSpecies; i++)
+{
+    fieldName = "Ys1" + Foam::name(i);
+    Info<< "Reading interface equilibrium mass fraction " << fieldName << endl;
+    Ys1_0.set
+    (
+        i,
+        new dimensionedScalar
+        (
+            transPropDict.lookup(fieldName)
+        )
+    );
+
+    Info<< "Initializing field " << fieldName << endl;
+    Ys1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            Ys1_0[i]            
+        )
+    );
+
+    fieldName = "Ys0" + Foam::name(i);
+    Info<< "Reading interface equilibrium mass fraction " << fieldName << endl;
+    Ys0_0.set
+    (
+        i,
+        new dimensionedScalar
+        (
+            transPropDict.lookup(fieldName)
+        )
+    );
+
+    Info<< "Initializing field " << fieldName << endl;
+    Ys0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            Ys0_0[i]            
+        )
+    );
+
+    fieldName = "Js1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    Js1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimTime, 0)
+        )
+    );
+
+    fieldName = "Js0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    Js0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimTime, 0)
+        )
+    );
+
+    fieldName = "mS1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    mS1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimVol, 0)
+        )
+    );
+
+    fieldName = "mS0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    mS0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimVol, 0)
+        )
+    );
+}
+
+fieldName = "mS1Tot";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField mS1Tot
+(
+    IOobject
+    (
+        fieldName,
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimMass/dimVol, 0)
+);
+
+fieldName = "mS0Tot";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField mS0Tot
+(
+    IOobject
+    (
+        fieldName,
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimMass/dimVol, 0)
+);
+
+fieldName = "alphaS1";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField alphaS1
+(
+    IOobject
+    (
+        fieldName,
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimless, 0)
+);
+
+fieldName = "alphaS0";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField alphaS0
+(
+    IOobject
+    (
+        fieldName,
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimless, 0)
+);
+
+fieldName = "pS";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField pS
+(
+    IOobject
+    (
+        fieldName,
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimless/dimTime, 0)
+);
+
+const labelListList& istCellStencil = cell_stencil.stencil();
+const mapDistribute& istMap = cell_stencil.map();
+label n_flatFld_ist = istMap.constructSize();
+
+List<scalar> alpha1_flatFld_ist(n_flatFld_ist, 0.0);
+
+List<List<scalar> > Y1_flatFld_ist(nSpecies); 
+List<List<scalar> > Y0_flatFld_ist(nSpecies);
+List<scalar> Y_flatFld_ist(n_flatFld_ist, 0.0);     
+
+for(label i=0; i<nSpecies; i++)
+{
+    Y1_flatFld_ist[i] = Y_flatFld_ist;    
+    Y0_flatFld_ist[i] = Y_flatFld_ist;        
+}
+
+// flat field for phase centroid position vectors
+List<vector> C_ph1_flatFld_ist(n_flatFld_ist, vector::one);
+List<vector> C_ph0_flatFld_ist(n_flatFld_ist, vector::one);
+
+
 // Y diffusion
 
 surfaceScalarField rho1f
@@ -758,6 +1012,28 @@ surfaceScalarField w_ph0
 
 centredCFCCellToCellStencilObject diffCellStencilObject(mesh);
 const labelListList& diffCellStencil = diffCellStencilObject.stencil();
+const mapDistribute& diffMap = diffCellStencilObject.map();
+label n_flatFld_diff = diffMap.constructSize();
+
+label nFaces = mesh.nFaces();
+labelList face_phaseState_diff(nFaces);
+
+List<scalar> alpha1_flatFld_diff(n_flatFld_diff, 0.0);
+
+List<List<scalar> > Y1_flatFld_diff(nSpecies); 
+List<List<scalar> > Y0_flatFld_diff(nSpecies);
+List<scalar> Y_flatFld_diff(n_flatFld_diff, 0.0);     
+
+for(label i=0; i<nSpecies; i++)
+{
+    Y1_flatFld_diff[i] = Y_flatFld_diff;    
+    Y0_flatFld_diff[i] = Y_flatFld_diff;        
+}
+
+// flat field for phase centroid position vectors
+List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
+List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
+
 
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
@@ -778,7 +1054,6 @@ const vectorField& Cf_ph1_nei = interface.Cf_ph1_nei();
 const vectorField& Cf_ph0_nei = interface.Cf_ph0_nei();
 //const labelList& face_phaseState_nei = interface.face_phaseState_nei();
 
-label nFaces = mesh.nFaces();
 vectorField Cf_ph1(nFaces);
 vectorField Cf_ph0(nFaces);
 
@@ -788,28 +1063,6 @@ const vectorField& C_ph0 = interface.C_ph0();
 //Done obtain references to phase centroids, phase face centres, phase face areas, face phase states
 //------------------------------------------------------------------//
 
-const mapDistribute& diffMap = diffCellStencilObject.map();
-label n_flatFld_diff = diffMap.constructSize();
-
-labelList face_phaseState_diff(nFaces);
-
-List<scalar> alpha1_flatFld_diff(n_flatFld_diff, 0.0);
-
-List<List<scalar> > Y1_flatFld_diff(nSpecies); 
-List<List<scalar> > Y0_flatFld_diff(nSpecies);
-List<scalar> Y_flatFld_diff(n_flatFld_diff, 0.0);     
-
-for(label i=0; i<nSpecies; i++)
-{
-    Y1_flatFld_diff[i] = Y_flatFld_diff;    
-    Y0_flatFld_diff[i] = Y_flatFld_diff;        
-}
-
-// flat field for phase centroid position vectors
-List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
-List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
-
-
 // tolerances and max iters
 label ALPHA_BOUND_ITERS_MAX = 12;
 label Y_BOUND_ITERS_MAX = 12;
@@ -818,6 +1071,7 @@ scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_F
 scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
+scalar ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 
 // debug bool switches
 bool redist_alpha;
@@ -833,17 +1087,26 @@ adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 bool adv_debug2;
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 
+bool ist_debug;
+ist_debug = transPropDict.lookupOrDefault("ist_debug", false);
+
+bool ist_debug2;
+ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
+
 bool diff_debug;
 diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
 
 bool diff_debug2;
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 
-fileName outputFile("adv_dbg");
+fileName outputFile("alpha_dbg");
+OFstream osAlpha(mesh.time().path()/outputFile);
+
+outputFile = "adv_dbg";
 OFstream osAdv(mesh.time().path()/outputFile);
+
+outputFile = "ist_dbg";
+OFstream osIst(mesh.time().path()/outputFile);
 
 outputFile = "diff_dbg";
 OFstream osDiff(mesh.time().path()/outputFile);
-
-outputFile = "alpha_dbg";
-OFstream osAlpha(mesh.time().path()/outputFile);

@@ -16,15 +16,15 @@ for(label i=0; i<nSpecies; i++)
 {
     List<scalar>& Y1i_flatFld_ist = Y1_flatFld_ist[i];
     List<scalar>& Y0i_flatFld_ist = Y0_flatFld_ist[i];
-    plicFuncs::makeFlatFld(Y1i, istMap, Y1i_flatFld_ist);    
-    plicFuncs::makeFlatFld(Y1i, istMap, Y0i_flatFld_ist);    
+    plicFuncs::makeFlatFld(Y1[i], istMap, Y1i_flatFld_ist);    
+    plicFuncs::makeFlatFld(Y0[i], istMap, Y0i_flatFld_ist);    
 }
 //Done make flat fields for alpha1 and phase centroids required for gradient calculation
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Calculate interfacial species mass fluxes
-plicFuncs::calc_Js(mesh, cell_stencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, ist_debug2, osIst);
+plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, interface.C_intfc(), interface.A_intfc(), interface.nHat(), Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, ist_debug2, osIst);
 //Done calculate interfacial species mass fluxes
 //------------------------------------------------------------------//
 
@@ -117,6 +117,37 @@ forAll(alpha1.internalField(), cellI)
             << "--------------------------------------------------------------------------" << nl
             << endl;
     }
+}
+
+alpha1.correctBoundaryConditions();
+
+for(label i=0; i<nSpecies; i++)
+{
+    C1[i].correctBoundaryConditions();
+    Y1[i].correctBoundaryConditions();
+
+    C0[i].correctBoundaryConditions();
+    Y0[i].correctBoundaryConditions();
+
+    Info<< "Phase-1 C[" << i << "] = "
+        << (C1[i]).weightedAverage(mesh.Vsc()).value()
+        << nl
+        << "Min(C1i) = " << min(C1[i]).value()
+        << "  Max(C1i) = " << max(C1[i]).value()
+        << nl
+        << "Min(Y1i) = " << min(Y1[i]).value()
+        << "  Max(Y1i) = " << max(Y1[i]).value()
+        << endl;
+
+    Info<< "Phase-0 C[" << i << "] = "
+        << (C0[i]).weightedAverage(mesh.Vsc()).value()
+        << nl
+        << "Min(C0i) = " << min(C0[i]).value()
+        << "  Max(C0i) = " << max(C0[i]).value()
+        << nl
+        << "Min(Y0i) = " << min(Y0[i]).value()
+        << "  Max(Y0i) = " << max(Y0[i]).value()
+        << endl;        
 }
 
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
