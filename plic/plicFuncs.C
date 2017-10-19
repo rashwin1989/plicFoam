@@ -2116,6 +2116,10 @@ void calc_2ph_diffFluxes_Yi_Fick
     const volScalarField& Y0i,
     surfaceScalarField& diffFlux_Y1i,
     surfaceScalarField& diffFlux_Y0i,
+    const scalar& Y1MIN,
+    const scalar& Y1MAX,
+    const scalar& Y0MIN,
+    const scalar& Y0MAX,
     const label& i,    
     const bool debug,
     OFstream& os
@@ -2169,12 +2173,47 @@ void calc_2ph_diffFluxes_Yi_Fick
         else if(curPhaseState == 0)
         {
             diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*curMagSf_ph0*gradf_Y0i[faceI];
+            diffFlux_limiter = 1;
+            calc_diffFlux_limiter2
+            (
+                rho0Cells[faceOwn],
+                alpha0Cells[faceOwn],
+                Y0iCells[faceOwn],
+                meshV[faceOwn],
+                rho0Cells[faceNei],
+                alpha0Cells[faceNei],
+                Y0iCells[faceNei],
+                meshV[faceNei],
+                mesh.time().deltaTValue(),
+                diffFlux_Y0i[faceI],
+                diffFlux_limiter,
+                Y0MIN,
+                Y0MAX
+            );
+            diffFlux_Y0i[faceI] *= min(diffFlux_limiter, 1);
             diffFlux_Y1i[faceI] = 0;
         }
         else if(curPhaseState == 1)
         {
             diffFlux_Y0i[faceI] = 0;
             diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*curMagSf_ph1*gradf_Y1i[faceI];
+            diffFlux_limiter = 1;
+            calc_diffFlux_limiter2
+            (
+                rho1Cells[faceOwn],
+                alpha1Cells[faceOwn],
+                Y1iCells[faceOwn],
+                meshV[faceOwn],
+                rho1Cells[faceNei],
+                alpha1Cells[faceNei],
+                Y1iCells[faceNei],
+                meshV[faceNei],
+                mesh.time().deltaTValue(),
+                diffFlux_Y1i[faceI],
+                diffFlux_limiter,
+                Y1MIN,
+                Y1MAX
+            );
         }
         else if(curPhaseState == 2)
         {
@@ -2208,7 +2247,7 @@ void calc_2ph_diffFluxes_Yi_Fick
         // limit diffFlux if that is the case 
         diffFlux_limiter = 1;
         //ph1        
-        calc_diffFlux_limiter
+        calc_diffFlux_limiter2
         (
             rho1Cells[faceOwn],
             alpha1Cells[faceOwn],
@@ -2220,7 +2259,9 @@ void calc_2ph_diffFluxes_Yi_Fick
             meshV[faceNei],
             mesh.time().deltaTValue(),
             diffFlux_Y1i[faceI],
-            diffFlux_limiter
+            diffFlux_limiter,
+            Y1MIN,
+            Y1MAX
         );
 
         if(diffFlux_limiter < 1)
@@ -2246,7 +2287,7 @@ void calc_2ph_diffFluxes_Yi_Fick
         //ph0
         diffFlux_limiter = 1;
 
-        calc_diffFlux_limiter
+        calc_diffFlux_limiter2
         (
             rho0Cells[faceOwn],
             alpha0Cells[faceOwn],
@@ -2258,7 +2299,9 @@ void calc_2ph_diffFluxes_Yi_Fick
             meshV[faceNei],
             mesh.time().deltaTValue(),
             diffFlux_Y0i[faceI],
-            diffFlux_limiter
+            diffFlux_limiter,
+            Y0MIN,
+            Y0MAX
         );        
 
         if(diffFlux_limiter < 1)
@@ -2377,10 +2420,46 @@ void calc_2ph_diffFluxes_Yi_Fick
                 {
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter2
+                    (
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        rho0Nei[fcI],
+                        alpha0Nei[fcI],
+                        Y0iNei[fcI],
+                        VNei[bndFaceI],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y0i[fcI],
+                        diffFlux_limiter,
+                        Y0MIN,
+                        Y0MAX
+                    );
+                    pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
                 }
                 if(curPhaseState == 1)
                 {
                     pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter2
+                    (
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        rho1Nei[fcI],
+                        alpha1Nei[fcI],
+                        Y1iNei[fcI],
+                        VNei[bndFaceI],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y1i[fcI],
+                        diffFlux_limiter,
+                        Y1MIN,
+                        Y1MAX
+                    );
+                    pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
                     pdiffFlux_Y0i[fcI] = 0;
                 }
                 if(curPhaseState == 2)
@@ -2416,7 +2495,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 //ph1        
                 diffFlux_limiter = 1;
 
-                calc_diffFlux_limiter
+                calc_diffFlux_limiter2
                 (
                     rho1Own[fcI],
                     alpha1Own[fcI],
@@ -2428,7 +2507,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     VNei[bndFaceI],
                     mesh.time().deltaTValue(),
                     pdiffFlux_Y1i[fcI],
-                    diffFlux_limiter
+                    diffFlux_limiter,
+                    Y1MIN,
+                    Y1MAX
                 );
 
                 if(diffFlux_limiter < 1)
@@ -2454,7 +2535,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 //ph0        
                 diffFlux_limiter = 1;
 
-                calc_diffFlux_limiter
+                calc_diffFlux_limiter2
                 (
                     rho0Own[fcI],
                     alpha0Own[fcI],
@@ -2466,7 +2547,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     VNei[bndFaceI],
                     mesh.time().deltaTValue(),
                     pdiffFlux_Y0i[fcI],
-                    diffFlux_limiter
+                    diffFlux_limiter,
+                    Y0MIN,
+                    Y0MAX
                 );
 
                 if(diffFlux_limiter < 1)
@@ -2519,10 +2602,46 @@ void calc_2ph_diffFluxes_Yi_Fick
                 {
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter
+                    (
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y0i[fcI],
+                        diffFlux_limiter,
+                        Y0MIN,
+                        Y0MAX
+                    );
+                    pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
                 }
                 if(curPhaseState == 1)
                 {
                     pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter
+                    (
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y1i[fcI],
+                        diffFlux_limiter,
+                        Y1MIN,
+                        Y1MAX
+                    );
+                    pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
                     pdiffFlux_Y0i[fcI] = 0;
                 }
                 if(curPhaseState == 2)
@@ -2570,7 +2689,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     meshV[faceOwn],
                     mesh.time().deltaTValue(),
                     pdiffFlux_Y1i[fcI],
-                    diffFlux_limiter
+                    diffFlux_limiter,
+                    Y1MIN,
+                    Y1MAX
                 );
 
                 if(diffFlux_limiter < 1)
@@ -2606,7 +2727,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     meshV[faceOwn],
                     mesh.time().deltaTValue(),
                     pdiffFlux_Y0i[fcI],
-                    diffFlux_limiter
+                    diffFlux_limiter,
+                    Y0MIN,
+                    Y0MAX
                 );
 
                 if(diffFlux_limiter < 1)
@@ -2678,40 +2801,134 @@ void calc_diffFlux_limiter
     const scalar& VNei,
     const scalar& dt,
     const scalar& diffFlux,
-    scalar& diffFlux_limiter
+    scalar& diffFlux_limiter,
+    const scalar& YMIN,
+    const scalar& YMAX
 )
 {
     scalar maxDiffFluxOwn;
-    scalar maxDiffFluxNei;
+    scalar maxDiffFluxNei;    
     scalar maxDiffFlux;
+    scalar magDiffFlux = mag(diffFlux);
     diffFlux_limiter = 1;    
 
     if(diffFlux > 0)
     {
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*YOwn*VOwn/dt;
+        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
         
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(1 - YNei)*VNei/dt;
-
+        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
+        
         maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxNei);
         
-        if(mag(diffFlux) > maxDiffFlux)
+        if(magDiffFlux > maxDiffFlux)
         {
-            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + SMALL);
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
         }        
     }
     else
     {
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*YNei*VNei/dt;
+        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
 
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(1 - YOwn)*VOwn/dt;
+        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
 
         maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxNei);
 
-        if(mag(diffFlux) > maxDiffFlux)
+        if(magDiffFlux > maxDiffFlux)
         {
-            diffFlux_limiter = maxDiffFlux/(mag(diffFlux) + SMALL);
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
         }
-    }        
+    }       
+}
+
+
+void calc_diffFlux_limiter2
+(
+    const scalar& rhoOwn,
+    const scalar& alphaOwn,
+    const scalar& YOwn,
+    const scalar& VOwn,
+    const scalar& rhoNei,
+    const scalar& alphaNei,
+    const scalar& YNei,
+    const scalar& VNei,
+    const scalar& dt,
+    const scalar& diffFlux,
+    scalar& diffFlux_limiter,
+    const scalar& YMIN,
+    const scalar& YMAX
+)
+{
+    scalar maxDiffFluxOwn;
+    scalar maxDiffFluxNei;
+    scalar coeff;
+    scalar maxDiffFluxOwnNei;
+    scalar maxDiffFlux;
+    scalar magDiffFlux = mag(diffFlux);
+    diffFlux_limiter = 1;    
+
+    coeff = rhoOwn*rhoNei*alphaOwn*alphaNei*VOwn*VNei/dt;
+    coeff /= (rhoOwn*alphaOwn*VOwn + rhoNei*alphaNei*VNei);
+
+    if(diffFlux > 0)
+    {
+        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
+        
+        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
+
+        if(YOwn > YNei)
+        {
+            maxDiffFluxOwnNei = coeff*(YOwn - YNei);        
+        }
+        else
+        {
+            maxDiffFluxOwnNei = 0;
+        }
+
+        maxDiffFlux = min(min(maxDiffFluxOwn, maxDiffFluxNei), maxDiffFluxOwnNei);
+        
+        if(magDiffFlux > maxDiffFlux)
+        {
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
+        }        
+    }
+    else
+    {
+        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
+
+        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
+
+        if(YNei > YOwn)
+        {
+            maxDiffFluxOwnNei = coeff*(YNei - YOwn);        
+        }
+        else
+        {
+            maxDiffFluxOwnNei = 0;
+        }
+
+        maxDiffFlux = min(min(maxDiffFluxOwn, maxDiffFluxNei), maxDiffFluxOwnNei);
+
+        if(magDiffFlux > maxDiffFlux)
+        {
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
+        }
+    }       
 }
 
 

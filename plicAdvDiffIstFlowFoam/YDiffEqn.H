@@ -120,6 +120,10 @@ for(label i=0; i<nSpecies; i++)
         Y0i,
         diffFlux_Y1i,
         diffFlux_Y0i,
+        Y1min[i],
+        Y1max[i],
+        Y0min[i],
+        Y0max[i],
         i,
         diff_debug2,
         osDiff

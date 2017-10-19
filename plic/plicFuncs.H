@@ -318,6 +318,10 @@ namespace plicFuncs
         const volScalarField& Y0i,
         surfaceScalarField& diffFlux_Y1i,
         surfaceScalarField& diffFlux_Y0i,
+        const scalar& Y1MIN,
+        const scalar& Y1MAX,
+        const scalar& Y0MIN,
+        const scalar& Y0MAX,
         const label& i,    
         const bool debug, 
         OFstream& os
@@ -335,7 +339,26 @@ namespace plicFuncs
         const scalar& VNei,
         const scalar& dt,
         const scalar& diffFlux,
-        scalar& diffFlux_limiter
+        scalar& diffFlux_limiter,
+        const scalar& YMIN,
+        const scalar& YMAX
+    );
+
+    void calc_diffFlux_limiter2
+    (
+        const scalar& rhoOwn,
+        const scalar& alphaOwn,
+        const scalar& YOwn,
+        const scalar& VOwn,
+        const scalar& rhoNei,
+        const scalar& alphaNei,
+        const scalar& YNei,
+        const scalar& VNei,
+        const scalar& dt,
+        const scalar& diffFlux,
+        scalar& diffFlux_limiter,
+        const scalar& YMIN,
+        const scalar& YMAX
     );
 
     template<class Type>

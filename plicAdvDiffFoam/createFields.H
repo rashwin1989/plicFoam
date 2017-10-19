@@ -293,6 +293,28 @@ C0.set
     )
 );
 
+List<scalar> C1max(nSpecies);
+List<scalar> C0max(nSpecies);
+List<scalar> C1min(nSpecies);
+List<scalar> C0min(nSpecies);
+List<scalar> Y1max(nSpecies);
+List<scalar> Y0max(nSpecies);
+List<scalar> Y1min(nSpecies);
+List<scalar> Y0min(nSpecies);
+
+for(label i=0; i<nSpecies; i++)
+{
+    C1max[i] = max(C1[i]).value();
+    C0max[i] = max(C0[i]).value();
+    C1min[i] = min(C1[i]).value();
+    C0min[i] = min(C0[i]).value();
+
+    Y1max[i] = max(Y1[i]).value();
+    Y0max[i] = max(Y0[i]).value();
+    Y1min[i] = min(Y1[i]).value();
+    Y0min[i] = min(Y0[i]).value();
+}
+
 // Y advection
 PtrList<surfaceScalarField> advFlux_Y1(nSpecies - 1);
 PtrList<surfaceScalarField> advFlux_Y0(nSpecies - 1);
@@ -656,20 +678,19 @@ List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 // tolerances and max iters
 label ALPHA_BOUND_ITERS_MAX = 12;
+label Y_BOUND_ITERS_MAX = 12;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 
 // debug bool switches
-bool debug;
-debug = transPropDict.lookupOrDefault("debug", false);
 bool redist_alpha;
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
-bool unbound_debug;
-unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+bool alpha_debug;
+alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 /*
 bool adv_debug;
 adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
@@ -686,3 +707,12 @@ diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 // 2-D bool switch
 bool twoD;
 twoD = runTime.controlDict().lookupOrDefault("twoD", true);
+
+fileName outputFile("adv_dbg");
+OFstream osAdv(mesh.time().path()/outputFile);
+
+outputFile = "diff_dbg";
+OFstream osDiff(mesh.time().path()/outputFile);
+
+outputFile = "alpha_dbg";
+OFstream osAlpha(mesh.time().path()/outputFile);
