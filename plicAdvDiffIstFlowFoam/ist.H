@@ -74,7 +74,9 @@ forAll(alpha1.internalField(), cellI)
     for(label i=0; i<nSpecies; i++)
     {
         C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;
+        C1[i].internalField()[cellI] = max(C1[i].internalField()[cellI], 0);
         C0[i].internalField()[cellI] += mS0[i].internalField()[cellI]*dt;
+        C0[i].internalField()[cellI] = max(C0[i].internalField()[cellI], 0);
         C1Tot_cellI += C1[i].internalField()[cellI];
         C0Tot_cellI += C0[i].internalField()[cellI];
     }
