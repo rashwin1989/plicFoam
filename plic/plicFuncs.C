@@ -3467,8 +3467,146 @@ void redistribute_Ci_field
 }
 
 
+label findCellInIntfcDir
+(
+    const labelList& cells,
+    const List<vector>& C,
+    const vector& Cp,
+    const vector& nf,
+    const label& C1_lbl,
+    bool debug,
+    OFstream& os
+)
+{
+    scalar cosThetaMax = -1;
+    label cell_lbl = 0;
+
+    if(debug)
+    {
+        os<< "Finding cell in face normal direction" << nl 
+          << "nf: " << nf
+          << endl;
+    }
+
+    for(label cellI=0; cellI<cells.size(); cellI++)
+    {
+        label curCell = cells[cellI];
+        vector Ci = C[curCell];
+        vector CCi = Ci - Cp;
+
+        if(debug)
+        {
+            os<< "Cell " << cellI << " in stencil: " << curCell << nl
+              << "C = " << Cp << "  Ci = " << Ci << nl
+              << "CCi" << CCi
+              << endl;
+        }
+
+        if(curCell != C1_lbl)
+        {            
+            CCi /= mag(CCi);
+            scalar cosTheta = nf & CCi;
+
+            if(debug)
+            {
+                os<< "costheta = " << cosTheta << endl;
+            }
+
+            if(cosTheta > cosThetaMax)
+            {
+                cell_lbl = curCell;
+                cosThetaMax = cosTheta;
+            }
+        }
+    }
+
+    if(debug)
+    {
+        os<< "Cell in nf direction: " << cell_lbl << nl
+          << endl;
+    }
+
+    return cell_lbl;
+}
+
+
+label findCellInIntfcOrthDir
+(
+    const labelList& cells,
+    const List<vector>& C,
+    const vector& Cp,
+    const vector& C1,
+    const vector& nf,
+    const label& C1_lbl,
+    bool debug,
+    OFstream& os
+)
+{
+    scalar magCosThetaMin = 1;
+    label cell_lbl = 0;
+
+    if(debug)
+    {
+        os<< "Finding cell in face normal orthogonal direction" << nl 
+            << "nf: " << nf
+            << endl;
+    }
+
+    scalar CC1_CCi_dir;
+    //vector Ci;
+    vector CC1 = C1 - Cp;
+    vector nfXCC1 = nf ^ CC1;
+    nfXCC1 /= mag(CC1);
+    vector CCi;
+
+    for(label cellI=0; cellI<cells.size(); cellI++)
+    {
+        label curCell = cells[cellI];
+        CCi = C[curCell] - Cp;
+
+        CC1_CCi_dir = nfXCC1 & (nf ^ CCi);
+        CC1_CCi_dir /= mag(CCi);
+
+        if(debug)
+        {
+            os<< "Cell " << cellI << " in stencil: " << curCell << nl
+                << "C = " << Cp << "  C1 = " << C1 << "  Ci = " << C[curCell] << nl
+                << "CC1 = " << CC1 << "  CCi" << CCi << "  CC1_CCi_dir = " << CC1_CCi_dir
+                << endl;
+        }
+
+        if(curCell != C1_lbl)
+        {
+            //CCi /= mag(CCi);
+            //scalar cosTheta = nf & CCi;
+            scalar cosTheta = (CC1 & CCi)/mag(CCi)/mag(CC1);
+
+            if(debug)
+            {
+                os<< "costheta = " << cosTheta << endl;
+            }
+
+            if(mag(cosTheta) < magCosThetaMin)
+            {
+                cell_lbl = curCell;
+                magCosThetaMin = mag(cosTheta);
+            }
+        }
+    }
+
+    if(debug)
+    {
+        os<< "Cell in nf orthogonal direction: " << cell_lbl << nl
+            << endl;
+    }
+
+    return cell_lbl;
+}
+
+
 void calc_cell_intfcGrad_coeffs
 (
+    const fvMesh& mesh,
     const label& curCell_lbl,
     const vector& nf,
     const vector& C_intfc,
@@ -3572,11 +3710,13 @@ void calc_cell_intfcGrad_coeffs
     magt1 = mag(t1);
     if(magt1 < SMALL)
     {
+        os<< "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << endl;
         magt1 += SMALL;
     }
     scalar costheta1 = (nf & t1)/magt1;
     if(costheta1 > 1)
     {
+        os<< "costheta1 = " << costheta1 << endl;
         costheta1 = 1;
     }
     scalar theta1 = acos(costheta1);
@@ -3588,24 +3728,27 @@ void calc_cell_intfcGrad_coeffs
     }
             
 
-    if(theta1 > SMALL)
+    if(theta1 > 1E-3)
     {        
         vector t2 = C2 - Cp;
         scalar magt2;
         magt2 = mag(t2);
         if(magt2 < SMALL)
         {
+            os<< "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << endl;
             magt2 += SMALL;
         }    
         scalar magt1t2 = magt1*magt2;
         if(magt1t2 < SMALL)
         {
+            os<< "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << endl;
             magt1t2 += SMALL;
         }        
         
         scalar costheta2 = (nf & t2)/magt2;
         if(costheta2 > 1)
         {
+            os<< "costheta2 = " << costheta2 << endl;
             costheta2 = 1;
         }
         scalar theta2 = acos(costheta2);
@@ -3623,6 +3766,13 @@ void calc_cell_intfcGrad_coeffs
         }
 
         scalar sintheta12 = sin(theta1 + theta2);
+
+        if(theta1 + theta2 > constant::mathematical::pi)
+        {
+            os<< "Time = " << mesh.time().timeName() << "  Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  C2 = " << C2 << nl
+                << "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
+                << "theta1 = " << theta1 << "  theta2 = " << theta2 << "  (theta1+theta2) = " << theta1 + theta2 << " sin(theta1+theta2) = " << sintheta12 << endl;
+        }
         if(sintheta12 < SMALL)
         {
             sintheta12 += SMALL;
@@ -3780,7 +3930,7 @@ void calc_Js
 
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(cellI, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
             if(debug)
             {
                 os<< "dn1 = " << dn1 << endl;
@@ -3809,7 +3959,7 @@ void calc_Js
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
-            calc_cell_intfcGrad_coeffs(cellI, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
             if(debug)
             {
                 os<< "dn0 = " << dn0 << endl;
@@ -3910,7 +4060,7 @@ void calc_Js
 
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(faceOwn, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, faceOwn, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
             if(debug)
             {
                 os<< "dn1 = " << dn1 << endl;
@@ -3941,7 +4091,7 @@ void calc_Js
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation
             curCellsAll = cellStencil[faceNei];
-            calc_cell_intfcGrad_coeffs(faceNei, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, faceNei, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
             if(debug)
             {
                 os<< "dn0 = " << dn0 << endl;
@@ -3997,7 +4147,7 @@ void calc_Js
 
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(faceNei, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, faceNei, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
             if(debug)
             {
                 os<< "dn1 = " << dn1 << endl;
@@ -4028,7 +4178,7 @@ void calc_Js
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation
             curCellsAll = cellStencil[faceOwn];
-            calc_cell_intfcGrad_coeffs(faceOwn, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, faceOwn, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
             if(debug)
             {
                 os<< "dn0 = " << dn0 << endl;
@@ -4146,7 +4296,7 @@ void calc_Js
 
                     //phase-1
                     //ensure nf direction is into the phase
-                    calc_cell_intfcGrad_coeffs(faceOwn, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
+                    calc_cell_intfcGrad_coeffs(mesh, faceOwn, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
                     if(debug)
                     {
                         os<< "dn1 = " << dn1 << endl;
@@ -4203,7 +4353,7 @@ void calc_Js
                     //phase-0
                     //ensure nf direction is into the phase
                     //then reverse nf again for Js0 calculation
-                    calc_cell_intfcGrad_coeffs(faceOwn, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
+                    calc_cell_intfcGrad_coeffs(mesh, faceOwn, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
                     if(debug)
                     {
                         os<< "dn0 = " << dn0 << endl;
@@ -4891,6 +5041,542 @@ void calc_mS_alphaS
     }
 }
 
+/*
+void calc_mS_alphaS_He
+(
+    const fvMesh& mesh,
+    const PtrList<volScalarField>& C1,
+    const PtrList<volScalarField>& C0,
+    const PtrList<volScalarField>& Y1,
+    const PtrList<volScalarField>& Y0,
+    const volScalarField& alpha1,
+    const volScalarField& rho1,
+    const volScalarField& rho0,
+    const PtrList<volScalarField>& Ys1,
+    const PtrList<volScalarField>& Ys0,
+    const PtrList<volScalarField>& Js1,
+    const PtrList<volScalarField>& Js0,
+    const label& nSpecies,
+    const scalar& ALPHA_2PH_MIN,
+    PtrList<volScalarField>& mS1,
+    PtrList<volScalarField>& mS0,
+    volScalarField& mS1Tot,
+    volScalarField& mS0Tot,
+    volScalarField& alphaS1,
+    volScalarField& alphaS0,
+    const bool debug,
+    OFstream& os
+)
+{
+    scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
+    scalar dt = mesh.time().deltaTValue();
+    const scalarField& V = mesh.V();
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+
+    const scalarField& alpha1Cells = alpha1.internalField();    
+    const scalarField& rho1Cells = rho1.internalField();
+    const scalarField& rho0Cells = rho0.internalField();
+
+    if(debug)
+    {
+        os<< "-------------------------------------------------------------------------" << nl
+          << "Interfacial Species Transfer Source Terms Calculation" << nl
+          << "-------------------------------------------------------------------------" << nl
+          << nl
+          << "-------------------------------------------------------------------------" << nl
+          << "Internal cells" << nl
+          << "-------------------------------------------------------------------------" << nl
+          << endl;
+    }
+
+    //Js for all interface cells
+    forAll(alpha1Cells, cellI)
+    {
+        scalar alpha1_cellI = alpha1Cells[cellI];        
+        scalar rho1_cellI = rho1Cells[cellI];        
+        scalar rho0_cellI = rho0Cells[cellI];        
+        scalar V_cellI = V[cellI];
+        if(debug)
+        {
+            os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+        }
+
+        scalar mS1Tot_cellI = 0;
+        scalar mS1i_cellI = 0;
+        //scalar mS0Tot_cellI = 0;
+        //List<scalar> mS1_cellI(nSpecies);
+        //List<scalar> mS0_cellI(nSpecies);
+        scalar limiter = 1;
+        scalar limiter_min = 1;
+        scalar max_mS;
+        scalar max_mSi;
+
+        if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
+        {
+            mS1Tot_cellI = Js0[0].internalField()[cellI] - Js1[0].internalField()[cellI];
+            mS1Tot_cellI /= (Ys1[0].internalField()[cellI] - Ys0[0].internalField()[cellI]);
+            mS1Tot_cellI /= V_cellI;
+
+            if(mS1Tot_cellI > 0)
+            {
+                max_mS = rho0_cellI*(1 - alpha1_cellI)/dt;
+                mS1Tot_cellI = min(max_mS, mS1Tot_cellI);
+            }
+            else
+            {
+                max_mS = rho1_cellI*alpha1_cellI/dt;
+                mS1Tot_cellI = -min(max_mS, -mS1Tot_cellI);
+            }
+
+            
+            for(label i=0; i<nSpecies; i++)
+            {                                
+                mS1i_cellI = mS1Tot_cellI*Ys1[i].internalField()[cellI] + Js1[i].internalField()[cellI]/V_cellI;
+                
+                if(mS1i_cellI > 0)
+                {
+                    max_mSi = C0[i].internalField()[cellI]/dt;
+
+                    if(mag(mS1i_cellI) > max_mSi)
+                    {
+                        limiter = max_mSi/mag(mS1i_cellI);
+                        limiter_min = min(limiter, limiter_min);                        
+                    }                    
+                }
+                else if(mS1i_cellI < 0)
+                {
+                    max_mSi = C1[i].internalField()[cellI]/dt;
+
+                    if(mag(mS1i_cellI) > max_mSi)
+                    {
+                        limiter = max_mSi/mag(mS1i_cellI);
+                        limiter_min = min(limiter, limiter_min);
+                    }
+                }
+                else
+                {
+                    limiter = 1;
+                    limiter_min = min(limiter, limiter_min);
+                }
+            }
+
+            for(label i=0; i<nSpecies; i++)
+            {
+                mS1[i].internalField()[cellI] = limiter_min*(mS1Tot_cellI*Ys1[i].internalField()[cellI] + Js1[i].internalField()[cellI]/V_cellI);
+                mS0[i].internalField()[cellI] = -mS1[i].internalField()[cellI];
+            }
+
+            mS1Tot.internalField()[cellI] = limiter_min*mS1Tot_cellI;
+            mS0Tot.internalField()[cellI] = -limiter_min*mS1Tot_cellI;
+
+            alphaS1.internalField()[cellI] = limiter_min*mS1Tot_cellI/rho1Cells[cellI];
+            alphaS0.internalField()[cellI] = -limiter_min*mS1Tot_cellI/rho0Cells[cellI];
+        }
+        else
+        {
+            for(label i=0; i<nSpecies; i++)
+            {
+                mS1[i].internalField()[cellI] = 0;
+                mS0[i].internalField()[cellI] = 0;
+            }
+
+            mS1Tot.internalField()[cellI] = 0;
+            mS0Tot.internalField()[cellI] = 0;
+
+            alphaS1.internalField()[cellI] = 0;
+            alphaS0.internalField()[cellI] = 0;
+        }
+
+        if(debug)
+        {
+            os<< "-----------------------------------------------------------------------------------" << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "C1[" << i << "] = " << C1[i].internalField()[cellI] << "  C0[" << i << "] = " << C0[i].internalField()[cellI] << nl
+                    << "Js1[" << i << "] = " << Js1[i].internalField()[cellI] << "  Js0[" << i << "] = " << Js0[i].internalField()[cellI] << nl 
+                    << "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << mS0[i].internalField()[cellI] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << mS0Tot.internalField()[cellI] << nl
+                << "rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << nl
+                << "alphaS1 = " << alphaS1.internalField()[cellI] << "  alphaS0 = " << alphaS0.internalField()[cellI] << nl
+                << "-----------------------------------------------------------------------------------" << nl
+                << endl;
+        }        
+    }
+
+    if(debug)
+    {
+        os<< "-------------------------------------------------------------------------" << nl
+            << "Internal faces" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
+    }
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        label faceOwn = own[faceI];
+        label faceNei = nei[faceI];
+        scalar alpha1Own = alpha1Cells[faceOwn];
+        scalar alpha1Nei = alpha1Cells[faceNei];
+        scalar VOwn = V[faceOwn];
+        scalar VNei = V[faceNei];
+        //scalar rho1Own  = rho1Cells[faceOwn];
+        scalar rho0Own  = rho0Cells[faceOwn];
+        //scalar rho1Nei = rho1Cells[faceNei];
+        scalar rho0Nei = rho0Cells[faceNei];
+
+        if(debug)
+        {
+            os<< "Face: " << faceI << nl
+                << "own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei
+                << endl;
+        }
+
+        scalar mS1Tot_cellI = 0;
+        scalar mS1Tot_own = 0;
+        scalar mS1Tot_nei = 0;                       
+        scalar max_mS;
+
+        if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
+        {
+            mS1Tot_cellI = Js0[0].internalField()[faceOwn] - Js1[0].internalField()[faceOwn];
+            mS1Tot_cellI /= (Ys1[0].internalField()[faceOwn] - Ys0[0].internalField()[faceOwn]);
+
+            if(mS1Tot_cellI > 0)
+            {
+                max_mS = rho0Own*(1 - alpha1Own)*VOwn/dt;
+                if(mS1Tot_cellI > max_mS)
+                {
+                    mS1Tot_own = max_mS;                    
+                }
+                mS1Tot_nei = mS1Tot_cellI - mS1Tot_own;            
+                
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceOwn] + Js1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceNei] = mS1Tot_nei*Ys1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceOwn] /= VOwn;
+                    mS1[i].internalField()[faceNei] /= VNei;
+
+                    mS0[i].internalField()[faceOwn] = -mS1Tot_own*Y0[i].internalField()[faceOwn];
+                    mS0[i].internalField()[faceNei] = -mS1Tot_nei*Ys0[i].internalField()[faceOwn] - Js0[i].internalField()[faceOwn] - mS0[i].internalField()[faceOwn];
+                    mS0[i].internalField()[faceOwn] /= VOwn;
+                    mS0[i].internalField()[faceNei] /= VNei;
+                }
+            }
+            else
+            {
+                mS1Tot_own = mS1Tot_cellI;
+                mS1Tot_nei = mS1Tot_cellI - mS1Tot_own;            
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceOwn] + Js1[i].internalField()[faceOwn];
+                    mS1[i].internalField()[faceNei] = 0;
+                    mS1[i].internalField()[faceOwn] /= VOwn;
+                    mS1[i].internalField()[faceNei] /= VNei;
+
+                    mS0[i].internalField()[faceOwn] = -mS1Tot_own*Ys0[i].internalField()[faceOwn];
+                    mS0[i].internalField()[faceNei] = -Js0[i].internalField()[faceOwn];
+                    mS0[i].internalField()[faceOwn] /= VOwn;
+                    mS0[i].internalField()[faceNei] /= VNei;
+                }
+            }            
+
+            mS1Tot.internalField()[faceOwn] = mS1Tot_own/VOwn;
+            mS0Tot.internalField()[faceOwn] = -mS1Tot_own/VOwn;
+
+            mS1Tot.internalField()[faceNei] = mS1Tot_nei/VNei;
+            mS0Tot.internalField()[faceNei] = -mS1Tot_nei/VNei;      
+        }
+
+        if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
+        {            
+            mS1Tot_cellI = Js0[0].internalField()[faceNei] - Js1[0].internalField()[faceNei];
+            mS1Tot_cellI /= (Ys1[0].internalField()[faceNei] - Ys0[0].internalField()[faceNei]);
+
+            if(mS1Tot_cellI > 0)
+            {
+                max_mS = rho0Nei*(1 - alpha1Nei)*VNei/dt;
+                if(mS1Tot_cellI > max_mS)
+                {
+                    mS1Tot_nei = max_mS;                    
+                }                
+                mS1Tot_own = mS1Tot_cellI - mS1Tot_nei;
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceNei] = mS1Tot_nei*Ys1[i].internalField()[faceNei] + Js1[i].internalField()[faceNei];
+                    mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceNei];
+                    mS1[i].internalField()[faceOwn] /= VOwn;
+                    mS1[i].internalField()[faceNei] /= VNei;
+
+                    mS0[i].internalField()[faceNei] = -mS1Tot_nei*Y0[i].internalField()[faceNei];
+                    mS0[i].internalField()[faceOwn] = -mS1Tot_own*Ys0[i].internalField()[faceNei] - Js0[i].internalField()[faceNei] - mS0[i].internalField()[faceNei];
+                    mS0[i].internalField()[faceOwn] /= VOwn;
+                    mS0[i].internalField()[faceNei] /= VNei;
+                }
+            }
+            else
+            {
+                mS1Tot_nei = mS1Tot_cellI;
+                mS1Tot_own = mS1Tot_cellI - mS1Tot_nei;
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    mS1[i].internalField()[faceNei] = mS1Tot_nei*Ys1[i].internalField()[faceNei] + Js1[i].internalField()[faceNei];
+                    mS1[i].internalField()[faceOwn] = 0;
+                    mS1[i].internalField()[faceOwn] /= VOwn;
+                    mS1[i].internalField()[faceNei] /= VNei;
+
+                    mS0[i].internalField()[faceNei] = -mS1Tot_nei*Ys0[i].internalField()[faceNei];
+                    mS0[i].internalField()[faceOwn] = -Js0[i].internalField()[faceNei];
+                    mS0[i].internalField()[faceOwn] /= VOwn;
+                    mS0[i].internalField()[faceNei] /= VNei;
+                }
+            }                        
+
+            mS1Tot.internalField()[faceOwn] = mS1Tot_own/VOwn;
+            mS0Tot.internalField()[faceOwn] = -mS1Tot_own/VOwn;
+
+            mS1Tot.internalField()[faceNei] = mS1Tot_nei/VNei;
+            mS0Tot.internalField()[faceNei] = -mS1Tot_nei/VNei;      
+        }
+
+        alphaS1.internalField()[faceOwn] = mS1Tot.internalField()[faceOwn]/rho1Cells[faceOwn];
+        alphaS0.internalField()[faceOwn] = mS0Tot.internalField()[faceOwn]/rho0Cells[faceOwn];
+
+        alphaS1.internalField()[faceNei] = mS1Tot.internalField()[faceNei]/rho1Cells[faceNei];
+        alphaS0.internalField()[faceNei] = mS0Tot.internalField()[faceNei]/rho0Cells[faceNei];
+
+        if(debug)
+        {
+            os<< "-----------------------------------------------------------------------------------" << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "C1[" << i << "] = " << C1[i].internalField()[faceOwn] << "  C0[" << i << "] = " << C0[i].internalField()[faceOwn] << nl
+                    << "Js1[" << i << "] = " << Js1[i].internalField()[faceOwn] << "  Js0[" << i << "] = " << Js0[i].internalField()[faceOwn] << nl 
+                    << "mS1[" << i << "] = " << mS1[i].internalField()[faceOwn] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceOwn] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[faceOwn] << "  mS0Tot = " << mS0Tot.internalField()[faceOwn] << nl
+                << "rho1 = " << rho1Cells[faceOwn] << "  rho0 = " << rho0Cells[faceOwn] << nl
+                << "alphaS1 = " << alphaS1.internalField()[faceOwn] << "  alphaS0 = " << alphaS0.internalField()[faceOwn] << endl;
+            for(label i=0; i<nSpecies; i++)
+            {
+                os<< "C1[" << i << "] = " << C1[i].internalField()[faceNei] << "  C0[" << i << "] = " << C0[i].internalField()[faceNei] << nl
+                    << "Js1[" << i << "] = " << Js1[i].internalField()[faceNei] << "  Js0[" << i << "] = " << Js0[i].internalField()[faceNei] << nl
+                    << "mS1[" << i << "] = " << mS1[i].internalField()[faceNei] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceNei] 
+                    << endl;
+            }
+            os<< "mS1Tot = " << mS1Tot.internalField()[faceNei] << "  mS0Tot = " << mS0Tot.internalField()[faceNei] << nl
+                << "rho1 = " << rho1Cells[faceNei] << "  rho0 = " << rho0Cells[faceNei] << nl
+                << "alphaS1 = " << alphaS1.internalField()[faceNei] << "  alphaS0 = " << alphaS0.internalField()[faceNei] << endl;
+            os<< "-----------------------------------------------------------------------------------" << nl
+                << endl;
+        }
+    }
+
+    //boundary faces
+    if(debug)
+    {
+        os<< "-------------------------------------------------------------------------" << nl
+          << "Boundary coupled faces" << nl
+          << "-------------------------------------------------------------------------" << nl
+          << endl;
+    }
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    const wordList& patchNames = patches.names();
+
+    //--------------------------------------------------------------//
+    //Need volume of cell neighbour on neighbouring processor for 
+    //each coupled patch face in order to calculate flux limiter
+    //for that face
+    const label nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<scalar> VNeiFld(nBnd);
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                const label& faceOwn = own[faceI];
+                VNeiFld[bndFaceI] = V[faceOwn];
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, VNeiFld);
+    //VNei now has cell volume of neighbouring cell for each coupled
+    //patch face
+    //--------------------------------------------------------------//
+
+    forAll(mS1Tot.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pmS1Tot = mS1Tot.boundaryField()[patchI];
+
+        if(debug)
+        {
+            os<< "-------------------------------------------------------------------------" << nl
+                << "Patch: " << patchNames[patchI] << nl
+                << "-------------------------------------------------------------------------" << nl
+                << endl;
+        }
+
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            const scalarField& alpha1NeiFld = alpha1.boundaryField()[patchI].patchNeighbourField();
+            //const scalarField& rho1NeiFld = rho1.boundaryField()[patchI].patchNeighbourField();            
+            const scalarField& rho0NeiFld = rho0.boundaryField()[patchI].patchNeighbourField();            
+
+            forAll(pmS1Tot, fcI)
+            {
+                label faceOwn = own[faceI];                
+                scalar alpha1Own = alpha1Cells[faceOwn];
+                scalar alpha1Nei = alpha1NeiFld[fcI];
+                scalar VOwn = V[faceOwn];
+                scalar VNei = VNeiFld[bndFaceI];
+                //scalar rho1Own  = rho1Cells[faceOwn];
+                scalar rho0Own  = rho0Cells[faceOwn];
+                //scalar rho1Nei = rho1NeiFld[fcI];
+                scalar rho0Nei = rho0NeiFld[fcI];
+
+                if(debug)
+                {
+                    os<< "Face: " << faceI << "  patch face index: " << fcI << nl
+                        << "own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  alpha1Nei = " << alpha1Nei << endl;
+                }
+
+                scalar mS1Tot_cellI = 0;
+                scalar mS1Tot_own = 0;
+                scalar mS1Tot_nei = 0;                       
+                scalar max_mS;
+
+                if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
+                {
+                    mS1Tot_cellI = Js0[0].internalField()[faceOwn] - Js1[0].internalField()[faceOwn];
+                    mS1Tot_cellI /= (Ys1[0].internalField()[faceOwn] - Ys0[0].internalField()[faceOwn]);
+
+                    if(mS1Tot_cellI > 0)
+                    {
+                        max_mS = rho0Own*(1 - alpha1Own)*VOwn/dt;
+                        if(mS1Tot_cellI > max_mS)
+                        {
+                            mS1Tot_own = max_mS;                    
+                        }
+                        mS1Tot_nei = mS1Tot_cellI - mS1Tot_own;
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceOwn] + Js1[i].internalField()[faceOwn];
+                            mS1[i].internalField()[faceOwn] /= VOwn;
+
+                            mS0[i].internalField()[faceOwn] = -mS1Tot_own*Y0[i].internalField()[faceOwn];
+                            mS0[i].internalField()[faceOwn] /= VOwn;
+                        }
+                    }
+                    else
+                    {
+                        mS1Tot_own = mS1Tot_cellI;
+                        mS1Tot_nei = mS1Tot_cellI - mS1Tot_own;
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceOwn] + Js1[i].internalField()[faceOwn];
+                            mS1[i].internalField()[faceOwn] /= VOwn;
+
+                            mS0[i].internalField()[faceOwn] = -mS1Tot_own*Ys0[i].internalField()[faceOwn];
+                            mS0[i].internalField()[faceOwn] /= VOwn;
+                        }
+                    }                    
+                    
+                    mS1Tot.internalField()[faceOwn] = mS1Tot_own/VOwn;
+                    mS0Tot.internalField()[faceOwn] = -mS1Tot_own/VOwn;
+                }
+
+                if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
+                {            
+                    mS1Tot_cellI = Js0[0].internalField()[faceOwn] - Js1[0].internalField()[faceOwn];
+                    mS1Tot_cellI /= (Ys1[0].internalField()[faceOwn] - Ys0[0].internalField()[faceOwn]);
+
+                    if(mS1Tot_cellI > 0)
+                    {
+                        max_mS = rho0Nei*(1 - alpha1Nei)*VNei/dt;
+                        if(mS1Tot_cellI > max_mS)
+                        {
+                            mS1Tot_nei = max_mS;                    
+                        }                
+                        mS1Tot_own = mS1Tot_cellI - mS1Tot_nei;
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            const scalarField& Y0iNeiFld = Y0[i].boundaryField()[patchI].patchNeighbourField();
+
+                            mS1[i].internalField()[faceOwn] = mS1Tot_own*Ys1[i].internalField()[faceOwn];
+                            mS1[i].internalField()[faceOwn] /= VOwn;
+                            
+                            mS0[i].internalField()[faceOwn] = -mS1Tot_own*Ys0[i].internalField()[faceOwn] - Js0[i].internalField()[faceOwn] + mS1Tot_nei*Y0iNeiFld[fcI];
+                            mS0[i].internalField()[faceOwn] /= VOwn;
+                        }
+                    }
+                    else
+                    {
+                        mS1Tot_nei = mS1Tot_cellI;
+                        mS1Tot_own = mS1Tot_cellI - mS1Tot_nei;
+
+                        for(label i=0; i<nSpecies; i++)
+                        {
+                            mS1[i].internalField()[faceOwn] = 0;
+                            mS1[i].internalField()[faceOwn] /= VOwn;
+
+                            mS0[i].internalField()[faceOwn] = -Js0[0].internalField()[faceOwn];
+                            mS0[i].internalField()[faceOwn] /= VOwn;
+                        }
+                    }                                        
+
+                    mS1Tot.internalField()[faceOwn] = mS1Tot_own/VOwn;
+                    mS0Tot.internalField()[faceOwn] = -mS1Tot_own/VOwn;
+                }
+
+                alphaS1.internalField()[faceOwn] = mS1Tot.internalField()[faceOwn]/rho1Cells[faceOwn];
+                alphaS0.internalField()[faceOwn] = mS0Tot.internalField()[faceOwn]/rho0Cells[faceOwn];
+
+                if(debug)
+                {
+                    os<< "-----------------------------------------------------------------------------------" << endl;
+                    for(label i=0; i<nSpecies; i++)
+                    {
+                        os<< "C1[" << i << "] = " << C1[i].internalField()[faceOwn] << "  C0[" << i << "] = " << C0[i].internalField()[faceOwn] << nl
+                            << "Js1[" << i << "] = " << Js1[i].internalField()[faceOwn] << "  Js0[" << i << "] = " << Js0[i].internalField()[faceOwn] << nl 
+                            << "mS1[" << i << "] = " << mS1[i].internalField()[faceOwn] << "  mS0[" << i << "] = " << mS0[i].internalField()[faceOwn] 
+                            << endl;
+                    }
+                    os<< "mS1Tot = " << mS1Tot.internalField()[faceOwn] << "  mS0Tot = " << mS0Tot.internalField()[faceOwn] << nl
+                        << "rho1 = " << rho1Cells[faceOwn] << "  rho0 = " << rho0Cells[faceOwn] << nl
+                        << "alphaS1 = " << alphaS1.internalField()[faceOwn] << "  alphaS0 = " << alphaS0.internalField()[faceOwn] << endl;
+                    os<< "-----------------------------------------------------------------------------------" << nl
+                        << endl;
+                }
+
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+}
+*/
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

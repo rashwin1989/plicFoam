@@ -434,6 +434,7 @@ namespace plicFuncs
 
     void calc_cell_intfcGrad_coeffs
     (
+        const fvMesh& mesh,
         const label& curCell_lbl,
         const vector& nf,
         const vector& C_intfc,
