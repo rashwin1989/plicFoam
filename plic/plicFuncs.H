@@ -432,6 +432,33 @@ namespace plicFuncs
         OFstream& os
     );
 
+    label findCellInIntfcDir
+    (
+        const fvMesh& mesh,
+        const List<scalar>& alpha1,
+        const labelList& cells,
+        const List<vector>& C,
+        const vector& Cp,
+        const vector& nf,
+        const label& C1_lbl,
+        bool debug,
+        OFstream& os
+    );
+
+    label findCellInIntfcOrthDir
+    (
+        const fvMesh& mesh,
+        const List<scalar>& alpha1,
+        const labelList& cells,
+        const List<vector>& C,
+        const vector& Cp,
+        const vector& C1,
+        const vector& nf,
+        const label& C1_lbl,
+        bool debug,
+        OFstream& os
+    );
+
     void calc_cell_intfcGrad_coeffs
     (
         const fvMesh& mesh,

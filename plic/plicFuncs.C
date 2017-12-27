@@ -3469,6 +3469,8 @@ void redistribute_Ci_field
 
 label findCellInIntfcDir
 (
+    const fvMesh& mesh,
+    const List<scalar>& alpha1,
     const labelList& cells,
     const List<vector>& C,
     const vector& Cp,
@@ -3480,6 +3482,7 @@ label findCellInIntfcDir
 {
     scalar cosThetaMax = -1;
     label cell_lbl = 0;
+    vector meshCi;
 
     if(debug)
     {
@@ -3496,8 +3499,18 @@ label findCellInIntfcDir
 
         if(debug)
         {
+            if(cellI < mesh.nCells())
+            {
+                meshCi = mesh.C()[curCell];
+            }
+            else
+            {
+                meshCi = vector::one;
+            }
+            
             os<< "Cell " << cellI << " in stencil: " << curCell << nl
               << "C = " << Cp << "  Ci = " << Ci << nl
+              << "alpha1i = " << alpha1[curCell] << "  meshCi = " << meshCi << nl
               << "CCi" << CCi
               << endl;
         }
@@ -3532,18 +3545,22 @@ label findCellInIntfcDir
 
 label findCellInIntfcOrthDir
 (
+    const fvMesh& mesh,
+    const List<scalar>& alpha1,
     const labelList& cells,
     const List<vector>& C,
     const vector& Cp,
     const vector& C1,
     const vector& nf,
     const label& C1_lbl,
+    bool foundCell,
     bool debug,
     OFstream& os
 )
 {
     scalar magCosThetaMin = 1;
     label cell_lbl = 0;
+    foundCell = false;
 
     if(debug)
     {
@@ -3558,6 +3575,7 @@ label findCellInIntfcOrthDir
     vector nfXCC1 = nf ^ CC1;
     nfXCC1 /= mag(CC1);
     vector CCi;
+    vector meshCi;
 
     for(label cellI=0; cellI<cells.size(); cellI++)
     {
@@ -3569,14 +3587,25 @@ label findCellInIntfcOrthDir
 
         if(debug)
         {
+            if(cellI < mesh.nCells())
+            {
+                meshCi = mesh.C()[curCell];
+            }
+            else
+            {
+                meshCi = vector::one;
+            }
+
             os<< "Cell " << cellI << " in stencil: " << curCell << nl
                 << "C = " << Cp << "  C1 = " << C1 << "  Ci = " << C[curCell] << nl
+                << "alpha1i = " << alpha1[curCell] << "  meshCi = " << meshCi << nl
                 << "CC1 = " << CC1 << "  CCi" << CCi << "  CC1_CCi_dir = " << CC1_CCi_dir
                 << endl;
         }
 
-        if(curCell != C1_lbl)
+        if(curCell != C1_lbl && CC1_CCi_dir < 0)
         {
+            foundCell = true;
             //CCi /= mag(CCi);
             //scalar cosTheta = nf & CCi;
             scalar cosTheta = (CC1 & CCi)/mag(CCi)/mag(CC1);
@@ -3694,17 +3723,18 @@ void calc_cell_intfcGrad_coeffs
     // suffix 2: direction closest orthogonal to nf in 2-D
     // further improvements needed for 3-D calculation
     vector Cp = C_intfc;
-    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,debug,os);
+    label C1_lbl = findCellInIntfcDir(mesh,alpha1,curCells,C,Cp,nf,-1,debug,os);
     vector C1 = C[C1_lbl];
-    label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,debug,os);
+    bool foundCell;
+    label C2_lbl = findCellInIntfcOrthDir(mesh,alpha1,curCells,C,Cp,C1,nf,C1_lbl,foundCell,debug,os);
     if(debug)
     {
         os<< "Cell " << curCell_lbl << nl
             << "Cell interface face centre: " << Cp << "  nf: " << nf << nl
-            << "C1_lbl: " << C1_lbl << "  C2_lbl: " << C2_lbl
+            << "C1_lbl: " << C1_lbl << "  C2_lbl: " << C2_lbl << "  found C2: " << foundCell
             << endl;
-    }        
-    vector C2 = C[C2_lbl];    
+    }   
+
     vector t1 = C1 - Cp;
     scalar magt1;    
     magt1 = mag(t1);
@@ -3726,100 +3756,136 @@ void calc_cell_intfcGrad_coeffs
             << "  theta1 = " << theta1                      
             << endl;
     }
-            
 
-    if(theta1 > 1E-3)
-    {        
-        vector t2 = C2 - Cp;
-        scalar magt2;
-        magt2 = mag(t2);
-        if(magt2 < SMALL)
-        {
-            os<< "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << endl;
-            magt2 += SMALL;
-        }    
-        scalar magt1t2 = magt1*magt2;
-        if(magt1t2 < SMALL)
-        {
-            os<< "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << endl;
-            magt1t2 += SMALL;
-        }        
+    if(foundCell)
+    {                    
+        if(theta1 > 1E-3)
+        {        
+            vector C2 = C[C2_lbl];    
+            vector t2 = C2 - Cp;
+            scalar magt2;
+            magt2 = mag(t2);
+            if(magt2 < SMALL)
+            {
+                os<< "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << endl;
+                magt2 += SMALL;
+            }    
+            scalar magt1t2 = magt1*magt2;
+            if(magt1t2 < SMALL)
+            {
+                os<< "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << endl;
+                magt1t2 += SMALL;
+            }        
         
-        scalar costheta2 = (nf & t2)/magt2;
-        if(costheta2 > 1)
-        {
-            os<< "costheta2 = " << costheta2 << endl;
-            costheta2 = 1;
-        }
-        scalar theta2 = acos(costheta2);
-        if(debug)
-        {
-            os<< "t2 = " << t2 << "  mag(t2) = " << magt2
-                << "  theta2 = " << theta2                      
-                << endl;
-        }
-        scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
-        if(debug)
-        {
-            os<< "theta2_sign = " << theta2_sign            
-                << endl;
-        }
+            scalar costheta2 = (nf & t2)/magt2;
+            if(costheta2 > 1)
+            {
+                os<< "costheta2 = " << costheta2 << endl;
+                costheta2 = 1;
+            }
+            scalar theta2 = acos(costheta2);
+            if(debug)
+            {
+                os<< "t2 = " << t2 << "  mag(t2) = " << magt2
+                    << "  theta2 = " << theta2                      
+                    << endl;
+            }
+            scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
+            if(debug)
+            {
+                os<< "theta2_sign = " << theta2_sign            
+                    << endl;
+            }
 
-        scalar sintheta12 = sin(theta1 + theta2);
+            scalar sintheta12 = sin(theta1 + theta2);
 
-        if(theta1 + theta2 > constant::mathematical::pi)
-        {
-            os<< "Time = " << mesh.time().timeName() << "  Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  C2 = " << C2 << nl
-                << "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
-                << "theta1 = " << theta1 << "  theta2 = " << theta2 << "  (theta1+theta2) = " << theta1 + theta2 << " sin(theta1+theta2) = " << sintheta12 << endl;
-        }
-        if(sintheta12 < SMALL)
-        {
-            sintheta12 += SMALL;
-        }
+            if(theta1 + theta2 > constant::mathematical::pi)
+            {
+                os<< "Time = " << mesh.time().timeName() << nl 
+                    << "Cell " << curCell_lbl << "  nf" << nf << "  Cp = " << Cp << "  phaseLabel: " << phaseLbl << "  cell alpha1 = " << alpha1[curCell_lbl] << "  cell meshC = " << mesh.C()[curCell_lbl] << nl 
+                    << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << "  C2_lbl: " << C2_lbl << "  C2 = " << C2 << nl
+                    << "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
+                    << "theta1 = " << theta1 << "  theta2 = " << theta2 << "  (theta1+theta2) = " << theta1 + theta2 << " sin(theta1+theta2) = " << sintheta12 << nl
+                    << endl;
 
-        scalar alpha = sin(theta2)/sintheta12;        
-        scalar beta = sin(theta1)/sintheta12;
-        scalar at2bt1 = alpha*magt2 + beta*magt1;
-        if(mag(at2bt1) < SMALL)
-        {
-            at2bt1 += SMALL;
-        }
+                C1_lbl = findCellInIntfcDir(mesh,alpha1,curCells,C,Cp,nf,-1,1,os);
+                C2_lbl = findCellInIntfcOrthDir(mesh,alpha1,curCells,C,Cp,C1,nf,C1_lbl,foundCell,1,os);
 
-        if(debug)
-        {
-            os<< "alpha = " << alpha << "  beta = " << beta << nl
-                << "at2bt1 = " << at2bt1
-                << endl;
-        }
-    
-        dn = magt1t2/at2bt1;
+                os<< endl;
+            }
 
-        if(debug)
-        {
-            os<< "dn = " << dn
-                << endl;
-        }
+            if(sintheta12 < SMALL)
+            {
+                sintheta12 += SMALL;
+            }
 
-        scalar Y1;
-        scalar Y2;
-        for(label i=0; i<nSpecies; i++)
-        {
-            Y1 = Y[i][C1_lbl];
-            Y2 = Y[i][C2_lbl];
-            Yeff[i] = (alpha*magt2*Y1 + beta*magt1*Y2)/at2bt1;
+            scalar alpha = sin(theta2)/sintheta12;        
+            scalar beta = sin(theta1)/sintheta12;
+            scalar at2bt1 = alpha*magt2 + beta*magt1;
+            if(mag(at2bt1) < SMALL)
+            {
+                at2bt1 += SMALL;
+            }
 
             if(debug)
             {
-                os<< "Species index: " << i << nl
-                    << "Y1 = " << Y1 << "  Y2 = " << Y2 << "  Yeff = " << Yeff[i]
+                os<< "alpha = " << alpha << "  beta = " << beta << nl
+                    << "at2bt1 = " << at2bt1
                     << endl;
             }
-        } 
-    }   
+    
+            dn = magt1t2/at2bt1;
+
+            if(debug)
+            {
+                os<< "dn = " << dn
+                    << endl;
+            }
+
+            scalar Y1;
+            scalar Y2;
+            for(label i=0; i<nSpecies; i++)
+            {
+                Y1 = Y[i][C1_lbl];
+                Y2 = Y[i][C2_lbl];
+                Yeff[i] = (alpha*magt2*Y1 + beta*magt1*Y2)/at2bt1;
+
+                if(debug)
+                {
+                    os<< "Species index: " << i << nl
+                        << "Y1 = " << Y1 << "  Y2 = " << Y2 << "  Yeff = " << Yeff[i]
+                        << endl;
+                }
+            } 
+        }   
+        else
+        {
+            dn = magt1;
+            if(debug)
+            {
+                os<< "dn = " << dn
+                    << endl;
+            }
+            for(label i=0; i<nSpecies; i++)
+            {             
+                Yeff[i] = Y[i][C1_lbl];
+                if(debug)
+                {
+                    os<< "Species index: " << i << nl
+                        << "Y1 = " << Y[i][C1_lbl] << "  Yeff = " << Yeff[i]
+                        << endl;
+                }
+            }
+        }
+
+        if(debug)
+        {
+            os<< endl;        
+        }
+    }
     else
     {
-        dn = magt1;
+        dn = magt1/costheta1;
         if(debug)
         {
             os<< "dn = " << dn
@@ -3835,11 +3901,6 @@ void calc_cell_intfcGrad_coeffs
                     << endl;
             }
         }
-    }
-
-    if(debug)
-    {
-        os<< endl;        
     }
 }
 
