@@ -3725,7 +3725,7 @@ void calc_cell_intfcGrad_coeffs
     vector Cp = C_intfc;
     label C1_lbl = findCellInIntfcDir(mesh,alpha1,curCells,C,Cp,nf,-1,debug,os);
     vector C1 = C[C1_lbl];
-    bool foundCell;
+    bool foundCell = false;
     label C2_lbl = findCellInIntfcOrthDir(mesh,alpha1,curCells,C,Cp,C1,nf,C1_lbl,foundCell,debug,os);
     if(debug)
     {
@@ -5106,6 +5106,10 @@ void calc_mS_alphaS
 void calc_mS_He
 (
     const fvMesh& mesh,
+    const labelListList& cellStencil,    
+    const List<List<scalar> >& Y1_flatFld,
+    const List<List<scalar> >& Y0_flatFld,
+    const List<scalar>& alpha1_flatFld,
     const PtrList<volScalarField>& C1,
     const PtrList<volScalarField>& C0,
     const PtrList<volScalarField>& Y1,
@@ -5113,10 +5117,18 @@ void calc_mS_He
     const volScalarField& alpha1,
     const volScalarField& rho1,
     const volScalarField& rho0,
-    const PtrList<volScalarField>& Ys1,
-    const PtrList<volScalarField>& Ys0,
-    const PtrList<volScalarField>& Js1,
-    const PtrList<volScalarField>& Js0,
+    const PtrList<volScalarField>& D1,
+    const PtrList<volScalarField>& D0,
+    const List<vector>& C_ph1_flatFld,
+    const List<vector>& C_ph0_flatFld,
+    const volVectorField& C_intfc,
+    const volScalarField& A_intfc,
+    const volVectorField& nHat,
+    const List<scalar>& He,
+    PtrList<volScalarField>& Ys1,
+    PtrList<volScalarField>& Ys0,
+    PtrList<volScalarField>& Js1,
+    PtrList<volScalarField>& Js0,
     const label& nSpecies,
     const scalar& ALPHA_2PH_MIN,
     PtrList<volScalarField>& mS1,
@@ -5129,17 +5141,20 @@ void calc_mS_He
     scalar dt = mesh.time().deltaTValue();
     const scalarField& V = mesh.V();
 
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
+    //const labelList& own = mesh.owner();
+    //const labelList& nei = mesh.neighbour();
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const scalarField& rho1Cells = rho1.internalField();
     const scalarField& rho0Cells = rho0.internalField();
+    const vectorField& C_intfcCells = C_intfc.internalField();
+    const scalarField& A_intfcCells = A_intfc.internalField();
+    const vectorField& nHatCells = nHat.internalField();
 
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Interfacial Species Transfer Source Terms Calculation" << nl
+          << "Interfacial Species Transfer Source Terms Calculation (Henry's Law Model)" << nl
           << "-------------------------------------------------------------------------" << nl
           << nl
           << "-------------------------------------------------------------------------" << nl
@@ -5164,8 +5179,8 @@ void calc_mS_He
         //scalar mS0Tot_cellI = 0;
         //List<scalar> mS1_cellI(nSpecies);
         //List<scalar> mS0_cellI(nSpecies);
-        scalar limiter = 1;
-        scalar limiter_min = 1;
+        //scalar limiter = 1;
+        //scalar limiter_min = 1;
         scalar max_mSi;
 
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
@@ -5179,7 +5194,7 @@ void calc_mS_He
             {
                 os<< "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
                     << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
-                    << "rho1 = " << rho1Cells[cellI] << "rho0 = " << rho0Cells[cellI] << endl;
+                    << "rho1 = " << rho1_cellI << "rho0 = " << rho0_cellI << endl;
             }
 
             scalar dn1;
@@ -5224,13 +5239,13 @@ void calc_mS_He
 
             for(label i=0; i<nSpecies; i++)
             {     
-                Ys0[i].internalField()[cellI] = rho0Cells[cellI]*D0[i].internalField()[cellI]*Yeff0[i]*dn1 + rho1Cells[cellI]*D1[i].internalField()[cellI]*Yeff1[i]*dn0;
-                Ys0[i].internalField()[cellI] /= (rho0Cells[cellI]*D0[i].internalField()[cellI]*dn1 + He[i]*rho1Cells[cellI]*D1[i].internalField()[cellI]*dn0);
+                Ys0[i].internalField()[cellI] = rho0_cellI*D0[i].internalField()[cellI]*Yeff0[i]*dn1 + rho1_cellI*D1[i].internalField()[cellI]*Yeff1[i]*dn0;
+                Ys0[i].internalField()[cellI] /= (rho0_cellI*D0[i].internalField()[cellI]*dn1 + He[i]*rho1_cellI*D1[i].internalField()[cellI]*dn0);
 
                 Ys1[i].internalField()[cellI] = He[i]*Ys0[i].internalField()[cellI];
 
                 intfcGradi_cellI = (Yeff1[i] - Ys1[i].internalField()[cellI])/dn1;
-                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*intfcGradi_cellI;
+                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1_cellI*D1[i].internalField()[cellI]*intfcGradi_cellI;
 
                 Js0[i].internalField()[cellI] = Js1[i].internalField()[cellI];
 
@@ -5275,9 +5290,7 @@ void calc_mS_He
                     << "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << mS0[i].internalField()[cellI] 
                     << endl;
             }
-            os<< "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << mS0Tot.internalField()[cellI] << nl
-                << "rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << nl
-                << "alphaS1 = " << alphaS1.internalField()[cellI] << "  alphaS0 = " << alphaS0.internalField()[cellI] << nl
+            os<< "rho1 = " << rho1_cellI << "  rho0 = " << rho0_cellI << nl                
                 << "-----------------------------------------------------------------------------------" << nl
                 << endl;
         }        
