@@ -30,7 +30,7 @@ for(label i=0; i<nSpecies; i++)
 
 //------------------------------------------------------------------//
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_mS_He(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, mS1, mS0, ist_debug2, osIst);
+plicFuncs::calc_mS_He(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, C1, C0, Y1, Y0, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, interface.C_intfc(), interface.A_intfc(), interface.nHat(), He, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, mS1, mS0, ist_debug2, osIst);
 //Done calculate interfacial species transfer source terms and alpha source terms
 //------------------------------------------------------------------//
 
@@ -58,9 +58,7 @@ forAll(alpha1.internalField(), cellI)
         }
         osIst<< "--------------------------------------------------------------------------" << nl
             << "Interfacial source terms" << nl
-            << "--------------------------------------------------------------------------" << nl
-            << "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << mS0Tot.internalField()[cellI] << nl
-            << "alphaS1 = " << alphaS1.internalField()[cellI] << "  alphaS0 = " << alphaS0.internalField()[cellI] << endl;
+            << "--------------------------------------------------------------------------" << endl;            
         for(label i=0; i<nSpecies; i++)
         {
             osIst<< "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << mS0[i].internalField()[cellI]
@@ -98,11 +96,8 @@ forAll(alpha1.internalField(), cellI)
 
     if(ist_debug)
     {        
-        osIst<< "pS = " << pS.internalField()[cellI] << nl
-            << "--------------------------------------------------------------------------" << nl
-            << "After interfacial species transfer" << nl
-            << "alpha1 = " << alpha1.internalField()[cellI] << "  alpha0 = " << alpha0.internalField()[cellI]
-            << "  (alpha1+alpha0) = " << (alpha1.internalField()[cellI] + alpha0.internalField()[cellI]) << nl
+        osIst<< "--------------------------------------------------------------------------" << nl
+            << "After interfacial species transfer" << nl            
             << "rho1 = " << rho1.internalField()[cellI] << "  rho0 = " << rho0.internalField()[cellI] << endl;
         for(label i=0; i<nSpecies; i++)
         {

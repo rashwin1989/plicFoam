@@ -343,13 +343,13 @@ for(label i=0; i<(nSpecies - 1); i++)
     Y0t += Y0[i];
 }
 
-label i = nSpecies - 1;
+label endSp = nSpecies - 1;
 
-fieldName = "Y1" + Foam::name(i);
+fieldName = "Y1" + Foam::name(endSp);
 Info<< "Reading field " << fieldName << endl;
 Y1.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -363,14 +363,14 @@ Y1.set
         Y1[0]
     )
 );
-Y1[i] = scalar(1.0) - Y1t;
-Y1[i].correctBoundaryConditions();
+Y1[endSp] = scalar(1.0) - Y1t;
+Y1[endSp].correctBoundaryConditions();
 
-fieldName = "C1" + Foam::name(i);
+fieldName = "C1" + Foam::name(endSp);
 Info<< "Initializing field " << fieldName << endl;
 C1.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -381,16 +381,16 @@ C1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha1*rho1*Y1[i],
-        Y1[i].boundaryField().types()
+        alpha1*rho1*Y1[endSp],
+        Y1[endSp].boundaryField().types()
     )
 );
 
-fieldName = "Y0" + Foam::name(i);
+fieldName = "Y0" + Foam::name(endSp);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -404,14 +404,14 @@ Y0.set
         Y0[0]
     )
 );
-Y0[i] = scalar(1.0) - Y0t;
-Y0[i].correctBoundaryConditions();
+Y0[endSp] = scalar(1.0) - Y0t;
+Y0[endSp].correctBoundaryConditions();
 
-fieldName = "C0" + Foam::name(i);
+fieldName = "C0" + Foam::name(endSp);
 Info<< "Initializing field " << fieldName << endl;
 C0.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -422,8 +422,8 @@ C0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha0*rho0*Y0[i],
-        Y0[i].boundaryField().types()
+        alpha0*rho0*Y0[endSp],
+        Y0[endSp].boundaryField().types()
     )
 );
 
@@ -656,7 +656,7 @@ for(label i=0; i<nSpecies; i++)
 
     fieldName = "He" + Foam::name(i);
     Info<< "Reading Henry's Law Co-efficient " << fieldName << endl;
-    He[i] = transPropDict.lookup(fieldName);    
+    He[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
 }
 
 const labelListList& istCellStencil = cell_stencil.stencil();
