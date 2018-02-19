@@ -559,6 +559,7 @@ namespace plicFuncs
         PtrList<volScalarField>& Js0,
         const label& nSpecies,
         const scalar& ALPHA_2PH_MIN,
+        const scalar& A_INTFC_2PH_MIN,
         PtrList<volScalarField>& mS1,
         PtrList<volScalarField>& mS0,
         const bool debug,

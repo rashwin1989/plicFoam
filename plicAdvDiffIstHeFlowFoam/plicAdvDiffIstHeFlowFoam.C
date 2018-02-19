@@ -164,6 +164,11 @@ int main(int argc, char *argv[])
                     << " s" << nl << endl;
 
                 intfcProp.correct();
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    C_phAvg[i] = C0[i] + C1[i];
+                }
             }
 
             #include "UEqn.H"

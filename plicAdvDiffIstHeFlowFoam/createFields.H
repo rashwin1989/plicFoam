@@ -250,6 +250,8 @@ PtrList<volScalarField> C1(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
 
+PtrList<volScalarField> C_phAvg(nSpecies);
+
 word fieldName;
 for(label i=0; i<(nSpecies-1); i++)
 {
@@ -330,6 +332,26 @@ for(label i=0; i<(nSpecies-1); i++)
             ),
             alpha0*rho0*Y0[i],
             Y0[i].boundaryField().types()
+        )
+    );
+
+    fieldName = "C_phAvg" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    C_phAvg.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            C0[i] + C1[i],
+            Y1[i].boundaryField().types()
         )
     );
 }
@@ -426,6 +448,27 @@ C0.set
         Y0[endSp].boundaryField().types()
     )
 );
+
+fieldName = "C_phAvg" + Foam::name(endSp);
+Info<< "Initializing field " << fieldName << endl;
+C_phAvg.set
+(
+    endSp,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        C0[endSp] + C1[endSp],
+        Y1[endSp].boundaryField().types()
+    )
+);
+
 
 List<scalar> C1max(nSpecies);
 List<scalar> C0max(nSpecies);
@@ -997,6 +1040,10 @@ scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_
 scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
 scalar ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
+scalar MIN_ALPHA_IST = transPropDict.lookupOrDefault("MIN_ALPHA_IST", 1E-09);
+scalar A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-12);
+scalar avgSf = (mesh.magSf()).average().value();
+scalar A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
 
 // debug bool switches
 bool redist_alpha;
