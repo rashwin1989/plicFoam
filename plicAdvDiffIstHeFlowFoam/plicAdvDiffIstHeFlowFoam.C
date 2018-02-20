@@ -150,13 +150,13 @@ int main(int argc, char *argv[])
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
-
+                /*
                 interface.intfc_correct();                
 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
-
+                */
                 #include "YDiffEqn.H"
 
                 Info<< "ExecutionTime = "
