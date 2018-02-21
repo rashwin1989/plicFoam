@@ -38,7 +38,6 @@ Description
 #include "fvCFD.H"
 #include "plic.H"
 #include "plicFuncs.H"
-#include "interfaceProperties.H"
 #include "IOdictionary.H"
 #include "centredCPCCellToCellStencilObject.H"
 #include "centredCFCCellToCellStencilObject.H"
@@ -62,7 +61,6 @@ int main(int argc, char *argv[])
     #include "correctPhi.H"
     #include "CourantNo.H"
     #include "diffCourantNo.H"
-    #include "IFTCourantNo.H"
     #include "setInitialDeltaT.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -78,8 +76,7 @@ int main(int argc, char *argv[])
         // according to both Adv and Diff Courant numbers
         #include "readTimeControls.H"
         #include "CourantNo.H"
-        #include "diffCourantNo.H"
-        #include "IFTCourantNo.H"
+        #include "diffCourantNo.H"        
         #include "setDeltaT.H"
         //--------------------------------------------------------------------//
 

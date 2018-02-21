@@ -22,33 +22,20 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Global
-    setDeltaT
+    readTimeControls
 
 Description
-    Reset the timestep to maintain a constant maximum courant number and diffusion courant Number.
-    Reduction of time-step is immediate, but increase is damped to avoid unstable oscillations.
+    Read the control parameters used by setDeltaT
 
 \*---------------------------------------------------------------------------*/
 
-if (adjustTimeStep)
-{
-    scalar maxDeltaTFactAdv = maxCo/(CoNum + SMALL);
-    scalar maxDeltaTFactDiff = maxDiffCo/(diffCoNum + SMALL);
+const bool adjustTimeStep =
+    runTime.controlDict().lookupOrDefault("adjustTimeStep", false);
 
-    scalar maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactDiff);
+scalar maxCo =
+    runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.5);
 
-    scalar deltaTFact = min(min(maxDeltaTFact, 1.0 + 0.1*maxDeltaTFact), 1.05);
-
-    runTime.setDeltaT
-    (
-        min
-        (
-            deltaTFact*runTime.deltaTValue(),
-            maxDeltaT
-        )
-    );
-
-    Info<< "deltaT = " <<  runTime.deltaTValue() << endl;
-}
+scalar maxDeltaT =
+    runTime.controlDict().lookupOrDefault<scalar>("maxDeltaT", GREAT);
 
 // ************************************************************************* //
