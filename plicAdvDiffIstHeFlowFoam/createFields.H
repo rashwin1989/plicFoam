@@ -196,7 +196,53 @@ surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
-interfaceProperties intfcProp(alpha1, U, transPropDict);
+//interfaceProperties intfcProp(alpha1, U, transPropDict);
+
+volScalarField alpha1_smooth
+(
+    IOobject
+    (
+        "alpha1_smooth",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    fvc::average(alpha1),
+    alpha1.boundaryField().types()
+);
+
+dimensionedScalar deltaN
+(
+    "deltaN",
+    1e-8/pow(average(mesh.V()), 1.0/3.0)
+);
+
+surfaceScalarField nHatf
+(
+    IOobject
+    (
+        "nHatf",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("nHatf", dimArea, 0.0)
+);
+
+dimensionedScalar sigma(transPropDict.lookup("sigma"));
+
+volScalarField K
+(
+    IOobject
+    (
+        "K",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("K", dimless/dimLength, 0.0)
+);
 
 // gravity and pressure
 #include "readGravitationalAcceleration.H"

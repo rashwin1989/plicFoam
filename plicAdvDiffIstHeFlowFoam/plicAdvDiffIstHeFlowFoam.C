@@ -163,7 +163,8 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
 
-                intfcProp.correct();
+                //intfcProp.correct();
+                #include "curvature.H"
 
                 for(label i=0; i<nSpecies; i++)
                 {
