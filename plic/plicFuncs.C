@@ -3553,14 +3553,14 @@ label findCellInIntfcOrthDir
     const vector& C1,
     const vector& nf,
     const label& C1_lbl,
-    bool foundCell,
+    bool& foundCell,
     bool debug,
     OFstream& os
 )
 {
+    foundCell = false;
     scalar magCosThetaMin = 1;
     label cell_lbl = 0;
-    foundCell = false;
 
     if(debug)
     {

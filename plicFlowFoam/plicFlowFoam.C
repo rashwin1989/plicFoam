@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
     #include "createPrghCorrTypes.H"
     #include "correctPhi.H"
     #include "CourantNo.H"
+    #include "IFTCourantNo.H"
     #include "setInitialDeltaT.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -66,7 +67,7 @@ int main(int argc, char *argv[])
     {
         #include "readTimeControls.H"
         #include "CourantNo.H"
-        #include "alphaCourantNo.H"
+        #include "IFTCourantNo.H"
         #include "setDeltaT.H"
 
         runTime++;

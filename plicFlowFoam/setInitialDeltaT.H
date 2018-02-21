@@ -4,7 +4,6 @@ if (adjustTimeStep)
     if ((runTime.timeIndex() == 0))
     {
         scalar maxDeltaTFactAdv;
-        scalar maxDeltaTFactDiff;
         scalar maxDeltaTFactIFT;
         scalar maxDeltaTFact;
 
@@ -15,16 +14,7 @@ if (adjustTimeStep)
         else
         {
             maxDeltaTFactAdv = 1;
-        }
-
-        if(diffCoNum > SMALL)
-        {
-            maxDeltaTFactDiff = maxDiffCo/diffCoNum;
-        }
-        else
-        {
-            maxDeltaTFactDiff = 1;
-        }
+        }        
 
         if(IFTCoNum > SMALL)
         {
@@ -35,7 +25,7 @@ if (adjustTimeStep)
             maxDeltaTFactIFT = 1;
         }
 
-        maxDeltaTFact = min(min(maxDeltaTFactAdv, maxDeltaTFactDiff), maxDeltaTFactIFT);
+        maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactIFT);
 
         runTime.setDeltaT
         (

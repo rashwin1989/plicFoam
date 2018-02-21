@@ -191,6 +191,32 @@ surfaceScalarField rhoPhi
     fvc::interpolate(rho)*phi
 );
 
+surfaceScalarField rho1f
+(
+    IOobject
+    (
+        "rho1f",
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    linearInterpolate(rho1)
+);
+
+surfaceScalarField rho0f
+(
+    IOobject
+    (
+        "rho0f",
+        mesh.time().timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    linearInterpolate(rho0)
+);
+
 // Construct PLIC interface object from alpha1 distribution, U field etc. 
 plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
 
@@ -199,6 +225,8 @@ surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
 interfaceProperties intfcProp(alpha1, U, transPropDict);
+
+dimensionedScalar sigma(transPropDict.lookup("sigma"));
 
 // gravity and pressure
 #include "readGravitationalAcceleration.H"
@@ -247,11 +275,17 @@ label ALPHA_BOUND_ITERS_MAX = 108;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
 
-// debug bool switches
-bool debug;
-debug = transPropDict.lookupOrDefault("debug", false);
-bool unbound_debug;
-unbound_debug = transPropDict.lookupOrDefault("unbound_debug", false);
+// bool switches
+bool redist_alpha;
+redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
+
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+
+bool alpha_debug;
+alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
+
+// debug output files
+fileName outputFile("alpha_dbg");
+OFstream osAlpha(mesh.time().path()/outputFile);
 

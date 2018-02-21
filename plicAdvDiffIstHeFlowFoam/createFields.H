@@ -1049,8 +1049,8 @@ List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
 List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 
-const labelList& own = mesh.owner();
-const labelList& nei = mesh.neighbour();
+//const labelList& own = mesh.owner();
+//const labelList& nei = mesh.neighbour();
 //const vectorField& meshC = mesh.C();
 //const vectorField& meshSf = mesh.Sf();
 //const scalarField& meshMagSf = mesh.magSf();
@@ -1085,7 +1085,7 @@ scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_F
 scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 scalar MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 scalar MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
-scalar ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
+//scalar ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 scalar MIN_ALPHA_IST = transPropDict.lookupOrDefault("MIN_ALPHA_IST", 1E-09);
 scalar A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-12);
 scalar avgSf = (mesh.magSf()).average().value();
