@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     #include "correctPhi.H"
     #include "CourantNo.H"
     #include "diffCourantNo.H"
+    #include "IFTCourantNo.H"
     #include "setInitialDeltaT.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
         #include "readTimeControls.H"
         #include "CourantNo.H"
         #include "diffCourantNo.H"
+        #include "IFTCourantNo.H"
         #include "setDeltaT.H"
         //--------------------------------------------------------------------//
 

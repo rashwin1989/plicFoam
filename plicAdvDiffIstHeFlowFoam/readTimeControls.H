@@ -38,6 +38,8 @@ scalar maxCo =
 scalar maxDiffCo = 
     runTime.controlDict().lookupOrDefault<scalar>("maxDiffCo", 0.5);
 
+scalar maxIFTCo = 
+    runTime.controlDict().lookupOrDefault<scalar>("maxIFTCo", 0.5);
 
 scalar maxDeltaT =
     runTime.controlDict().lookupOrDefault<scalar>("maxDeltaT", GREAT);

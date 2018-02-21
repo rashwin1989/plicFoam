@@ -27,9 +27,9 @@ scalarField sumDSfDelta
     fvc::surfaceSum(DSfDelta)().internalField()
 );
 
-diffCoNum = 0.5*gMax(sumDSfDelta/mesh.V().field()/mesh.V().field())*runTime.deltaTValue();
+diffCoNum = gMax(sumDSfDelta/mesh.V().field()/mesh.V().field())*runTime.deltaTValue();
 
-meanDiffCoNum = 0.5*(gSum(sumDSfDelta)/gSum(mesh.V().field()))*runTime.deltaTValue();
+meanDiffCoNum = (gSum(sumDSfDelta)/gSum(mesh.V().field())/gSum(mesh.V().field()))*runTime.deltaTValue();
 
 Info<< "Diffusion Courant Number mean: " << meanDiffCoNum
     << " max: " << diffCoNum << endl;
