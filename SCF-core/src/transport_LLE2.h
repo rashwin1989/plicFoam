@@ -3,6 +3,10 @@
 
 #include "myUmfpack.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
   INPUT PARAMETERS defined in a macro called "_PARAMETERS_"
 */
@@ -94,5 +98,9 @@ double transport_LLE_eval_func(
 double transport_evaluation_func(int n, 
                                   double *y_1, double *y_2, 
                                   double *J_1, double *J_2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

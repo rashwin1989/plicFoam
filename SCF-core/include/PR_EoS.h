@@ -1,6 +1,10 @@
 #ifndef                    _PR_EOS_H_
 #define                    _PR_EOS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* species' information:
 
   I. Type of BIP: type_k
@@ -243,4 +247,9 @@ void get_dvdt_( //
     int    *type_k,   // ! vector of binary interaction types
     double *coef_ab,  // vector of a, b coefficients
     double *V,  double *dVdT);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -29,6 +29,10 @@
 
 #include "umfpack.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   int rows, cols;   //number of rows and columns 
   int nz;           //number of nonzero entries
@@ -111,5 +115,9 @@ void Maxwell_Stefan_mass_flux(
        double Z, // compressibility factor
        int n, double *MW, double *x, double *Dij, double *rhs, 
        double *flux, LPT_UMFPACK umf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

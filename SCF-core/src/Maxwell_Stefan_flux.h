@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include "myUmfpack.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* calc_MS_flux_interface_combination() 
  * computes the mass fluxes on both sides of the interface
  */
@@ -24,5 +28,9 @@ void calc_MS_flux_interface(
     double *flux_m_2,
     LPT_UMFPACK flux_umf
     );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 	Pc,// ! vector of critical pressures
 	Tc,// ! vector of critical temperatures
 	w, // ! vector of acentric factors
-	type_k, // ! vector of binary interaction types
+	tk, // ! vector of binary interaction types
 	x_1, // ! vector of mass fractions: oil-rich phase
 	x_2, // ! vector of mass fractions: water-rich phase
 	&f_min);// ! minimum evaluation value

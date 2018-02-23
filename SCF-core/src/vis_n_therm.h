@@ -1,6 +1,10 @@
 #ifndef                 _PHE_VIS_N_THERM_H_
 #define                 _PHE_VIS_N_THERM_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void vis_n_cond_(double *P,       // P (Pa)  scalar
                  double *T,       // T (K)   scalar
                  int    *n,       // n       scalar
@@ -148,6 +152,10 @@ void ideal_gas_chem_potential_(
 void ig_cp_h_( // note that this is for single species; NOT for a vector of species
         double *Tb,double *Tc,double *SG,double *H8,double *MW,
         double *T,double *H_IG,double *CP_IG);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

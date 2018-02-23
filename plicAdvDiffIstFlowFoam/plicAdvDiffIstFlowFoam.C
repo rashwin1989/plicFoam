@@ -43,7 +43,7 @@ Description
 #include "pimpleControl.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
 
-/*
+
 #include <math.h>
 #include <time.h>
 #include <stdio.h>
@@ -56,7 +56,7 @@ Description
 #include "transport_LLE2.h"
 #include "gsl_optimizations2.h"
 #include "Maxwell_Stefan_flux.h"
-*/
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     #include "diffCourantNo.H"
     #include "setInitialDeltaT.H"
 
-    /*
+
     double Z;
     double *MW;
     double *x;
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
     Z = 0.5;
 
     Maxwell_Stefan_mass_flux(Z, nSpecies, MW, x, Dij, rhs_flux, flux_m, &flux_umf);
-    */
+
 
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -3,6 +3,10 @@
 
 #include <gsl/gsl_multimin.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct 
 {
   int n;      /* number of species */ 
@@ -88,5 +92,9 @@ int    my2_gsl_find_transport_LLE2(_PARAMETERS_);
 double transport_LLE_f_(const gsl_vector *v, void *params);
 
 double transport_LLE2_f_(const gsl_vector *v, void *params);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
