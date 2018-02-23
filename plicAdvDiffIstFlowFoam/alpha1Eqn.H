@@ -265,19 +265,26 @@ if(redist_alpha)
         }
     }
 }
-/*
-const vectorField& meshCi = mesh.C().internalField();
-vector minAlpha1CellC = vector::zero;
-vector maxAlpha1CellC = vector::zero;
-if(minAlpha1Cell >= 0)
+
+if(alpha_debug)
 {
-    minAlpha1CellC = meshCi[minAlpha1Cell];
+    const vectorField& meshCi = mesh.C().internalField();
+    vector minAlpha1CellC = vector::zero;
+    vector maxAlpha1CellC = vector::zero;
+    if(minAlpha1Cell >= 0)
+    {
+        minAlpha1CellC = meshCi[minAlpha1Cell];
+    }
+    if(maxAlpha1Cell >= 0)
+    {
+        maxAlpha1CellC = meshCi[maxAlpha1Cell];
+    }
+
+    osAlpha<< "alpha1 extrema locations: " << nl
+        << "Min alpha1 cell: " << minAlpha1Cell << " Min cell loc: " << minAlpha1CellC << " Min alpha1 value: " << minAlpha1 << nl 
+        << "Max alpha1 cell: " << maxAlpha1Cell  << " Max cell loc: " << maxAlpha1CellC << " Max alpha1 value: " << maxAlpha1 << nl
+        << endl;
 }
-if(maxAlpha1Cell >= 0)
-{
-    maxAlpha1CellC = meshCi[maxAlpha1Cell];
-}
-*/
 
 alpha1.correctBoundaryConditions();
 
@@ -289,10 +296,6 @@ Info<< "Phase-1 volume fraction after redistribution = "
     << "alpha1 undershoot = " << min(alpha1).value()
     << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
     << endl;
-
-/*Info<< "alpha1 extrema locations: " << nl
-<< "Min alpha1 cell: " << minAlpha1Cell << " Min cell loc: " << minAlpha1CellC << " Min alpha1 value: " << minAlpha1 << nl 
-    << "Max alpha1 cell: " << maxAlpha1Cell  << " Max cell loc: " << maxAlpha1CellC << " Max alpha1 value: " << maxAlpha1 << endl;*/
 
 alpha1.max(0.0);
 alpha1.min(1.0);

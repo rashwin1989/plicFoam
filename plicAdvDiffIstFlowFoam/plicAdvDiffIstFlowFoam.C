@@ -22,31 +22,46 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    plicAdvDiffFoam
+    plicAdvDiffIstFlowFoam
 
 Description
     Solver for 2 incompressible, immiscible fluids using a VOF
     (volume of fluid) phase-fraction based interface capturing with 
-    piecewise linear interface reconstruction. Advection and diffusion
-    of species within each bulk phase.
-    Time-varying velocity field set.
+    piecewise linear interface reconstruction. 
+    Advection and diffusion of species within each bulk phase.
+    Interfacial species mass transfer calculation.
 
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
 #include "plic.H"
 #include "plicFuncs.H"
-#include "interfaceProperties.H"
+//#include "interfaceProperties.H"
 #include "IOdictionary.H"
 #include "centredCPCCellToCellStencilObject.H"
 #include "centredCFCCellToCellStencilObject.H"
 #include "pimpleControl.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
 
+/*
+#include <math.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "MACROS.H"
+#include "PR_EoS.h"
+#include "myUmfpack.h"
+#include "vis_n_therm.h"
+#include "transport_LLE2.h"
+#include "gsl_optimizations2.h"
+#include "Maxwell_Stefan_flux.h"
+*/
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
-{
+{    
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createMesh.H"        
@@ -61,6 +76,50 @@ int main(int argc, char *argv[])
     #include "CourantNo.H"
     #include "diffCourantNo.H"
     #include "setInitialDeltaT.H"
+
+    /*
+    double Z;
+    double *MW;
+    double *x;
+    double *Dij;
+    double *rhs_flux;
+    double *flux_m;
+    T_UMFPACK flux_umf;
+
+    _NEW_(MW, double, nSpecies);    
+    _NEW_(x, double, nSpecies);    
+    _NEW_(Dij, double, nSpecies*nSpecies);
+    _NEW_(rhs_flux, double, nSpecies);
+    _NEW_(flux_m, double, nSpecies);    
+
+    // initialize umfpack
+    initialUmfpack(&flux_umf);
+    flux_memoryMatVec(&flux_umf, nSpecies);
+    flux_compRow_setRowCol(&flux_umf, nSpecies);
+    
+    int iread;
+    FILE *f;
+    f = fopen("MW.dat+", "r");
+    for(int i=0; i<nSpecies; i++) iread=fscanf(f, "%lf", &MW[i]);
+    fclose(f);
+
+    for(int i=0; i<nSpecies; i++) x[i] = Y1[i].internalField()[0]/MW[i];
+
+    for(int i=0; i<nSpecies; i++)
+    {
+        for(int j=0; j<nSpecies; j++)
+        {
+            Dij[i+nSpecies*j] = D1_0[0].value();
+        }
+    }
+
+    for(int i=0; i<nSpecies; i++) rhs_flux[i] = -gradf_Y1[i].internalField()[0];
+
+    Z = 0.5;
+
+    Maxwell_Stefan_mass_flux(Z, nSpecies, MW, x, Dij, rhs_flux, flux_m, &flux_umf);
+    */
+
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -161,7 +220,13 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
 
-                intfcProp.correct();
+                //intfcProp.correct();
+                #include "curvature.H"
+
+                for(label i=0; i<nSpecies; i++)
+                {
+                    C_phAvg[i] = C0[i] + C1[i];
+                }
             }
 
             #include "UEqn.H"

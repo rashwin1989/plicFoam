@@ -677,13 +677,13 @@ plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/extendedCellToCel
 plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CPCCellToCellStencil.H
 plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/cellToCellStencil.H
 plicDiffFoam.dep: ../plic/lnInclude/plicFuncs.H
-plicDiffFoam.dep: ../plic/lnInclude/plicFuncs.C
+plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncTools.H
+plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncToolsTemplates.C
 plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/OFstream.H
+plicDiffFoam.dep: ../plic/lnInclude/plicFuncs.C
 plicDiffFoam.dep: ../plic/lnInclude/plicI.H
 plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/centredCFCCellToCellStencilObject.H
 plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CFCCellToCellStencil.H
-plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncTools.H
-plicDiffFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncToolsTemplates.C
 plicDiffFoam.dep: ../SCF-core/include/myUmfpack.h
 plicDiffFoam.dep: /home/r_ashwin/Ashwin/UMFPACK/Include/umfpack.h
 plicDiffFoam.dep: /home/r_ashwin/Ashwin/UFconfig/UFconfig.h

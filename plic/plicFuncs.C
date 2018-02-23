@@ -3603,12 +3603,13 @@ label findCellInIntfcOrthDir
                 << endl;
         }
 
-        if(curCell != C1_lbl && CC1_CCi_dir < 0)
+        scalar cosTheta = (CC1 & CCi)/mag(CCi)/mag(CC1);
+
+        if(curCell != C1_lbl && CC1_CCi_dir < 0 && cosTheta >= 0)
         {
             foundCell = true;
             //CCi /= mag(CCi);
-            //scalar cosTheta = nf & CCi;
-            scalar cosTheta = (CC1 & CCi)/mag(CCi)/mag(CC1);
+            //scalar cosTheta = nf & CCi;            
 
             if(debug)
             {

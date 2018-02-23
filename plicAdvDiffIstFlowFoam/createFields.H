@@ -196,7 +196,53 @@ surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
-interfaceProperties intfcProp(alpha1, U, transPropDict);
+//interfaceProperties intfcProp(alpha1, U, transPropDict);
+
+volScalarField alpha1_smooth
+(
+    IOobject
+    (
+        "alpha1_smooth",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    fvc::average(alpha1),
+    alpha1.boundaryField().types()
+);
+
+dimensionedScalar deltaN
+(
+    "deltaN",
+    1e-8/pow(average(mesh.V()), 1.0/3.0)
+);
+
+surfaceScalarField nHatf
+(
+    IOobject
+    (
+        "nHatf",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("nHatf", dimArea, 0.0)
+);
+
+dimensionedScalar sigma(transPropDict.lookup("sigma"));
+
+volScalarField K
+(
+    IOobject
+    (
+        "K",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("K", dimless/dimLength, 0.0)
+);
 
 // gravity and pressure
 #include "readGravitationalAcceleration.H"
@@ -249,6 +295,8 @@ PtrList<volScalarField> Y1(nSpecies);
 PtrList<volScalarField> C1(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
+
+PtrList<volScalarField> C_phAvg(nSpecies);
 
 word fieldName;
 for(label i=0; i<(nSpecies-1); i++)
@@ -332,6 +380,26 @@ for(label i=0; i<(nSpecies-1); i++)
             Y0[i].boundaryField().types()
         )
     );
+
+    fieldName = "C_phAvg" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    C_phAvg.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            C0[i] + C1[i],
+            Y1[i].boundaryField().types()
+        )
+    );
 }
 
 volScalarField Y1t = 0.0*Y1[0];
@@ -343,13 +411,13 @@ for(label i=0; i<(nSpecies - 1); i++)
     Y0t += Y0[i];
 }
 
-label i = nSpecies - 1;
+label endSp = nSpecies - 1;
 
-fieldName = "Y1" + Foam::name(i);
+fieldName = "Y1" + Foam::name(endSp);
 Info<< "Reading field " << fieldName << endl;
 Y1.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -363,14 +431,14 @@ Y1.set
         Y1[0]
     )
 );
-Y1[i] = scalar(1.0) - Y1t;
-Y1[i].correctBoundaryConditions();
+Y1[endSp] = scalar(1.0) - Y1t;
+Y1[endSp].correctBoundaryConditions();
 
-fieldName = "C1" + Foam::name(i);
+fieldName = "C1" + Foam::name(endSp);
 Info<< "Initializing field " << fieldName << endl;
 C1.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -381,16 +449,16 @@ C1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha1*rho1*Y1[i],
-        Y1[i].boundaryField().types()
+        alpha1*rho1*Y1[endSp],
+        Y1[endSp].boundaryField().types()
     )
 );
 
-fieldName = "Y0" + Foam::name(i);
+fieldName = "Y0" + Foam::name(endSp);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -404,14 +472,14 @@ Y0.set
         Y0[0]
     )
 );
-Y0[i] = scalar(1.0) - Y0t;
-Y0[i].correctBoundaryConditions();
+Y0[endSp] = scalar(1.0) - Y0t;
+Y0[endSp].correctBoundaryConditions();
 
-fieldName = "C0" + Foam::name(i);
+fieldName = "C0" + Foam::name(endSp);
 Info<< "Initializing field " << fieldName << endl;
 C0.set
 (
-    i,
+    endSp,
     new volScalarField
     (
         IOobject
@@ -422,10 +490,31 @@ C0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha0*rho0*Y0[i],
-        Y0[i].boundaryField().types()
+        alpha0*rho0*Y0[endSp],
+        Y0[endSp].boundaryField().types()
     )
 );
+
+fieldName = "C_phAvg" + Foam::name(endSp);
+Info<< "Initializing field " << fieldName << endl;
+C_phAvg.set
+(
+    endSp,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        C0[endSp] + C1[endSp],
+        Y1[endSp].boundaryField().types()
+    )
+);
+
 
 List<scalar> C1max(nSpecies);
 List<scalar> C0max(nSpecies);
@@ -1035,8 +1124,8 @@ List<vector> C_ph1_flatFld_diff(n_flatFld_diff, vector::one);
 List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 
-const labelList& own = mesh.owner();
-const labelList& nei = mesh.neighbour();
+//const labelList& own = mesh.owner();
+//const labelList& nei = mesh.neighbour();
 //const vectorField& meshC = mesh.C();
 //const vectorField& meshSf = mesh.Sf();
 //const scalarField& meshMagSf = mesh.magSf();
