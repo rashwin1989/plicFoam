@@ -441,6 +441,7 @@ namespace plicFuncs
         const vector& Cp,
         const vector& nf,
         const label& C1_lbl,
+        bool& foundCell,
         bool debug,
         OFstream& os
     );
@@ -454,6 +455,7 @@ namespace plicFuncs
         const vector& Cp,
         const vector& C1,
         const vector& nf,
+        const label& C_lbl,
         const label& C1_lbl,
         bool& foundCell,
         bool debug,
