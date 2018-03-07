@@ -3947,7 +3947,7 @@ void calc_cell_intfcGrad_coeffs
                 if(costheta1 < 1E-3)
                 {        
                     os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 cell " << C1_lbl << "  C1 = " << C1 << nl
                         << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
                         << "  costheta1 = " << costheta1 << nl 
                         << endl;
@@ -3996,13 +3996,16 @@ void calc_cell_intfcGrad_coeffs
         os<< "Time = " << mesh.time().timeName() << nl 
             << "Cell " << curCell_lbl << ": Cell in interface normal direction not found! Using curCell centroid" << nl
             << endl;
+        /*
         vector C1 = C[curCell_lbl];
         vector t1 = C1 - Cp;
         scalar magt1;    
         magt1 = mag(t1);
         scalar magnf;
         magnf = mag(nf);
-        scalar min_dn = 0.5*mag(mesh.C()[curCell_lbl] - mesh.C()[curCellsAll[1]]);
+        */
+        scalar min_dn = mag(mesh.C()[curCell_lbl] - mesh.C()[curCellsAll[1]]);
+        /*
         if(magt1 < min_dn)
         {
             os<< "Time = " << mesh.time().timeName() << nl 
@@ -4033,7 +4036,8 @@ void calc_cell_intfcGrad_coeffs
                 << endl;
             costheta1 = 1;
         }
-        dn = magt1/costheta1;
+        */
+        dn = min_dn;
         if(debug)
         {
             os<< "dn = " << dn
