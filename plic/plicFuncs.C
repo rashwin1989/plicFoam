@@ -31,6 +31,19 @@ Author
 #include "fileName.H"
 #include "mathematicalConstants.H"
 
+#include <math.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "MACROS.H"
+#include "PR_EoS.h"
+#include "myUmfpack.h"
+#include "vis_n_therm.h"
+#include "transport_LLE2.h"
+#include "gsl_optimizations2.h"
+#include "Maxwell_Stefan_flux.h"
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -778,11 +791,13 @@ label findCellInFaceDir
     const vector& Cp,
     const vector& nf,
     const label& C1_lbl,
+    bool& foundCell,
     bool debug,
     OFstream& os
 )
 {
-    scalar cosThetaMax = -1;
+    foundCell = false;
+    scalar cosThetaMax = 0;
     label cell_lbl = 0;
 
     if(debug)
@@ -820,6 +835,7 @@ label findCellInFaceDir
             {
                 cell_lbl = curCell;
                 cosThetaMax = cosTheta;
+                foundCell = true;
             }
         }
     }
@@ -842,10 +858,12 @@ label findCellInFaceOrthDir
     const vector& C1,
     const vector& nf,
     const label& C1_lbl,
+    bool& foundCell,
     bool debug,
     OFstream& os
 )
 {
+    foundCell = false;
     scalar magCosThetaMin = 1;
     label cell_lbl = 0;
 
@@ -863,6 +881,8 @@ label findCellInFaceOrthDir
     nfXCC1 /= mag(CC1);
     vector CCi;
 
+    // first try to find cell C2 so that vector nf lies between 
+    // vector CC1 and CC2 ==> CC1_CCi_dir < 0
     for(label cellI=0; cellI<cells.size(); cellI++)
     {
         label curCell = cells[cellI];
@@ -879,7 +899,7 @@ label findCellInFaceOrthDir
                 << endl;
         }
 
-        if(curCell != C1_lbl)
+        if(curCell != C1_lbl && CC1_CCi_dir < 0)
         {
             //CCi /= mag(CCi);
             //scalar cosTheta = nf & CCi;
@@ -894,6 +914,47 @@ label findCellInFaceOrthDir
             {
                 cell_lbl = curCell;
                 magCosThetaMin = mag(cosTheta);
+                foundCell = true;
+            }
+        }
+    }
+
+    // if can't find cell C2 so that vector nf lies between 
+    // vector CC1 and CC2 ==> CC1_CCi_dir < 0, find cell
+    // closest ortogonal to CC1 direction and use backward difference
+    // in calcCellGradWeights()
+
+    if(!foundCell)
+    {
+        for(label cellI=0; cellI<cells.size(); cellI++)
+        {
+            label curCell = cells[cellI];
+            CCi = C[curCell] - Cp;            
+
+            if(debug)
+            {
+                os<< "Cell " << cellI << " in stencil: " << curCell << nl
+                    << "C = " << Cp << "  C1 = " << C1 << "  Ci = " << C[curCell] << nl                    
+                    << endl;
+            }
+
+            if(curCell != C1_lbl)
+            {
+                //CCi /= mag(CCi);
+                //scalar cosTheta = nf & CCi;
+                scalar cosTheta = (CC1 & CCi)/mag(CCi)/mag(CC1);
+
+                if(debug)
+                {
+                    os<< "costheta = " << cosTheta << endl;
+                }
+
+                if(mag(cosTheta) < magCosThetaMin)
+                {
+                    cell_lbl = curCell;
+                    magCosThetaMin = mag(cosTheta);
+                    foundCell = true;
+                }
             }
         }
     }
@@ -998,93 +1059,122 @@ void calcCellGradWeights
     // suffix 2: direction closest orthogonal to nf in 2-D
     // further improvements needed for 3-D calculation
     vector Cp = C[curCell_lbl];
-    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,debug,os);
-    vector C1 = C[C1_lbl];
-    label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,debug,os);
+    bool foundCell1 = false;
+    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,foundCell1,debug,os);
+    if(foundCell1)
+    {
+        vector C1 = C[C1_lbl];
+        scalar Yp = Y[curCell_lbl];
+        scalar Y1 = Y[C1_lbl];
 
-    if(debug)
-    {
-        os<< "Cell " << curCell_lbl << nl
-            << "Cell phase centroid: " << Cp << "  nf: " << nf << nl
-            << "C1_lbl: " << C1_lbl << "  C2_lbl: " << C2_lbl
-            << endl;
-    }
-    
-    scalar Yp = Y[curCell_lbl];
-    scalar Y1 = Y[C1_lbl];
-    vector C2 = C[C2_lbl];
-    scalar Y2 = Y[C2_lbl];
-    scalar Y2_1 = Y2;
+        vector t1 = C1 - Cp;
+        magt1 = mag(t1);
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << endl;
+        }
+        if(magt1 < SMALL){magt1 += SMALL;}
+        scalar costheta1 = (nf & t1)/magt1;
+        if(mag(costheta1) > 1){costheta1 = 1;}
+        scalar theta1 = acos(costheta1);
 
-    vector t1 = C1 - Cp;
-    magt1 = mag(t1);
-    if(magt1 < SMALL)
-    {
-        magt1 += SMALL;
-    }
-    vector t2 = C2 - Cp;
-    magt2 = mag(t2);
-    if(magt2 < SMALL)
-    {
-        magt2 += SMALL;
-    }    
-    scalar magt1t2 = magt1*magt2;
-    if(magt1t2 < SMALL)
-    {
-        magt1t2 += SMALL;
-    }    
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << "costheta1 = " << costheta1 << "  theta1 = " << theta1
+                << endl;
+        }
 
-    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
-    
-    scalar costheta1 = (nf & t1)/magt1;
-    if(mag(costheta1) > 1)
-    {
-        costheta1 /= mag(costheta1);
-    }
-    scalar theta1 = acos(costheta1);
+        if(theta1 > 1E-3)
+        {
+            bool foundCell2 = false;
+            label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,foundCell2,debug,os);
 
-    scalar theta2;
-    scalar theta2_1;
-    scalar costheta2 = (nf & t2)/magt2;
-    if(mag(costheta2) > 1)
-    {
-        costheta2 /= mag(costheta2);
-    }
-    if(theta2_sign >= 0)
-    {
-        theta2 = acos(costheta2);
-        theta2_1 = theta2;
+            if(foundCell2)
+            {
+                vector C2 = C[C2_lbl];
+                scalar Y2 = Y[C2_lbl];
+                scalar Y2_1 = Y2;
+                vector t2 = C2 - Cp;
+                magt2 = mag(t2);
+                if(magt2 < SMALL){magt2 += SMALL;}    
+                scalar magt1t2 = magt1*magt2;
+                if(magt1t2 < SMALL){magt1t2 += SMALL;}
+
+                if(debug)
+                {
+                    os<< "C2_lbl: " << C2_lbl << "  C2 = " << C2 << " t1 = " << t2 << "  mag(t2) = " << magt2 << "  mag(t1*t2) = " << magt1t2
+                        << endl;
+                }
+
+                scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;                
+
+                if(debug)
+                {
+                    os<< "mag(t1*t2) = " << magt1t2 << "  theta2_sign = " << theta2_sign;
+                }
+
+                scalar theta2;
+                scalar theta2_1;
+                scalar costheta2 = (nf & t2)/magt2;
+                if(debug)
+                {
+                    os<< "  costheta2 = " << costheta2; 
+                }
+                if(mag(costheta2) > 1){costheta2 /= mag(costheta2);}
+                if(theta2_sign >= 0)
+                {
+                    theta2 = acos(costheta2);
+                    theta2_1 = theta2;
+                }
+                else
+                {
+                    theta2 = constant::mathematical::pi - acos(costheta2);
+                    theta2_1 = acos(costheta2);
+                    Y2 = Yp + (Yp - Y2_1);
+                }
+
+                if(debug)
+                {
+                    os
+                        << "theta2 = " << theta2 << "  theta2_1 = " << theta2_1 << nl                    
+                            << "Yp = " << Yp << "  Y1 = " << Y1 << "  Y2 = " << Y2 << "  Y2_1 = " << Y2_1 
+                            << endl;
+                }
+
+                scalar sintheta12 = sin(theta1 + theta2);
+                if(sintheta12 < SMALL){sintheta12 += SMALL;}
+
+                alpha = sin(theta2)/sintheta12;
+                beta = sin(theta1)/sintheta12;    
+                d = beta*Y2/magt2;
+            }
+            else
+            {
+                alpha = 1;
+                beta = 0;
+                d = 0;
+            }
+        }
+        else
+        {
+            alpha = 1;
+            beta = 0;
+            d = 0;
+        }
     }
     else
     {
-        theta2 = constant::mathematical::pi - acos(costheta2);
-        theta2_1 = acos(costheta2);
-        Y2 = Yp + (Yp - Y2_1);
-    }
-
-    if(debug)
-    {
-        os<< "t1 = " << t1 << "  t2 = " << t2 << nl
-            << "mag(t1) = " << magt1 << "  mag(t2) = " << magt2 << nl
-            << "theta1 = " << theta1 << "  theta2_1 = " << theta2_1 << nl
-            << "theta2_sign = " << theta2_sign << "  theta2 = " << theta2 << nl
-            << "Yp = " << Yp << "  Y1 = " << Y1 << "  Y2 = " << Y2 << "  Y2_1 = " << Y2_1 
+        os<< "Cell 1 not found! Fatal error!" << nl
             << endl;
-    }
 
-    scalar sintheta12 = sin(theta1 + theta2);
-    if(sintheta12 < SMALL)
-    {
-        sintheta12 += SMALL;
+        alpha = 1;
+        beta = 0;
+        d = 0;
     }
-
-    alpha = sin(theta2)/sintheta12;
-        
-    beta = sin(theta1)/sintheta12;            
-    //beta = -sin(theta1)/sin(theta1 + theta2);
-    
-    //d = alpha*Y1/magt1 + beta*Y2/magt2;
-    d = beta*Y2/magt2;
 
     if(debug)
     {
@@ -1109,6 +1199,8 @@ void calcCellGrad
     OFstream& os
 )
 {    
+    scalar alpha; scalar beta; scalar magt1; scalar magt2;
+
     if(debug)
     {
         os<< "Calculating cell grad in cell " << curCell_lbl << nl
@@ -1154,103 +1246,131 @@ void calcCellGrad
     // suffix 1: direction closest to nf
     // suffix 2: direction closest orthogonal to nf in 2-D
     // further improvements needed for 3-D calculation
-    vector Cp = C[curCell_lbl];
-    scalar Yp = Y[curCell_lbl];
-    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,debug,os);
-    vector C1 = C[C1_lbl];
-    scalar Y1 = Y[C1_lbl];
-    label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,debug,os);
-
-    if(debug)
+     vector Cp = C[curCell_lbl];
+    bool foundCell1 = false;
+    label C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,foundCell1,debug,os);
+    if(foundCell1)
     {
-        os<< "Cell " << curCell_lbl << nl
-            << "Cell phase centroid: " << Cp << "  nf: " << nf << nl
-            << "C1_lbl: " << C1_lbl << "  C2_lbl: " << C2_lbl
+        vector C1 = C[C1_lbl];
+        scalar Yp = Y[curCell_lbl];
+        scalar Y1 = Y[C1_lbl];
+
+        vector t1 = C1 - Cp;
+        magt1 = mag(t1);
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << endl;
+        }
+        if(magt1 < SMALL){magt1 += SMALL;}
+        scalar costheta1 = (nf & t1)/magt1;
+        if(mag(costheta1) > 1){costheta1 = 1;}
+        scalar theta1 = acos(costheta1);
+
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << "costheta1 = " << costheta1 << "  theta1 = " << theta1
+                << endl;
+        }
+
+        if(theta1 > 1E-3)
+        {
+            bool foundCell2 = false;
+            label C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,foundCell2,debug,os);
+
+            if(foundCell2)
+            {
+                vector C2 = C[C2_lbl];
+                scalar Y2 = Y[C2_lbl];
+                scalar Y2_1 = Y2;
+                vector t2 = C2 - Cp;
+                magt2 = mag(t2);
+                if(magt2 < SMALL){magt2 += SMALL;}    
+                scalar magt1t2 = magt1*magt2;
+                if(magt1t2 < SMALL){magt1t2 += SMALL;}
+
+                if(debug)
+                {
+                    os<< "C2_lbl: " << C2_lbl << "  C2 = " << C2 << " t1 = " << t2 << "  mag(t2) = " << magt2 << "  mag(t1*t2) = " << magt1t2
+                        << endl;
+                }
+
+                scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;                
+
+                if(debug)
+                {
+                    os<< "mag(t1*t2) = " << magt1t2 << "  theta2_sign = " << theta2_sign;
+                }
+
+                scalar theta2;
+                scalar theta2_1;
+                scalar costheta2 = (nf & t2)/magt2;
+                if(debug)
+                {
+                    os<< "  costheta2 = " << costheta2; 
+                }
+                if(mag(costheta2) > 1){costheta2 /= mag(costheta2);}
+                if(theta2_sign >= 0)
+                {
+                    theta2 = acos(costheta2);
+                    theta2_1 = theta2;
+                }
+                else
+                {
+                    theta2 = constant::mathematical::pi - acos(costheta2);
+                    theta2_1 = acos(costheta2);
+                    Y2 = Yp + (Yp - Y2_1);
+                }
+
+                if(debug)
+                {
+                    os
+                        << "theta2 = " << theta2 << "  theta2_1 = " << theta2_1 << nl                    
+                            << "Yp = " << Yp << "  Y1 = " << Y1 << "  Y2 = " << Y2 << "  Y2_1 = " << Y2_1 
+                            << endl;
+                }
+
+                scalar sintheta12 = sin(theta1 + theta2);
+                if(sintheta12 < SMALL){sintheta12 += SMALL;}
+
+                alpha = sin(theta2)/sintheta12;
+                beta = sin(theta1)/sintheta12;
+
+                cellGrad = alpha*(Y1 - Yp)/magt1 + beta*(Y2 - Yp)/magt2;
+            }
+            else
+            {
+                alpha = 1;
+                beta = 0;
+
+                cellGrad = (Y1 - Yp)/magt1;
+            }
+        }
+        else
+        {
+            alpha = 1;
+            beta = 0;
+
+            cellGrad = (Y1 - Yp)/magt1;
+        }
+    }
+    else
+    {
+        os<< "Cell 1 not found! Fatal error!" << nl
             << endl;
-    }
 
-    vector C2 = C[C2_lbl];
-    scalar Y2 = Y[C2_lbl];
+        alpha = 1;
+        beta = 0;
 
-    vector t1 = C1 - Cp;
-    scalar magt1 = mag(t1);
-    if(magt1 < SMALL)
-    {
-        magt1 += SMALL;
-    }
-    vector t2 = C2 - Cp;
-    scalar magt2 = mag(t2);
-    magt2 = mag(t2);
-    if(magt2 < SMALL)
-    {
-        magt2 += SMALL;
+        cellGrad = 0;
     }    
-    scalar magt1t2 = magt1*magt2;
-    if(magt1t2 < SMALL)
-    {
-        magt1t2 += SMALL;
-    }
-
-    scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;
-
-    scalar costheta1 = (nf & t1)/magt1;
-    if(mag(costheta1) > 1)
-    {
-        costheta1 /= mag(costheta1);
-    }
-    scalar theta1 = acos(costheta1);
-
-    scalar theta2;
-    scalar theta2_1;
-    scalar costheta2 = (nf & t2)/magt2;
-    if(mag(costheta2) > 1)
-    {
-        costheta2 /= mag(costheta2);
-    }
-    if(theta2_sign >= 0)
-    {
-        theta2 = acos(costheta2);
-        theta2_1 = theta2;
-    }
-    else
-    {
-        theta2 = constant::mathematical::pi - acos(costheta2);
-        theta2_1 = acos(costheta2);
-    }
 
     if(debug)
     {
-        os<< "t1 = " << t1 << "  t2 = " << t2 << nl
-            << "mag(t1) = " << magt1 << "  mag(t2) = " << magt2 << nl
-            << "theta1 = " << theta1 << "  theta2_1 = " << theta2_1 << nl
-            << "theta2_sign = " << theta2_sign << "  theta2 = " << theta2 << nl            
-            << "Y1 = " << Y1 << "  Y2 = " << Y2 
-            << endl;
-    }
-
-    scalar sintheta12 = sin(theta1 + theta2);
-    if(sintheta12 < SMALL)
-    {
-        sintheta12 += SMALL;
-    }
-
-    scalar alpha = sin(theta2)/sintheta12;
-    scalar beta;
-    if(theta2_sign >= 0)
-    {
-        beta = sin(theta1)/sintheta12;
-    }
-    else
-    {
-        beta = -sin(theta1)/sintheta12;
-    }
-
-    cellGrad = alpha*(Y1 - Yp)/magt1 + beta*(Y2 - Yp)/magt2;
-
-    if(debug)
-    {
-        os<< "alpha = " << alpha << "  beta = " << beta << nl
-            << "cell grad = " << cellGrad << nl
+        os<< "alpha = " << alpha << "  beta = " << beta << "  cell grad = " << cellGrad << nl
             << endl;
     }
 }
@@ -2138,6 +2258,701 @@ void calc_2ph_diffFluxes_Yi_Fick
     const volScalarField& Y0i,
     surfaceScalarField& diffFlux_Y1i,
     surfaceScalarField& diffFlux_Y0i,
+    const scalar& Y1MIN,
+    const scalar& Y1MAX,
+    const scalar& Y0MIN,
+    const scalar& Y0MAX,
+    const label& i,    
+    const bool debug,
+    OFstream& os
+)
+{
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();    
+    const surfaceScalarField& meshMagSf = mesh.magSf();    
+    const scalarField& meshV = mesh.V();
+        
+    scalar curMagSf_ph1;
+    scalar curMagSf_ph0;
+    label curPhaseState;    
+    label faceOwn; 
+    label faceNei;    
+    scalar diffFlux_limiter;
+
+    if(debug)
+    {
+        os<< "---------------------------------------------------------" << nl
+            << "Diffusion flux calculation" << nl
+            << "---------------------------------------------------------" << nl
+            << nl
+            << "Internal faces" << nl
+            << endl;
+    }
+
+    //--------------------------------------------------------------//
+    //Internal faces
+    const scalarField& rho1Cells = rho1.internalField();
+    const scalarField& alpha1Cells = alpha1.internalField();
+    const scalarField& Y1iCells = Y1i.internalField();    
+
+    const scalarField& rho0Cells = rho0.internalField();
+    const scalarField& alpha0Cells = alpha0.internalField();
+    const scalarField& Y0iCells = Y0i.internalField();    
+
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        curMagSf_ph1 = min(magSf_ph1_own[faceI], magSf_ph1_nei[faceI]);
+        curMagSf_ph0 = min(magSf_ph0_own[faceI], magSf_ph0_nei[faceI]);
+        curPhaseState = face_phaseState_diff[faceI];
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];                        
+
+        if(curPhaseState == 3)
+        {
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = 0;
+        }
+        else if(curPhaseState == 0)
+        {
+            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*curMagSf_ph0*gradf_Y0i[faceI];
+            diffFlux_limiter = 1;
+            calc_diffFlux_limiter2
+            (
+                rho0Cells[faceOwn],
+                alpha0Cells[faceOwn],
+                Y0iCells[faceOwn],
+                meshV[faceOwn],
+                rho0Cells[faceNei],
+                alpha0Cells[faceNei],
+                Y0iCells[faceNei],
+                meshV[faceNei],
+                mesh.time().deltaTValue(),
+                diffFlux_Y0i[faceI],
+                diffFlux_limiter,
+                Y0MIN,
+                Y0MAX
+            );
+            diffFlux_Y0i[faceI] *= min(diffFlux_limiter, 1);
+            diffFlux_Y1i[faceI] = 0;
+        }
+        else if(curPhaseState == 1)
+        {
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*curMagSf_ph1*gradf_Y1i[faceI];
+            diffFlux_limiter = 1;
+            calc_diffFlux_limiter2
+            (
+                rho1Cells[faceOwn],
+                alpha1Cells[faceOwn],
+                Y1iCells[faceOwn],
+                meshV[faceOwn],
+                rho1Cells[faceNei],
+                alpha1Cells[faceNei],
+                Y1iCells[faceNei],
+                meshV[faceNei],
+                mesh.time().deltaTValue(),
+                diffFlux_Y1i[faceI],
+                diffFlux_limiter,
+                Y1MIN,
+                Y1MAX
+            );
+        }
+        else if(curPhaseState == 2)
+        {
+            diffFlux_Y0i[faceI] = -rho0f[faceI]*D0fi[faceI]*curMagSf_ph0*gradf_Y0i[faceI];
+            diffFlux_Y1i[faceI] = -rho1f[faceI]*D1fi[faceI]*curMagSf_ph1*gradf_Y1i[faceI];
+        }
+        else
+        {
+            diffFlux_Y0i[faceI] = 0;
+            diffFlux_Y1i[faceI] = 0;
+        }
+
+        if(debug)
+        {
+            os<< "Face: " << faceI << "  mag(Sf) = " << meshMagSf[faceI] << nl
+                << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/meshMagSf[faceI] 
+                << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/meshMagSf[faceI] << nl
+                << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/meshMagSf[faceI] 
+                << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/meshMagSf[faceI] << nl
+                << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                << "Own: " << faceOwn << "  Nei: " << faceNei << nl
+                << "Own Y1" << i << ": " << Y1i[faceOwn] << "  Nei Y1" << i << ": " << Y1i[faceNei] << nl
+                << "Own Y0" << i << ": " << Y0i[faceOwn] << "  Nei Y0" << i << ": " << Y0i[faceNei] << nl               
+                << "diffusion flux ph1 for Y" << i << " = " << diffFlux_Y1i[faceI] << nl
+                << "diffusion flux ph0 for Y" << i << " = " << diffFlux_Y0i[faceI] << nl
+                << endl;
+        }        
+
+        //----------------------------------------------------------//
+        // check diffFlux > maxDiffFlux causing unboundedness and
+        // limit diffFlux if that is the case 
+        diffFlux_limiter = 1;
+        //ph1        
+        calc_diffFlux_limiter2
+        (
+            rho1Cells[faceOwn],
+            alpha1Cells[faceOwn],
+            Y1iCells[faceOwn],
+            meshV[faceOwn],
+            rho1Cells[faceNei],
+            alpha1Cells[faceNei],
+            Y1iCells[faceNei],
+            meshV[faceNei],
+            mesh.time().deltaTValue(),
+            diffFlux_Y1i[faceI],
+            diffFlux_limiter,
+            Y1MIN,
+            Y1MAX
+        );
+
+        if(diffFlux_limiter < 1)
+        {
+            if(debug)
+            {
+                os<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
+                    << nl                    
+                    << "Own " << faceOwn << "  Nei " << faceNei 
+                    << nl
+                    << "diffFlux_Y1" << i << ": " << diffFlux_Y1i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
+                    << nl 
+                    << "rho1Own: " << rho1Cells[faceOwn] << "  alpha1Own: " << alpha1Cells[faceOwn] << "  Y1iOwn: " <<  Y1iCells[faceOwn] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                    << nl 
+                    << "rho1Nei: " << rho1Cells[faceNei] << "  alpha1Nei: " << alpha1Cells[faceNei] << "  Y1iNei: " <<  Y1iCells[faceNei] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  meshV[faceNei]
+                    << nl
+                    << endl;
+            }            
+        }
+
+        diffFlux_Y1i[faceI] *= min(diffFlux_limiter, 1);
+
+        //ph0
+        diffFlux_limiter = 1;
+
+        calc_diffFlux_limiter2
+        (
+            rho0Cells[faceOwn],
+            alpha0Cells[faceOwn],
+            Y0iCells[faceOwn],
+            meshV[faceOwn],
+            rho0Cells[faceNei],
+            alpha0Cells[faceNei],
+            Y0iCells[faceNei],
+            meshV[faceNei],
+            mesh.time().deltaTValue(),
+            diffFlux_Y0i[faceI],
+            diffFlux_limiter,
+            Y0MIN,
+            Y0MAX
+        );        
+
+        if(diffFlux_limiter < 1)
+        {
+            if(debug)
+            {
+                os<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
+                    << nl                    
+                    << "Own " << faceOwn << "  Nei " << faceNei 
+                    << nl
+                    << "diffFlux_Y0" << i << ": " << diffFlux_Y0i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
+                    << nl 
+                    << "rho0Own: " << rho0Cells[faceOwn] << "  alpha0Own: " << alpha0Cells[faceOwn] << "  Y0iOwn: " <<  Y0iCells[faceOwn] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                    << nl 
+                    << "rho0Nei: " << rho0Cells[faceNei] << "  alpha0Nei: " << alpha0Cells[faceNei] << "  Y0iNei: " <<  Y0iCells[faceNei] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  meshV[faceNei]
+                    << nl
+                    << endl;
+            }
+        }
+
+        diffFlux_Y0i[faceI] *= min(diffFlux_limiter, 1);
+
+        //end check diffFlux > maxDiffFlux
+        //----------------------------------------------------------//
+
+    }//end for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+
+    //end internal faces    
+    //--------------------------------------------------------------//
+
+    //--------------------------------------------------------------//
+    //Boundary faces
+    if(debug)
+    {
+        os<< "Boundary faces" << nl
+            << endl;
+    }
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    //--------------------------------------------------------------//
+    //Need volume of cell neighbour on neighbouring processor for 
+    //each coupled patch face in order to calculate flux limiter
+    //for that face
+    const label nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<scalar> VNei(nBnd);
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        if(pp.coupled())
+        {
+            label faceI = pp.start();
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+            forAll(pp, fcI)
+            {
+                const label& faceOwn = own[faceI];
+                VNei[bndFaceI] = meshV[faceOwn];
+                faceI++;
+                bndFaceI++;
+            }
+        }
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, VNei);
+    //VNei now has cell volume of neighbouring cell for each coupled
+    //patch face
+    //--------------------------------------------------------------//
+    
+    forAll(Y1i.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
+        const fvPatchScalarField& pY0i = Y0i.boundaryField()[patchI];
+        fvsPatchScalarField& pdiffFlux_Y1i = diffFlux_Y1i.boundaryField()[patchI];
+        const fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
+        const fvsPatchScalarField& prho1f = rho1f.boundaryField()[patchI];
+        const fvsPatchScalarField& pD1fi = D1fi.boundaryField()[patchI];
+        fvsPatchScalarField& pdiffFlux_Y0i = diffFlux_Y0i.boundaryField()[patchI];
+        const fvsPatchScalarField& pgradf_Y0i = gradf_Y0i.boundaryField()[patchI];
+        const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
+        const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];        
+        
+        label faceI = pp.start();
+
+        if(pp.coupled())
+        {
+            label bndFaceI = pp.start() - mesh.nInternalFaces();
+
+            const scalarField& rho1Own = rho1.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha1Own = alpha1.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y1iOwn = Y1i.boundaryField()[patchI].patchInternalField();
+            const scalarField& rho1Nei = rho1.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& alpha1Nei = alpha1.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& Y1iNei = Y1i.boundaryField()[patchI].patchNeighbourField();
+
+            const scalarField& rho0Own = rho0.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha0Own = alpha0.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y0iOwn = Y0i.boundaryField()[patchI].patchInternalField();
+            const scalarField& rho0Nei = rho0.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& alpha0Nei = alpha0.boundaryField()[patchI].patchNeighbourField();
+            const scalarField& Y0iNei = Y0i.boundaryField()[patchI].patchNeighbourField();
+            
+            forAll(pY1i, fcI)
+            {                
+                curMagSf_ph1 = min(magSf_ph1_own[faceI], magSf_ph1_nei[faceI]);
+                curMagSf_ph0 = min(magSf_ph0_own[faceI], magSf_ph0_nei[faceI]);
+                curPhaseState = face_phaseState_diff[faceI];
+                faceOwn = own[faceI];                
+
+                if(curPhaseState == 3)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 0)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter2
+                    (
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        rho0Nei[fcI],
+                        alpha0Nei[fcI],
+                        Y0iNei[fcI],
+                        VNei[bndFaceI],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y0i[fcI],
+                        diffFlux_limiter,
+                        Y0MIN,
+                        Y0MAX
+                    );
+                    pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
+                }
+                if(curPhaseState == 1)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter2
+                    (
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        rho1Nei[fcI],
+                        alpha1Nei[fcI],
+                        Y1iNei[fcI],
+                        VNei[bndFaceI],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y1i[fcI],
+                        diffFlux_limiter,
+                        Y1MIN,
+                        Y1MAX
+                    );
+                    pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 2)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                else
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+
+                if(debug)
+                {
+                    os<< "Face: " << faceI << "  mag(Sf) = " << pMagSf[fcI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/pMagSf[fcI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/pMagSf[fcI] << nl
+                        << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                        << "Own: " << faceOwn << nl
+                        << "Own Y1" << i << ": " << Y1iOwn[fcI] << "  Nei Y1" << i << ": " << Y1iNei[fcI] << nl
+                        << "Own Y0" << i << ": " << Y0iOwn[fcI] << "  Nei Y0" << i << ": " << Y0iNei[fcI] << nl               
+                        << "diffusion flux ph1 for Y" << i << " = " << pdiffFlux_Y1i[fcI] << nl
+                        << "diffusion flux ph0 for Y" << i << " = " << pdiffFlux_Y0i[fcI] << nl
+                        << endl;
+                }
+
+                // check diffFlux > maxDiffFlux causing unboundedness and
+                // limit diffFlux if that is the case 
+                
+                //ph1        
+                diffFlux_limiter = 1;
+
+                calc_diffFlux_limiter2
+                (
+                    rho1Own[fcI],
+                    alpha1Own[fcI],
+                    Y1iOwn[fcI],
+                    meshV[faceOwn],
+                    rho1Nei[fcI],
+                    alpha1Nei[fcI],
+                    Y1iNei[fcI],
+                    VNei[bndFaceI],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y1i[fcI],
+                    diffFlux_limiter,
+                    Y1MIN,
+                    Y1MAX
+                );
+
+                if(diffFlux_limiter < 1)
+                {
+                    if(debug)
+                    {
+                        os<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
+                            << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl 
+                            << "rho1Nei: " << rho1Nei[fcI] << "  alpha1Nei: " << alpha1Nei[fcI] << "  Y1iNei: " <<  Y1iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << nl
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
+                
+                //ph0        
+                diffFlux_limiter = 1;
+
+                calc_diffFlux_limiter2
+                (
+                    rho0Own[fcI],
+                    alpha0Own[fcI],
+                    Y0iOwn[fcI],
+                    meshV[faceOwn],
+                    rho0Nei[fcI],
+                    alpha0Nei[fcI],
+                    Y0iNei[fcI],
+                    VNei[bndFaceI],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y0i[fcI],
+                    diffFlux_limiter,
+                    Y0MIN,
+                    Y0MAX
+                );
+
+                if(diffFlux_limiter < 1)
+                {
+                    if(debug)
+                    {
+                        os<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
+                            << nl                            
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl 
+                            << "rho0Nei: " << rho0Nei[fcI] << "  alpha0Nei: " << alpha0Nei[fcI] << "  Y0iNei: " <<  Y0iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << nl
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
+                
+                faceI++;
+                bndFaceI++;
+            }//end forAll(pY1i, fcI)
+        }//end if(pp.coupled())        
+        else if(isA<fixedValueFvPatchScalarField>(pY1i))
+        {
+            const scalarField& rho1Own = rho1.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha1Own = alpha1.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y1iOwn = Y1i.boundaryField()[patchI].patchInternalField();            
+
+            const scalarField& rho0Own = rho0.boundaryField()[patchI].patchInternalField();
+            const scalarField& alpha0Own = alpha0.boundaryField()[patchI].patchInternalField();
+            const scalarField& Y0iOwn = Y0i.boundaryField()[patchI].patchInternalField();
+
+            forAll(pY1i, fcI)
+            {                
+                curMagSf_ph1 = magSf_ph1_own[faceI];
+                curMagSf_ph0 = magSf_ph0_own[faceI];
+                curPhaseState = face_phaseState_diff[faceI];
+                faceOwn = own[faceI];                
+
+                if(curPhaseState == 3)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 0)
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter
+                    (
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        rho0Own[fcI],
+                        alpha0Own[fcI],
+                        Y0iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y0i[fcI],
+                        diffFlux_limiter,
+                        Y0MIN,
+                        Y0MAX
+                    );
+                    pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
+                }
+                if(curPhaseState == 1)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    diffFlux_limiter = 1;
+                    calc_diffFlux_limiter
+                    (
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        rho1Own[fcI],
+                        alpha1Own[fcI],
+                        Y1iOwn[fcI],
+                        meshV[faceOwn],
+                        mesh.time().deltaTValue(),
+                        pdiffFlux_Y1i[fcI],
+                        diffFlux_limiter,
+                        Y1MIN,
+                        Y1MAX
+                    );
+                    pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+                if(curPhaseState == 2)
+                {
+                    pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
+                    pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
+                }
+                else
+                {
+                    pdiffFlux_Y1i[fcI] = 0;
+                    pdiffFlux_Y0i[fcI] = 0;
+                }
+
+                if(debug)
+                {
+                    os<< "Face: " << faceI << "  mag(Sf) = " << pMagSf[faceI] << nl
+                        << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/pMagSf[fcI] << nl
+                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/pMagSf[fcI] 
+                        << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/pMagSf[fcI] << nl
+                        << "face phase state for diffusion flux calculation: " << curPhaseState << nl
+                        << "Own: " << faceOwn << nl
+                        << "Own Y1" << i << ": " << pY1i[fcI] << nl
+                        << "Own Y0" << i << ": " << pY0i[fcI] << nl               
+                        << "diffusion flux ph1 for Y" << i << " = " << pdiffFlux_Y1i[fcI] << nl
+                        << "diffusion flux ph0 for Y" << i << " = " << pdiffFlux_Y0i[fcI] << nl
+                        << endl;
+                }
+
+                // check diffFlux > maxDiffFlux causing unboundedness and
+                // limit diffFlux if that is the case 
+                
+                //ph1        
+                diffFlux_limiter = 1;
+                
+                calc_diffFlux_limiter
+                (
+                    rho1Own[fcI],
+                    alpha1Own[fcI],
+                    Y1iOwn[fcI],
+                    meshV[faceOwn],
+                    rho1Own[fcI],
+                    alpha1Own[fcI],
+                    Y1iOwn[fcI],
+                    meshV[faceOwn],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y1i[fcI],
+                    diffFlux_limiter,
+                    Y1MIN,
+                    Y1MAX
+                );
+
+                if(diffFlux_limiter < 1)
+                {
+                    if(debug)
+                    {
+                        os<< "Face " << faceI << ": limiting diffFlux_Y1" << i 
+                            << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl                             
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y1i[fcI] *= min(diffFlux_limiter, 1);
+                
+                //ph0        
+                diffFlux_limiter = 1;
+
+                calc_diffFlux_limiter
+                (
+                    rho0Own[fcI],
+                    alpha0Own[fcI],
+                    Y0iOwn[fcI],
+                    meshV[faceOwn],
+                    rho0Own[fcI],
+                    alpha0Own[fcI],
+                    Y0iOwn[fcI],
+                    meshV[faceOwn],
+                    mesh.time().deltaTValue(),
+                    pdiffFlux_Y0i[fcI],
+                    diffFlux_limiter,
+                    Y0MIN,
+                    Y0MAX
+                );
+
+                if(diffFlux_limiter < 1)
+                {
+                    if(debug)
+                    {
+                        os<< "Face " << faceI << ": limiting diffFlux_Y0" << i 
+                            << nl
+                            << "Own " << faceOwn 
+                            << nl
+                            << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
+                            << nl 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << nl                            
+                            << endl;
+                    }            
+                }
+
+                pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
+
+                faceI++;
+            }//end forAll(pY1i, fcI)
+        }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
+        else
+        {
+            forAll(pY1i, fcI)
+            {
+                pdiffFlux_Y1i[fcI] = 0;
+                pdiffFlux_Y0i[fcI] = 0;
+                faceI++;
+            }
+        }
+    }//end forAll(patches,patchI)
+
+    //end boundary faces
+
+    if(debug)
+    {
+        os<<"---------------------------------------------" << nl
+            << "Diffusive fluxes at faces for Y" << i << nl
+            << "--------------------------------------------" << nl
+            << endl;
+
+        os<< "-----------------------------------------------------------------------------------------------------" << nl
+            << " Face        face_phaseState            diffFlux_Y1i           diffFlux_Y0i" << nl
+            << "-----------------------------------------------------------------------------------------------------" << nl
+            << endl;
+        
+        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+        {
+            os<< "   " << faceI << "          " << face_phaseState_diff[faceI] << "                " << diffFlux_Y1i[faceI] << "                " << diffFlux_Y0i[faceI] << endl;
+        }
+
+        os<< "------------------------------------------------------------------------------------------------------" << nl
+            << endl;
+    }
+}
+
+
+void calc_2ph_diffFluxes_Yi_MS
+(
+    const fvMesh& mesh,
+    const surfaceScalarField& rho1f,
+    const surfaceScalarField& rho0f,
+    const surfaceScalarField& D1fi,
+    const surfaceScalarField& D0fi,
+    const PtrList<surfaceScalarField>& gradf_Y1i,
+    const PtrList<surfaceScalarField>& gradf_Y0i,
+    const scalarField& magSf_ph1_own,
+    const scalarField& magSf_ph0_own,
+    const scalarField& magSf_ph1_nei,
+    const scalarField& magSf_ph0_nei,
+    const labelList& face_phaseState_diff,
+    const volScalarField& rho1,
+    const volScalarField& alpha1,
+    const volScalarField& Y1i,
+    const volScalarField& rho0,
+    const volScalarField& alpha0,
+    const volScalarField& Y0i,
+    PtrList<surfaceScalarField>& diffFlux_Y1i,
+    PtrList<surfaceScalarField>& diffFlux_Y0i,
     const scalar& Y1MIN,
     const scalar& Y1MAX,
     const scalar& Y0MIN,

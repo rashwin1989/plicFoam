@@ -1,4 +1,8 @@
 EXE_INC = \
+	-I../SCF-core/include \
+        -I/home/r_ashwin/Ashwin/UMFPACK/Include \
+        -I/home/r_ashwin/Ashwin/AMD/Include \
+        -I/home/r_ashwin/Ashwin/UFconfig \
 	-I../plicStencils/lnInclude \
 	-IcellInfo/lnInclude \
 	-IPlane/lnInclude \
@@ -6,6 +10,13 @@ EXE_INC = \
 	-I$(LIB_SRC)/finiteVolume/lnInclude
 
 EXE_LIBS = \
+	-L../SCF-core/lib \
+        -lscfcore \
+        -lm -lgfortran \
+        -lgsl -lgslcblas \
+        /home/r_ashwin/Ashwin/UMFPACK/Lib/libumfpack.a \
+        /home/r_ashwin/Ashwin/AMD/Lib/libamd.a \
+        /home/r_ashwin/Ashwin/UFconfig/xerbla/libcerbla.a  \
 	-lplicStencils \
 	-lcellInfo \
 	-lPlane \

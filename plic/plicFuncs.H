@@ -182,6 +182,7 @@ namespace plicFuncs
         const vector&,
         const vector&,
         const label&,
+        bool&,
         bool, 
         OFstream&
     );
@@ -193,6 +194,7 @@ namespace plicFuncs
         const vector&,
         const vector&,
         const label&,
+        bool&,
         bool, 
         OFstream&
     );    
