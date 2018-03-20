@@ -1094,6 +1094,8 @@ scalar A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
 // debug bool switches
 bool redist_alpha;
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
+bool redist_C;
+redist_C = transPropDict.lookupOrDefault("redist_C", false);
 bool phi_interp_debug;
 phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
 bool alpha_debug;

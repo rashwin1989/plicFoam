@@ -264,6 +264,15 @@ if(redist_alpha)
             maxAlpha1Cell = cellI;
         }
     }
+
+    Info<< "Phase-1 volume fraction after redistribution = "
+    << alpha1.weightedAverage(mesh.Vsc()).value()
+    << "  Min(alpha1) = " << min(alpha1).value()
+    << "  Max(alpha1) = " << max(alpha1).value()
+    << nl
+    << "alpha1 undershoot = " << min(alpha1).value()
+    << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
+    << endl;
 }
 
 if(alpha_debug)
@@ -287,15 +296,6 @@ if(alpha_debug)
 }
 
 alpha1.correctBoundaryConditions();
-
-Info<< "Phase-1 volume fraction after redistribution = "
-    << alpha1.weightedAverage(mesh.Vsc()).value()
-    << "  Min(alpha1) = " << min(alpha1).value()
-    << "  Max(alpha1) = " << max(alpha1).value()
-    << nl
-    << "alpha1 undershoot = " << min(alpha1).value()
-    << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
-    << endl;
 
 alpha1.max(0.0);
 alpha1.min(1.0);
