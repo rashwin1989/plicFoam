@@ -3095,8 +3095,8 @@ void calc_2ph_diffFluxes_Y_MS
     label curPhaseState;    
     label faceOwn; 
     label faceNei;
-    scalar diffFlux_limiter_ph1;
-    scalar diffFlux_limiter_ph0;
+    scalar diffFlux_limiter_ph1; scalar diffFlux_limiter_ph1i; 
+    scalar diffFlux_limiter_ph0; scalar diffFlux_limiter_ph0i; 
 
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();    
@@ -3115,6 +3115,11 @@ void calc_2ph_diffFluxes_Y_MS
 
     //--------------------------------------------------------------//
     //Internal faces
+    const scalarField& rho1Cells = rho1.internalField();
+    const scalarField& alpha1Cells = alpha1.internalField();
+
+    const scalarField& rho0Cells = rho0.internalField();
+    const scalarField& alpha0Cells = alpha0.internalField();
 
     //start loop over internal faces
     for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
@@ -3133,16 +3138,20 @@ void calc_2ph_diffFluxes_Y_MS
 
         if(curPhaseState == 3)
         {
+            diffFlux_limiter_ph1 = 1;
+            diffFlux_limiter_ph0 = 1;
+
             for(i=0; i<n; i++)
             {
                 diffFlux_Y1[i][faceI] = 0;
                 diffFlux_Y0[i][faceI] = 0;                
-            }
-            diffFlux_limiter_ph1 = 1;
-            diffFlux_limiter_ph0 = 1;
+            }            
         }
         else if(curPhaseState == 0)
         {
+            diffFlux_limiter_ph1 = 1;
+            diffFlux_limiter_ph0 = 1;
+
             //ph-0
             init_MS_flux(faceI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
             calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
@@ -3151,31 +3160,33 @@ void calc_2ph_diffFluxes_Y_MS
             {
                 diffFlux_Y1[i][faceI] = 0;
                 diffFlux_Y0[i][faceI] = curMagSf_ph0*flux_m_ph0[i];
-            }
 
-            diffFlux_limiter_ph1 = 1;
-            diffFlux_limiter_ph0 = 1;
-            //ph-0
-            calc_diffFlux_limiter3
-            (
-                faceI,
-                faceOwn,
-                faceNei,
-                rho0,
-                alpha0,
-                Y0,
-                meshV,                
-                mesh.time().deltaTValue(),
-                diffFlux_Y0,
-                diffFlux_limiter_ph0,
-                Y0MIN,
-                Y0MAX
-            );
+                calc_diffFlux_limiter2
+                (
+                    rho0Cells[faceOwn],
+                    alpha0Cells[faceOwn],
+                    Y0[i].internalField()[faceOwn],
+                    meshV[faceOwn],
+                    rho0Cells[faceNei],
+                    alpha0Cells[faceNei],
+                    Y0[i].internalField()[faceNei],
+                    meshV[faceNei],
+                    deltaT,
+                    diffFlux_Y0[i][faceI],
+                    diffFlux_limiter_ph0i,
+                    Y0MIN[i],
+                    Y0MAX[i]
+                );
+                diffFlux_limiter_ph0 = min(diffFlux_limiter_ph0, diffFlux_limiter_ph0i);
+            }
                         
             for(i=0; i<n; i++) diffFlux_Y0[i][faceI] *= min(diffFlux_limiter_ph0, 1);
         }
         else if(curPhaseState == 1)
         {
+            diffFlux_limiter_ph1 = 1;
+            diffFlux_limiter_ph0 = 1;
+
             //ph-1
             init_MS_flux(faceI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
             calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
@@ -3184,31 +3195,33 @@ void calc_2ph_diffFluxes_Y_MS
             {
                 diffFlux_Y1[i][faceI] = curMagSf_ph1*flux_m_ph1[i];
                 diffFlux_Y0[i][faceI] = 0;
-            }
 
-            diffFlux_limiter_ph1 = 1;
-            diffFlux_limiter_ph0 = 1;
-            //ph-1
-            calc_diffFlux_limiter3
-            (
-                faceI,
-                faceOwn,
-                faceNei,
-                rho1,
-                alpha1,
-                Y1,
-                meshV,                
-                mesh.time().deltaTValue(),
-                diffFlux_Y1,
-                diffFlux_limiter_ph1,
-                Y1MIN,
-                Y1MAX
-            );
+                calc_diffFlux_limiter2
+                (
+                    rho1Cells[faceOwn],
+                    alpha1Cells[faceOwn],
+                    Y1[i].internalField()[faceOwn],
+                    meshV[faceOwn],
+                    rho1Cells[faceNei],
+                    alpha1Cells[faceNei],
+                    Y1[i].internalField()[faceNei],
+                    meshV[faceNei],
+                    deltaT,
+                    diffFlux_Y1[i][faceI],
+                    diffFlux_limiter_ph1i,
+                    Y1MIN[i],
+                    Y1MAX[i]
+                );
+                diffFlux_limiter_ph1 = min(diffFlux_limiter_ph1, diffFlux_limiter_ph1i);
+            }
                         
             for(i=0; i<n; i++) diffFlux_Y1[i][faceI] *= min(diffFlux_limiter_ph1, 1);
         }
         else if(curPhaseState == 2)
         {
+            diffFlux_limiter_ph1 = 1;
+            diffFlux_limiter_ph0 = 1;
+
             //ph-1
             init_MS_flux(faceI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
             calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
@@ -3221,41 +3234,43 @@ void calc_2ph_diffFluxes_Y_MS
             {
                 diffFlux_Y1[i][faceI] = curMagSf_ph1*flux_m_ph1[i];
                 diffFlux_Y0[i][faceI] = curMagSf_ph0*flux_m_ph0[i];
-            }
 
-            diffFlux_limiter_ph1 = 1;
-            diffFlux_limiter_ph0 = 1;
-            //ph-1
-            calc_diffFlux_limiter3
-            (
-                faceOwn,
-                faceNei,
-                rho1,
-                alpha1,
-                Y1,
-                meshV,                
-                mesh.time().deltaTValue(),
-                diffFlux_Y1,
-                diffFlux_limiter_ph1,
-                Y1MIN,
-                Y1MAX
-            );
-            //ph-0
-            calc_diffFlux_limiter3
-            (
-                faceI,
-                faceOwn,
-                faceNei,
-                rho0,
-                alpha0,
-                Y0,
-                meshV,                
-                mesh.time().deltaTValue(),
-                diffFlux_Y0,
-                diffFlux_limiter_ph0,
-                Y0MIN,
-                Y0MAX
-            );
+                calc_diffFlux_limiter2
+                (
+                    rho1Cells[faceOwn],
+                    alpha1Cells[faceOwn],
+                    Y1[i].internalField()[faceOwn],
+                    meshV[faceOwn],
+                    rho1Cells[faceNei],
+                    alpha1Cells[faceNei],
+                    Y1[i].internalField()[faceNei],
+                    meshV[faceNei],
+                    deltaT,
+                    diffFlux_Y1[i][faceI],
+                    diffFlux_limiter_ph1i,
+                    Y1MIN[i],
+                    Y1MAX[i]
+                );
+                diffFlux_limiter_ph1 = min(diffFlux_limiter_ph1, diffFlux_limiter_ph1i);
+
+                calc_diffFlux_limiter2
+                (
+                    rho0Cells[faceOwn],
+                    alpha0Cells[faceOwn],
+                    Y0[i].internalField()[faceOwn],
+                    meshV[faceOwn],
+                    rho0Cells[faceNei],
+                    alpha0Cells[faceNei],
+                    Y0[i].internalField()[faceNei],
+                    meshV[faceNei],
+                    deltaT,
+                    diffFlux_Y0[i][faceI],
+                    diffFlux_limiter_ph0i,
+                    Y0MIN[i],
+                    Y0MAX[i]
+                );
+                diffFlux_limiter_ph0 = min(diffFlux_limiter_ph0, diffFlux_limiter_ph0i);
+            }
 
             for(i=0; i<n; i++) 
             {
@@ -3265,13 +3280,14 @@ void calc_2ph_diffFluxes_Y_MS
         }
         else
         {
+            diffFlux_limiter_ph1 = 1;
+            diffFlux_limiter_ph0 = 1;
+
             for(i=0; i<n; i++)
             {
                 diffFlux_Y1[i][faceI] = 0;
                 diffFlux_Y0[i][faceI] = 0;                
             }
-            diffFlux_limiter_ph1 = 1;
-            diffFlux_limiter_ph0 = 1;
         }        
 
         if(debug)
@@ -3384,10 +3400,10 @@ void calc_2ph_diffFluxes_Y_MS
     //patch face
     //--------------------------------------------------------------//
     
-    forAll(Y1i.boundaryField(), patchI)
+    forAll(Y1[0].boundaryField(), patchI)
     {
         const polyPatch& pp = patches[patchI];
-        const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
+        PtrList<fvPatchScalarField> pY1i = Y1i.boundaryField()[patchI];
         const fvPatchScalarField& pY0i = Y0i.boundaryField()[patchI];
         fvsPatchScalarField& pdiffFlux_Y1i = diffFlux_Y1i.boundaryField()[patchI];
         const fvsPatchScalarField& pgradf_Y1i = gradf_Y1i.boundaryField()[patchI];
@@ -3424,15 +3440,77 @@ void calc_2ph_diffFluxes_Y_MS
                 curMagSf_ph1 = min(magSf_ph1_own[faceI], magSf_ph1_nei[faceI]);
                 curMagSf_ph0 = min(magSf_ph0_own[faceI], magSf_ph0_nei[faceI]);
                 curPhaseState = face_phaseState_diff[faceI];
-                faceOwn = own[faceI];                
+                faceOwn = own[faceI];
+
+                P_tmp = Pf.boundaryField()[patchI][fcI];
+                T1_tmp = T1f.boundaryField()[patchI][fcI];
+                T0_tmp = T0f.boundaryField()[patchI][fcI];        
+                V1_tmp = V1f.boundaryField()[patchI][fcI];
+                V0_tmp = V0f.boundaryField()[patchI][fcI];
 
                 if(curPhaseState == 3)
                 {
-                    pdiffFlux_Y1i[fcI] = 0;
-                    pdiffFlux_Y0i[fcI] = 0;
+                    diffFlux_limiter_ph1 = 1;
+                    diffFlux_limiter_ph0 = 1;
+
+                    for(i=0; i<n; i++)
+                    {
+                        diffFlux_Y1[i].boundaryField()[patchI][fcI] = 0;
+                        diffFlux_Y0[i].boundaryField()[patchI][fcI] = 0;                
+                    }                    
                 }
                 if(curPhaseState == 0)
                 {
+                    diffFlux_limiter_ph1 = 1;
+                    diffFlux_limiter_ph0 = 1;
+
+                    //ph-0
+                    init_MS_flux(patchI,faceI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
+                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+
+                    for(i=0; i<n; i++)
+                    {
+                        diffFlux_Y1[i][faceI] = 0;
+                        diffFlux_Y0[i][faceI] = curMagSf_ph0*flux_m_ph0[i];
+
+                        calc_diffFlux_limiter2
+                        (
+                            rho0Own[fcI],
+                            alpha0Own[fcI],
+                            Y0Own[i][fcI],
+                            meshV[faceOwn],
+                            rho0Nei[fcI],
+                            alpha0Nei[fcI],
+                            Y0Nei[i][fcI],
+                            VNei[bndFaceI],
+                            deltaT,
+                            pdiffFlux_Y0[i][fcI],
+                            diffFlux_limiter_ph0i,
+                            Y0MIN[i],
+                            Y0MAX[i]
+                        );
+                    }
+
+                    diffFlux_limiter_ph1 = 1;
+                    diffFlux_limiter_ph0 = 1;
+                    //ph-0
+                    calc_diffFlux_limiter3
+                    (
+                        faceI,
+                        faceOwn,
+                        faceNei,
+                        rho0,
+                        alpha0,
+                        Y0,
+                        meshV,                
+                        mesh.time().deltaTValue(),
+                        diffFlux_Y0,
+                        diffFlux_limiter_ph0,
+                        Y0MIN,
+                        Y0MAX
+                    );
+                        
+                    for(i=0; i<n; i++) diffFlux_Y0[i][faceI] *= min(diffFlux_limiter_ph0, 1);
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
                     diffFlux_limiter = 1;
