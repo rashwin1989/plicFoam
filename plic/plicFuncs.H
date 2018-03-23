@@ -58,6 +58,19 @@ SourceFiles
 #include "syncTools.H"
 #include "OFstream.H"
 
+#include <math.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "MACROS.H"
+#include "PR_EoS.h"
+#include "myUmfpack.h"
+#include "vis_n_therm.h"
+#include "transport_LLE2.h"
+#include "gsl_optimizations2.h"
+#include "Maxwell_Stefan_flux.h"
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -326,6 +339,101 @@ namespace plicFuncs
         const scalar& Y0MAX,
         const label& i,    
         const bool debug, 
+        OFstream& os
+    );
+
+    void init_MS_flux
+    (
+        const label& faceI,
+        const PtrList<surfaceScalarField>& xf,
+        const PtrList<surfaceScalarField>& gradf_x,    
+        const PtrList<surfaceScalarField>& Dijf,
+        int n,
+        double *x,
+        double *grad_x,
+        double *Dij
+    );
+
+    void init_MS_flux
+    (
+        const label& patchI,
+        const label& faceI,
+        const PtrList<surfaceScalarField>& xf,
+        const PtrList<surfaceScalarField>& gradf_x,    
+        const PtrList<surfaceScalarField>& Dijf,
+        int n,
+        double *x,
+        double *grad_x,
+        double *Dij
+    );
+
+    void calc_MS_flux
+    (
+        double P,
+        double T,
+        double V,
+        double *x,
+        double R_gas,
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *lnphi,
+        double *dlnphi_dxj,
+        double *grad_x,
+        double *Dij,
+        int n_flux_type,
+        LPT_UMFPACK flux_umf,
+        double *rhs_flux,
+        double *flux_m
+    );
+
+    void calc_2ph_diffFluxes_Y_MS
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& Pf,
+        const surfaceScalarField& T1f,
+        const surfaceScalarField& T0f,
+        const surfaceScalarField& V1f,
+        const surfaceScalarField& V0f,
+        double R_gas,
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,    
+        const PtrList<surfaceScalarField>& Dij1f,
+        const PtrList<surfaceScalarField>& Dij0f,
+        const PtrList<surfaceScalarField>& x1f,
+        const PtrList<surfaceScalarField>& x0f,
+        const PtrList<surfaceScalarField>& gradf_x1,
+        const PtrList<surfaceScalarField>& gradf_x0,    
+        const scalarField& magSf_ph1_own,
+        const scalarField& magSf_ph0_own,
+        const scalarField& magSf_ph1_nei,
+        const scalarField& magSf_ph0_nei,
+        const labelList& face_phaseState_diff,
+        const volScalarField& rho1,
+        const volScalarField& alpha1,
+        const PtrList<volScalarField>& Y1,
+        const volScalarField& rho0,
+        const volScalarField& alpha0,
+        const PtrList<volScalarField>& Y0,
+        PtrList<surfaceScalarField>& diffFlux_Y1,
+        PtrList<surfaceScalarField>& diffFlux_Y0,
+        LPT_UMFPACK flux_umf,
+        int n_flux_type,
+        scalar deltaT,
+        const List<scalar>& Y1MIN,
+        const List<scalar>& Y1MAX,
+        const List<scalar>& Y0MIN,
+        const List<scalar>& Y0MAX,
+        const bool debug,
         OFstream& os
     );
 
