@@ -5943,15 +5943,13 @@ void calc_Js
 void calc_Js_Ys
 (
     const fvMesh& mesh,
-    const labelListList& cellStencil,    
-    const List<List<scalar> >& Y1_flatFld,
-    const List<List<scalar> >& Y0_flatFld,
+    const labelListList& cellStencil,
+    const List<List<scalar> >& x1_flatFld,
+    const List<List<scalar> >& x0_flatFld,
     const List<scalar>& alpha1_flatFld,
     const volScalarField& alpha1,
     const volScalarField& rho1,
     const volScalarField& rho0,
-    const PtrList<volScalarField>& D1,
-    const PtrList<volScalarField>& D0,
     const List<vector>& C_ph1_flatFld,
     const List<vector>& C_ph0_flatFld,
     const volVectorField& C_intfc,
@@ -5959,14 +5957,25 @@ void calc_Js_Ys
     const volVectorField& nHat,
     PtrList<volScalarField>& Ys1,
     PtrList<volScalarField>& Ys0,
+    PtrList<volScalarField>& xs1,
+    PtrList<volScalarField>& xs0,
     PtrList<volScalarField>& Js1,
     PtrList<volScalarField>& Js0,    
     const label& nSpecies,
     const scalar& ALPHA_2PH_MIN,
+    const scalar& A_INTFC_2PH_MIN,
     const bool debug,
     OFstream& os
 )
 {
+    int n = nSpecies;
+    scalar alpha1_cellI;
+    vector nf; vector C_intfc_cellI;
+    labelList curCellsAll = cellStencil[0];
+    scalar dn1; scalar dn0;
+    List<scalar> xeff1(n); List<scalar> xeff0(n);    
+    scalar intfcGradi_cellI;
+
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
     const labelList& own = mesh.owner();
@@ -5986,30 +5995,33 @@ void calc_Js_Ys
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Interfacial Species Flux Calculation" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << nl
-          << "-------------------------------------------------------------------------" << nl
-          << "Internal cells" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << endl;
+            << "-------------------------------------------------------------------------" << nl
+            << "Interfacial Species Fluxes Calculation with Transport-LLE Constraints" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << nl
+            << "-------------------------------------------------------------------------" << nl
+            << "Internal cells" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
 
     //Js for all interface cells
     forAll(alpha1Cells, cellI)
     {
-        scalar alpha1_cellI = alpha1Cells[cellI];
+        alpha1_cellI = alpha1Cells[cellI];
+        A_intfc_cellI = A_intfcCells[cellI];
         if(debug)
         {
-            os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+            os<< "-------------------------------------------------------------------------" << nl
+                << "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << nl
+                << "-------------------------------------------------------------------------" << endl;
         }
 
-        if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
+        if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX && A_intfc_cellI > A_INTFC_2PH_MIN)
         {
-            vector nf = nHatCells[cellI];
-            vector C_intfc_cellI = C_intfcCells[cellI];
-            scalar A_intfc_cellI = A_intfcCells[cellI];
-            labelList curCellsAll = cellStencil[cellI];
+            nf = nHatCells[cellI];
+            C_intfc_cellI = C_intfcCells[cellI];            
+            curCellsAll = cellStencil[cellI];
 
             if(debug)
             {
@@ -6018,18 +6030,12 @@ void calc_Js_Ys
                     << "rho1 = " << rho1Cells[cellI] << "rho0 = " << rho0Cells[cellI] << endl;
             }
 
-            scalar dn1;
-            List<scalar> Yeff1(nSpecies);
-            scalar dn0;
-            List<scalar> Yeff0(nSpecies);
-            scalar intfcGradi_cellI;
-
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, debug, os);
             if(debug)
             {
-                os<< "dn1 = " << dn1 << endl;
+                os<< "dn1 = " << dn1;
             }
             if(dn1 < SMALL)
             {
@@ -6037,7 +6043,7 @@ void calc_Js_Ys
             }
             if(debug)
             {
-                os<< "dn1 stab = " << dn1 << endl;
+                os<< "  dn1 stab = " << dn1 << endl;
             }
 
             for(label i=0; i<nSpecies; i++)
@@ -6055,10 +6061,10 @@ void calc_Js_Ys
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
-            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
+            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, debug, os);
             if(debug)
             {
-                os<< "dn0 = " << dn0 << endl;
+                os<< "dn0 = " << dn0;
             }
             if(dn0 < SMALL)
             {
@@ -6066,7 +6072,7 @@ void calc_Js_Ys
             }
             if(debug)
             {
-                os<< "dn0 stab = " << dn0 << endl;
+                os<< "  dn0 stab = " << dn0 << endl;
             }
 
             for(label i=0; i<nSpecies; i++)
