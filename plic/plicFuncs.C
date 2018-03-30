@@ -6046,18 +6046,6 @@ void calc_Js_Ys
                 os<< "  dn1 stab = " << dn1 << endl;
             }
 
-            for(label i=0; i<nSpecies; i++)
-            {
-                intfcGradi_cellI = (Yeff1[i] - Ys1[i].internalField()[cellI])/dn1;
-                
-                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*intfcGradi_cellI;
-
-                if(debug)
-                {
-                    os<< "species: " << i << "  Ys1i = " << Ys1[i].internalField()[cellI] << "  Yeff1i = " << Yeff1[i] << "  intfcGrad1i = " << intfcGradi_cellI << "  D1i = " << D1[i].internalField()[cellI] << "  Js1i = " <<  Js1[i].internalField()[cellI] << endl;
-                }
-            }
-            
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
@@ -6074,6 +6062,18 @@ void calc_Js_Ys
             {
                 os<< "  dn0 stab = " << dn0 << endl;
             }
+
+            for(label i=0; i<nSpecies; i++)
+            {
+                intfcGradi_cellI = (Yeff1[i] - Ys1[i].internalField()[cellI])/dn1;
+                
+                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*intfcGradi_cellI;
+
+                if(debug)
+                {
+                    os<< "species: " << i << "  Ys1i = " << Ys1[i].internalField()[cellI] << "  Yeff1i = " << Yeff1[i] << "  intfcGrad1i = " << intfcGradi_cellI << "  D1i = " << D1[i].internalField()[cellI] << "  Js1i = " <<  Js1[i].internalField()[cellI] << endl;
+                }
+            }                        
 
             for(label i=0; i<nSpecies; i++)
             {
