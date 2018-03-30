@@ -5943,13 +5943,13 @@ void calc_Js
 void calc_Js_Ys
 (
     const fvMesh& mesh,
-    const labelListList& cellStencil,    
+    const labelListList& cellStencil,
     const List<List<scalar> >& x1_flatFld,
     const List<List<scalar> >& x0_flatFld,
     const List<scalar>& alpha1_flatFld,
     const volScalarField& alpha1,
     const volScalarField& rho1,
-    const volScalarField& rho0,    
+    const volScalarField& rho0,
     const List<vector>& C_ph1_flatFld,
     const List<vector>& C_ph0_flatFld,
     const volVectorField& C_intfc,
@@ -6028,7 +6028,7 @@ void calc_Js_Ys
                 os<< "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
                     << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
                     << "rho1 = " << rho1Cells[cellI] << "rho0 = " << rho0Cells[cellI] << endl;
-            }            
+            }
 
             //phase-1
             //ensure nf direction is into the phase
