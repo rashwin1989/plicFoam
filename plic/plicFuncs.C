@@ -5287,6 +5287,15 @@ void calc_cell_intfcGrad_coeffs
             }
         }
     }
+    
+    if(dn < SMALL)
+    {
+        dn += SMALL;
+    }
+    if(debug)
+    {
+        os<< "dn stab = " << dn << endl;
+    }
 }
 
 
@@ -5940,6 +5949,80 @@ void calc_Js
 }
 
 
+void calc_intfc_transLLE
+(
+
+)
+{
+    int iTs, bKijSet, iLLE;
+    double Ts_tmp;
+
+    Ts_tmp = Ts;
+
+    for(iTs=0; iTs<MAX_ITERS_Ts; iTs++)
+    {
+        //calculate BIPs for current iteration interface temperature Ts_tmp
+        bKijSet = 1;
+        calculate_kij_(&bKijSet,&Ts_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+
+        iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,tk,Tb,SG,H8,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,H1,H0,flux_m_1,flux_m_0,flux_umf);
+
+        //calculate fluid properties on both sides of interface
+        //convert the mole fractions to mass fractions
+        x2y(n,MW,xs1,ys1);
+        x2y(n,MW,xs0,ys0);
+
+        //phase 1
+        pr_phase_(&P,&Ts_tmp,&n,Pc,Tc,xs1,tk,coef_ab,phase_type_1);
+
+        thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs1,Tb,SG,H8,tk,&V1,&Cp1,&Cv,CpIG,h1,Hdep1,Vpar,&dVdT,&G,lnphi1,&am,&bm,&G_only);
+
+        fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs1,tk,coef_ab,lnphi1,dlnphi1,&V_tmp);
+
+        CvIG = calc_CvIG_from_CpIG(n,xs1,CpIG);
+
+        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs1,&CvIG,&V1,&cond1,&vis1);
+
+        rho1 = calc_rho_from_V(n,xs1,MW,V1);
+
+        new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs1,Dij1);
+
+        //phase 0
+        pr_phase_(&P,&Ts_tmp,&n,Pc,Tc,xs0,tk,coef_ab,phase_type_0);
+
+        thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs0,Tb,SG,H8,tk,&V0,&Cp0,&Cv,CpIG,h0,Hdep0,Vpar,&dVdT,&G,lnphi0,&am,&bm,&G_only);
+
+        fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs0,tk,coef_ab,lnphi0,dlnphi0,&V_tmp);
+
+        CvIG = calc_CvIG_from_CpIG(n,xs0,CpIG);
+
+        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs0,&CvIG,&V0,&cond0,&vis0);
+
+        rho0 = calc_rho_from_V(n,xs0,MW,V0);
+
+        new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs0,Dij0);
+
+        //calculate the total ph-1 to ph-0 phase change mass flux 
+        //from ph-1 and ph-0 diffusive fluxes
+        JsTot = 0;
+        num = 0;
+        for(i=0; i<n; i++)
+        {
+            if(mag(ys1[i]-ys0[i]) > MASS_FRAC_TOL)
+            {
+                JsTot += (flux_m_0[i] - flux_m_1[i])/(ys1[i] - ys0[i]);
+                num++;
+            }
+        }
+
+        if(num > 0)
+        {
+            JsTot = JsTot/(double)(num);
+        }
+    }
+}
+
+
 void calc_Js_Ys
 (
     const fvMesh& mesh,
@@ -6032,36 +6115,12 @@ void calc_Js_Ys
 
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, debug, os);
-            if(debug)
-            {
-                os<< "dn1 = " << dn1;
-            }
-            if(dn1 < SMALL)
-            {
-                dn1 += SMALL;
-            }
-            if(debug)
-            {
-                os<< "  dn1 stab = " << dn1 << endl;
-            }
+            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, debug, os);            
 
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
-            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, debug, os);
-            if(debug)
-            {
-                os<< "dn0 = " << dn0;
-            }
-            if(dn0 < SMALL)
-            {
-                dn0 += SMALL;
-            }
-            if(debug)
-            {
-                os<< "  dn0 stab = " << dn0 << endl;
-            }
+            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, debug, os);            
 
             for(label i=0; i<nSpecies; i++)
             {
