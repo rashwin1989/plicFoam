@@ -6222,36 +6222,23 @@ void calc_Js_Ys
 
             //phase-1
             //ensure nf direction is into the phase
-            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, debug, os);            
+            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, T1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, Teff1, debug, os);            
 
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
-            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, debug, os);            
+            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, T0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, Teff0, debug, os);
 
-            for(label i=0; i<nSpecies; i++)
+            if(curCell_had_intfc)
             {
-                intfcGradi_cellI = (Yeff1[i] - Ys1[i].internalField()[cellI])/dn1;
-                
-                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*intfcGradi_cellI;
-
-                if(debug)
-                {
-                    os<< "species: " << i << "  Ys1i = " << Ys1[i].internalField()[cellI] << "  Yeff1i = " << Yeff1[i] << "  intfcGrad1i = " << intfcGradi_cellI << "  D1i = " << D1[i].internalField()[cellI] << "  Js1i = " <<  Js1[i].internalField()[cellI] << endl;
-                }
-            }                        
-
-            for(label i=0; i<nSpecies; i++)
+                curTs = curTs_old;
+            }
+            else
             {
-                intfcGradi_cellI = (Yeff0[i] - Ys0[i].internalField()[cellI])/dn0;
-                
-                Js0[i].internalField()[cellI] = A_intfc_cellI*rho0Cells[cellI]*D0[i].internalField()[cellI]*intfcGradi_cellI;
+                curTs = 0.5*(curT1 + curT0);
+            }
 
-                if(debug)
-                {
-                    os<< "species: " << i << "  Ys0i = " << Ys0[i].internalField()[cellI] << "  Yeff0i = " << Yeff0[i] << "  intfcGrad0i = " << intfcGradi_cellI << "  D0i = " << D0[i].internalField()[cellI] << "  Js0i = " <<  Js0[i].internalField()[cellI] << endl;
-                }
-            }                        
+            calc_intfc_transLLE(curP, curTs, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot, flux_m_1, flux_m_0, iLLE, iTs, flux_umf, Ts_TOL, MAX_ITERS_Ts, debug, os); 
         }
         else
         {
