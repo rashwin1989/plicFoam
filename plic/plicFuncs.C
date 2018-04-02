@@ -5951,11 +5951,68 @@ void calc_Js
 
 void calc_intfc_transLLE
 (
-
+    double P,
+    double& Ts,
+    int n,
+    double *Pc,
+    double *Tc,
+    double* Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
+    double dn1,
+    double dn0,
+    double *xeff1,
+    double *xeff0,
+    double Teff1,
+    double Teff0,
+    double *xs1,
+    double *xs0,
+    double *ys1,
+    double *ys0,
+    double& JsTot,
+    double *flux_m_1,
+    double *flux_m_0,
+    int& iLLE,
+    int& iTs,
+    LPT_UMFPACK flux_umf,
+    double Ts_TOL,
+    int MAX_ITERS_Ts,
+    const bool debug,
+    OFstream& os
 )
 {
-    int iTs, bKijSet, iLLE;
-    double Ts_tmp;
+    int i, bKijSet, num;
+    double Ts_tmp, V1, V0; 
+    double Cp1, Cp0, Cv, dVdT, G, am, bm, G_only, V_tmp, CvIG;
+    double rho1, rho0, cond1, cond0, vis1, vis0;
+    double J1, J0, qs, TNum, TDen, Ts_err;
+    double *kij_tmp; 
+    double *lnphi1; double *lnphi0; double *dlnphi1; double *dlnphi0; double *Dij1; double *Dij0; 
+    double *h1; double *h0; 
+    double *H1; double *H0; double *CpIG; double *Hdep1; double *Hdep0; double *Vpar;
+
+    _NEW_(kij_tmp, double, n*n);
+    _NEW_(lnphi1, double, n);
+    _NEW_(lnphi0, double, n);
+    _NEW_(dlnphi1, double, n*n);
+    _NEW_(dlnphi0, double, n*n);
+    _NEW_(Dij1, double, n*n);
+    _NEW_(Dij0, double, n*n);
+    _NEW_(h1, double, n);
+    _NEW_(h0, double, n);
+    _NEW_(H1, double, n);
+    _NEW_(H0, double, n);
+    _NEW_(Hdep1, double, n);
+    _NEW_(Hdep0, double, n);
+    _NEW_(CpIG, double, n);
+    _NEW_(Vpar, double, n);
 
     Ts_tmp = Ts;
 
@@ -5973,8 +6030,6 @@ void calc_intfc_transLLE
         x2y(n,MW,xs0,ys0);
 
         //phase 1
-        pr_phase_(&P,&Ts_tmp,&n,Pc,Tc,xs1,tk,coef_ab,phase_type_1);
-
         thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs1,Tb,SG,H8,tk,&V1,&Cp1,&Cv,CpIG,h1,Hdep1,Vpar,&dVdT,&G,lnphi1,&am,&bm,&G_only);
 
         fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs1,tk,coef_ab,lnphi1,dlnphi1,&V_tmp);
@@ -5988,8 +6043,6 @@ void calc_intfc_transLLE
         new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs1,Dij1);
 
         //phase 0
-        pr_phase_(&P,&Ts_tmp,&n,Pc,Tc,xs0,tk,coef_ab,phase_type_0);
-
         thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs0,Tb,SG,H8,tk,&V0,&Cp0,&Cv,CpIG,h0,Hdep0,Vpar,&dVdT,&G,lnphi0,&am,&bm,&G_only);
 
         fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs0,tk,coef_ab,lnphi0,dlnphi0,&V_tmp);
@@ -6019,7 +6072,61 @@ void calc_intfc_transLLE
         {
             JsTot = JsTot/(double)(num);
         }
+
+        //calculate the enthalpy flux due to species fluxes
+        qs=0;
+        for(i=0; i<n; i++)
+        {
+            J1 = JsTot*ys1[i] + flux_m_1[i];
+            J0 = JsTot*ys0[i] + flux_m_0[i];
+            qs += (J0*h0[i] - J1*h1[i])/(MW[i]*1e-3);
+        }
+
+        //calculate the interface temperature consistent with
+        //energy balance across the interface
+        TNum = cond1*Teff1/dn1 + cond0*Teff0/dn0 - qs;
+        TDen = cond1/dn1 + cond0/dn0;
+        if(Tden < SMALL) TDen += SMALL;
+        Ts_tmp = TNum/TDen;
+
+        //calculate error in Ts and break if converged
+        Ts_err = mag(Ts_tmp - Ts);
+        if(Ts_err < Ts_TOL) break;
+
+        //Ts under-relaxation
+        if (n_flux_type>0) 
+        {
+            Ts_tmp = Ts_tmp*0.5 + Ts*0.5;	
+        }
+        else
+        {
+            if (iTs<3)
+                Ts_tmp = Ts_tmp*0.5 + Ts*0.5;
+            else if (iTs<20)
+                Ts_tmp = Ts_tmp*0.1 + Ts*0.9;
+            else
+                Ts_tmp = Ts_tmp*0.01+ Ts*0.99;
+        }
+
+        //update prev iteration value of Ts
+        Ts = Ts_tmp;
     }
+
+    _DELETE_(kij_tmp);
+    _DELETE_(lnphi1);
+    _DELETE_(lnphi0);
+    _DELETE_(dlnphi1);
+    _DELETE_(dlnphi0);
+    _DELETE_(Dij1);
+    _DELETE_(Dij0);
+    _DELETE_(h1);
+    _DELETE_(h0);
+    _DELETE_(H1);
+    _DELETE_(H0);
+    _DELETE_(Hdep1);
+    _DELETE_(Hdep0);
+    _DELETE_(CpIG);
+    _DELETE_(Vpar);
 }
 
 
