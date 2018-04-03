@@ -6162,9 +6162,8 @@ void calc_Js_Ys
     scalar alpha1_cellI;
     vector nf; vector C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];
-    scalar dn1; scalar dn0;
-    List<scalar> xeff1(n); List<scalar> xeff0(n);    
-    scalar intfcGradi_cellI;
+    double dn1, dn0;
+    double *xeff1; double *xeff0;    
 
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
