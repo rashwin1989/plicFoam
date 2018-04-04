@@ -57,6 +57,7 @@ SourceFiles
 #include "dimensionedTypes.H"
 #include "syncTools.H"
 #include "OFstream.H"
+#include "IOmanip.H"
 
 #include <math.h>
 #include <time.h>
@@ -614,6 +615,160 @@ namespace plicFuncs
         PtrList<volScalarField>& Js0,
         const label& nSpecies,
         const scalar& ALPHA_2PH_MIN,
+        const bool debug,
+        OFstream& os
+    );
+
+    void x2y(int n, double *MW, double *x, double *y);
+
+    double calc_rho_from_V(int n, double *x, double *MW, double V);
+
+    double calc_CvIG_from_CpIG(int n, double *x, double *CpIG);
+
+    void calc_intfc_transLLE
+    (
+        double P,
+        double& Ts,
+        int n,
+        double *Pc,
+        double *Tc,
+        double* Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double *k,
+        double *dm,
+        double dn1,
+        double dn0,
+        double *xeff1,
+        double *xeff0,
+        double Teff1,
+        double Teff0,
+        double *xs1,
+        double *xs0,
+        double *ys1,
+        double *ys0,
+        double& JsTot,
+        double *flux_m_1,
+        double *flux_m_0,
+        int& iLLE,
+        int& iTs,
+        int n_flux_type,
+        LPT_UMFPACK flux_umf,
+        double Ts_TOL,
+        int MAX_ITERS_Ts,
+        double MASS_FRAC_TOL,
+        const bool debug,
+        OFstream& os
+    );
+
+    void calc_limiter_mS1
+    (
+        double& mS1Tot_cellI, 
+        double *mS1_cellI, 
+        double *C1_cellI, 
+        double *C0_cellI,
+        double& alpha1_cellI,
+        double& rho1_cellI,
+        double& rho0_cellI,
+        double& V_cellI, 
+        double& dt,
+        int n,
+        double& limiter_mS1Tot, 
+        double *limiter_mS1, 
+        double& limiter_min, 
+        const bool debug, 
+        OFstream& os
+    );
+
+    void print_line(OFstream& os, int n);
+
+    void calc_cell_intfcGrad_coeffs
+    (
+        const fvMesh& mesh,
+        const label& curCell_lbl,
+        const vector& nf,
+        const vector& C_intfc,
+        const List<List<scalar> >& Y,
+        const List<scalar>& T,
+        const List<scalar>& alpha1,
+        const List<vector>& C,
+        const labelList& curCellsAll,
+        const label& nSpecies,
+        const scalar& MIN_ALPHA_2PH,
+        const label& phaseLbl,
+        double& dn,
+        double *Yeff,
+        double& Teff,
+        bool debug, 
+        OFstream& os
+    );
+
+    void calc_Xs_Ys_Js_mS_alphaS
+    (
+        const fvMesh& mesh,
+        double *Pc,
+        double *Tc,
+        double* Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double *k,
+        double *dm,
+        const labelListList& cellStencil,
+        const List<List<scalar> >& x1_flatFld,
+        const List<List<scalar> >& x0_flatFld,
+        const List<scalar>& T1_flatFld,
+        const List<scalar>& T0_flatFld,
+        const List<scalar>& alpha1_flatFld,
+        const volScalarField& alpha1,
+        const volScalarField& rho1,
+        const volScalarField& rho0,
+        const volScalarField& T1,
+        const volScalarField& T0,
+        volScalarField& Ts,
+        const volScalarField& P,
+        const PtrList<volScalarField>& C1,
+        const PtrList<volScalarField>& C0,
+        const PtrList<volScalarField>& X1,
+        const PtrList<volScalarField>& X0,
+        const PtrList<volScalarField>& Y1,
+        const PtrList<volScalarField>& Y0,
+        const List<vector>& C_ph1_flatFld,
+        const List<vector>& C_ph0_flatFld,
+        const volVectorField& C_intfc,
+        const volScalarField& A_intfc,
+        const volVectorField& nHat,
+        PtrList<volScalarField>& Ys1,
+        PtrList<volScalarField>& Ys0,
+        PtrList<volScalarField>& Xs1,
+        PtrList<volScalarField>& Xs0,
+        PtrList<volScalarField>& Js1,
+        PtrList<volScalarField>& Js0,
+        PtrList<volScalarField>& mS1,
+        volScalarField& JsTot,
+        volScalarField& mS1Tot,
+        volScalarField& alphaS1,
+        volScalarField& alphaS0,
+        labelList& n_iters_Ts,
+        labelList& status_transLLE,
+        labelList& cell_had_intfc,
+        int n_flux_type,
+        LPT_UMFPACK flux_umf,
+        const label& nSpecies,
+        const scalar& ALPHA_2PH_MIN,
+        const scalar& A_INTFC_2PH_MIN,
+        double Ts_TOL,
+        int MAX_ITERS_Ts,
+        double MASS_FRAC_TOL,
         const bool debug,
         OFstream& os
     );

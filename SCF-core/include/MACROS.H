@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // I. new and delete
 // 1. one dimensional vextor var[size]
@@ -34,5 +37,9 @@
            for (_j=0; _j<size2; _j++) \
              var_n[_i][_j]=var[_i][_j];\
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

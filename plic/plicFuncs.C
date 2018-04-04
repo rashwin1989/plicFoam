@@ -5949,6 +5949,50 @@ void calc_Js
 }
 
 
+void x2y(int n, double *MW, double *x, double *y)
+{
+    int i;
+    double sum_MWx = 0.0, r1_sum;
+    for (i=0; i<n; i++) sum_MWx += MW[i]*x[i];
+
+    if(sum_MWx < SMALL) sum_MWx += SMALL;
+
+    r1_sum = 1.0/sum_MWx;
+
+    for (i=0; i<n; i++) y[i] = MW[i]*x[i] * r1_sum;
+}
+
+
+double calc_rho_from_V(int n, double *x, double *MW, double V)
+{
+    int i;
+    double sum = 0.0;
+
+    for (i=0;i<n;i++) 
+    {                             
+        sum += MW[i]*x[i];
+    }
+
+    if(V < SMALL) V += SMALL;
+
+    return 1e-3*sum/V;
+}
+
+
+double calc_CvIG_from_CpIG(int n, double *x, double *CpIG)
+{
+    int i;
+    double sum = 0.0;
+
+    for (i=0;i<n;i++)
+    {
+        sum += CpIG[i]*x[i];
+    }
+
+    return sum - 8.3144621;
+}
+
+
 void calc_intfc_transLLE
 (
     double P,
@@ -5981,17 +6025,20 @@ void calc_intfc_transLLE
     double *flux_m_0,
     int& iLLE,
     int& iTs,
+    int n_flux_type,
     LPT_UMFPACK flux_umf,
     double Ts_TOL,
     int MAX_ITERS_Ts,
+    double MASS_FRAC_TOL,
     const bool debug,
     OFstream& os
 )
 {
-    int i, bKijSet, num;
+    int i, bKijSet, num, G_only;
     double Ts_tmp, V1, V0; 
-    double Cp1, Cp0, Cv, dVdT, G, am, bm, G_only, V_tmp, CvIG;
-    double rho1, rho0, cond1, cond0, vis1, vis0;
+    double Cp1, Cp0, Cv, dVdT, G, am, bm, V_tmp, CvIG;
+    //double rho1, rho0;
+    double cond1, cond0, vis1, vis0;
     double J1, J0, qs, TNum, TDen, Ts_err;
     double *kij_tmp; 
     double *lnphi1; double *lnphi0; double *dlnphi1; double *dlnphi0; double *Dij1; double *Dij0; 
@@ -6038,7 +6085,7 @@ void calc_intfc_transLLE
 
         vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs1,&CvIG,&V1,&cond1,&vis1);
 
-        rho1 = calc_rho_from_V(n,xs1,MW,V1);
+        //rho1 = calc_rho_from_V(n,xs1,MW,V1);
 
         new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs1,Dij1);
 
@@ -6051,7 +6098,7 @@ void calc_intfc_transLLE
 
         vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs0,&CvIG,&V0,&cond0,&vis0);
 
-        rho0 = calc_rho_from_V(n,xs0,MW,V0);
+        //rho0 = calc_rho_from_V(n,xs0,MW,V0);
 
         new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs0,Dij0);
 
@@ -6086,7 +6133,7 @@ void calc_intfc_transLLE
         //energy balance across the interface
         TNum = cond1*Teff1/dn1 + cond0*Teff0/dn0 - qs;
         TDen = cond1/dn1 + cond0/dn0;
-        if(Tden < SMALL) TDen += SMALL;
+        if(TDen < SMALL) TDen += SMALL;
         Ts_tmp = TNum/TDen;
 
         //calculate error in Ts and break if converged
@@ -6149,6 +6196,7 @@ void calc_limiter_mS1
     OFstream& os
 )
 {
+    int i;
     double mS1Tot_tmp, max_mS, mS1i_cellI, max_mSi;
 
     limiter_min = 1.0;
@@ -6188,16 +6236,455 @@ void calc_limiter_mS1
 }
 
 
-void calc_Js_Ys
+void print_line(OFstream& os, int n)
+{
+    for(int i=0; i<n; i++)
+    {
+        os<< "-";
+    }
+    os<< endl;
+}
+
+
+void calc_cell_intfcGrad_coeffs
 (
     const fvMesh& mesh,
+    const label& curCell_lbl,
+    const vector& nf,
+    const vector& C_intfc,
+    const List<List<scalar> >& Y,
+    const List<scalar>& T,
+    const List<scalar>& alpha1,
+    const List<vector>& C,
+    const labelList& curCellsAll,
+    const label& nSpecies,
+    const scalar& MIN_ALPHA_2PH,
+    const label& phaseLbl,
+    double& dn,
+    double *Yeff,
+    double& Teff,
+    bool debug, 
+    OFstream& os
+)
+{
+    if(debug)
+    {
+        os<< nl
+          << "Calculating cell intfc grad weights in cell " << curCell_lbl << nl
+          << endl;
+    }
+
+    scalar MAX_ALPHA_2PH = 1 - MIN_ALPHA_2PH;
+    
+    labelList curCells(curCellsAll.size());
+    label n_ph = 0;
+
+    if(debug)
+    {
+        os<< "Reducing cell stencil for phase " << phaseLbl << nl
+            << "Full cell stencil" << nl
+            << curCellsAll << endl;
+    }
+
+    if(phaseLbl == 1)
+    {
+        for(label cellI=0; cellI<curCellsAll.size(); cellI++)
+        {            
+            label cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MIN_ALPHA_2PH = " << MIN_ALPHA_2PH
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] > MIN_ALPHA_2PH && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = cellI_lbl;
+            }            
+        }        
+    }
+    else
+    {
+        for(label cellI=0; cellI<curCellsAll.size(); cellI++)
+        {
+            label cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MAX_ALPHA_2PH = " << MAX_ALPHA_2PH
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] < MAX_ALPHA_2PH && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = curCellsAll[cellI];
+            }            
+        }
+    }
+    
+    curCells.setSize(n_ph);
+
+    if(debug)
+    {
+        os<< "Cell reduced stencil" << nl
+            << curCells << nl
+            << endl;
+    }
+
+    // suffix 1: direction closest to nf
+    // suffix 2: direction closest orthogonal to nf in 2-D
+    // further improvements needed for 3-D calculation
+    bool foundCell1 = false;
+    bool foundCell2 = false;
+    vector Cp = C_intfc;
+    label C1_lbl = findCellInIntfcDir(mesh,alpha1,curCells,C,Cp,nf,curCell_lbl,foundCell1,debug,os);
+    if(debug)
+    {
+        os<< "C1_lbl: " << C1_lbl << "  found C1: " << foundCell1
+            << endl;
+    }
+    if(foundCell1)
+    {
+        vector C1 = C[C1_lbl];
+        vector t1 = C1 - Cp;
+        scalar magt1;    
+        magt1 = mag(t1);
+        scalar magnf;
+        magnf = mag(nf);
+        if(magt1 < SMALL)
+        {
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
+                << endl;
+            magt1 += SMALL;
+        }
+        if(magnf < SMALL)
+        {
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
+                << endl;
+            magnf += SMALL;
+        }
+        scalar costheta1 = (nf & t1)/magt1/magnf;
+        if(costheta1 > 1)
+        {        
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+                << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                << "  costheta1 = " << costheta1 << nl 
+                << endl;
+            costheta1 = 1;
+        }
+        scalar theta1 = acos(costheta1);
+        if(debug)
+        {
+            os<< "Cp = " << Cp << "  C1 = " << C1 << "  t1 = " << t1 << "  mag(t1) = " << magt1
+                << "  costheta1 = " << costheta1 << "  theta1 = " << theta1                      
+                << endl;
+        }
+
+        if(theta1 > 1E-3)
+        {
+            label C2_lbl = findCellInIntfcOrthDir(mesh,alpha1,curCells,C,Cp,C1,nf,curCell_lbl,C1_lbl,foundCell2,debug,os);
+            if(debug)
+            {
+                os<< "C2_lbl: " << C2_lbl << "  found C2: " << foundCell2
+                    << endl;
+            }   
+
+            if(foundCell2)
+            {                                        
+                vector C2 = C[C2_lbl];    
+                vector t2 = C2 - Cp;
+                scalar magt2;
+                magt2 = mag(t2);
+                if(magt2 < SMALL)
+                {
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << nl
+                        << endl;
+                    magt2 += SMALL;
+                }    
+                scalar magt1t2 = magt1*magt2;
+                if(magt1t2 < SMALL)
+                {
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
+                        << endl;
+                    magt1t2 += SMALL;
+                }        
+        
+                scalar costheta2 = (nf & t2)/magt2/magnf;
+                if(costheta2 > 1)
+                {                
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "C2 cell " << C2_lbl << "  C2 = " << C2 << nl
+                        << "t2 = " << t2 << "  mag(t2) = " << magt2 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                        << "  costheta2 = " << costheta2 << nl 
+                        << endl;
+                    costheta2 = 1;
+                }
+                scalar theta2 = acos(costheta2);
+                if(debug)
+                {
+                    os<< "t2 = " << t2 << "  mag(t2) = " << magt2
+                        << "  costheta2 = " << costheta2 << "  theta2 = " << theta2                      
+                        << endl;
+                }
+                scalar theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2/magnf/magnf;
+                if(debug)
+                {
+                    os<< "theta2_sign = " << theta2_sign            
+                        << endl;
+                }
+
+                scalar sintheta12 = sin(theta1 + theta2);
+
+                if(theta1 + theta2 > constant::mathematical::pi)
+                {
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  nf" << nf << "  Cp = " << Cp << "  phaseLabel: " << phaseLbl << "  cell alpha1 = " << alpha1[curCell_lbl] << "  cell meshC = " << mesh.C()[curCell_lbl] << nl 
+                        << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << "  C2_lbl: " << C2_lbl << "  C2 = " << C2 << nl
+                        << "magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
+                        << "theta1 = " << theta1 << "  theta2 = " << theta2 << "  (theta1+theta2) = " << theta1 + theta2 << " sin(theta1+theta2) = " << sintheta12 << nl
+                        << endl;
+
+                    C1_lbl = findCellInIntfcDir(mesh,alpha1,curCells,C,Cp,nf,curCell_lbl,foundCell1,1,os);
+                    C2_lbl = findCellInIntfcOrthDir(mesh,alpha1,curCells,C,Cp,C1,nf,curCell_lbl,C1_lbl,foundCell2,1,os);
+
+                    os<< endl;
+                }
+
+                if(sintheta12 < SMALL)
+                {
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  sintheta12 = " << sintheta12 << nl
+                        << endl;
+                    sintheta12 += SMALL;
+                }
+
+                scalar alpha = sin(theta2)/sintheta12;        
+                scalar beta = sin(theta1)/sintheta12;
+                scalar at2bt1 = alpha*magt2 + beta*magt1;
+                if(mag(at2bt1) < SMALL)
+                {
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  alpha = " << alpha 
+                        << "  beta = " << beta << "  at2bt1 = " << at2bt1 << nl
+                        << endl;
+                    at2bt1 += SMALL;
+                }
+
+                if(debug)
+                {
+                    os<< "alpha = " << alpha << "  beta = " << beta << nl
+                        << "at2bt1 = " << at2bt1
+                        << endl;
+                }
+    
+                dn = magt1t2/at2bt1;
+                scalar T1; scalar T2;
+                T1 = T[C1_lbl];
+                T2 = T[C2_lbl];
+                Teff = (alpha*magt2*T1 + beta*magt1*T2)/at2bt1;
+                if(debug)
+                {
+                    os<< "dn = " << dn << "  Teff = " << Teff
+                        << endl;
+                }
+
+                scalar Y1; scalar Y2;                
+                if(debug)
+                {
+                    os<< "Teff = " << Teff
+                        << endl;
+                }
+                for(label i=0; i<nSpecies; i++)
+                {
+                    Y1 = Y[i][C1_lbl];
+                    Y2 = Y[i][C2_lbl];
+                    Yeff[i] = (alpha*magt2*Y1 + beta*magt1*Y2)/at2bt1;
+
+                    if(debug)
+                    {
+                        os<< "Species index: " << i << nl
+                            << "Y1 = " << Y1 << "  Y2 = " << Y2 << "  Yeff = " << Yeff[i]
+                            << endl;
+                    }
+                }             
+
+                if(debug)
+                {
+                    os<< endl;        
+                }
+            }
+            else
+            {
+                if(costheta1 < 1E-3)
+                {        
+                    os<< "Time = " << mesh.time().timeName() << nl 
+                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+                        << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                        << "  costheta1 = " << costheta1 << nl 
+                        << endl;
+                    costheta1 = 1E-3;
+                }
+                dn = magt1/costheta1;
+                Teff = T[C1_lbl];
+                if(debug)
+                {
+                    os<< "dn = " << dn << "  Teff = " << Teff
+                        << endl;
+                }
+                
+                for(label i=0; i<nSpecies; i++)
+                {             
+                    Yeff[i] = Y[i][C1_lbl];
+                    if(debug)
+                    {
+                        os<< "Species index: " << i << nl
+                            << "Y1 = " << Y[i][C1_lbl] << "  Yeff = " << Yeff[i]
+                            << endl;
+                    }
+                }
+            }
+        }
+        else
+        {
+            dn = magt1;
+            Teff = T[C1_lbl];
+            if(debug)
+            {
+                os<< "dn = " << dn << "  Teff = " << Teff
+                    << endl;
+            }
+            
+            for(label i=0; i<nSpecies; i++)
+            {             
+                Yeff[i] = Y[i][C1_lbl];
+                if(debug)
+                {
+                    os<< "Species index: " << i << nl
+                        << "Y1 = " << Y[i][C1_lbl] << "  Yeff = " << Yeff[i]
+                        << endl;
+                }
+            }
+        }
+    }
+    else
+    {
+        os<< "Time = " << mesh.time().timeName() << nl 
+            << "Cell " << curCell_lbl << ": Cell in interface normal direction not found! Using curCell centroid" << nl
+            << endl;
+        /*
+        vector C1 = C[curCell_lbl];
+        vector t1 = C1 - Cp;
+        scalar magt1;    
+        magt1 = mag(t1);
+        scalar magnf;
+        magnf = mag(nf);
+        */
+        scalar min_dn = mag(mesh.C()[curCell_lbl] - mesh.C()[curCellsAll[1]]);
+        /*
+        if(magt1 < min_dn)
+        {
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << ": curCell centroid too close to interface!" << nl 
+                << "Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
+                << endl;
+            if(magt1 < SMALL)
+            {
+                magt1 += SMALL;
+            }
+            t1 *= min_dn/magt1;
+            magt1 = mag(t1);
+        }
+        if(magnf < SMALL)
+        {
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
+                << endl;
+            magnf += SMALL;
+        }
+        scalar costheta1 = (nf & t1)/magt1/magnf;
+        if(costheta1 > 1)
+        {        
+            os<< "Time = " << mesh.time().timeName() << nl 
+                << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+                << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                << "  costheta1 = " << costheta1 << nl 
+                << endl;
+            costheta1 = 1;
+        }
+        */
+        dn = min_dn;
+        Teff = T[curCell_lbl];
+        if(debug)
+        {
+            os<< "dn = " << dn << "  Teff = " << Teff
+                << endl;
+        }
+        
+        for(label i=0; i<nSpecies; i++)
+        {             
+            Yeff[i] = Y[i][curCell_lbl];
+            if(debug)
+            {
+                os<< "Species index: " << i << nl
+                    << "Y1 = " << Y[i][curCell_lbl] << "  Yeff = " << Yeff[i]
+                    << endl;
+            }
+        }
+    }
+    
+    if(dn < SMALL)
+    {
+        dn += SMALL;
+    }
+    if(debug)
+    {
+        os<< "dn stab = " << dn << endl;
+    }
+}
+
+
+void calc_Xs_Ys_Js_mS_alphaS
+(
+    const fvMesh& mesh,
+    double *Pc,
+    double *Tc,
+    double* Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
     const labelListList& cellStencil,
     const List<List<scalar> >& x1_flatFld,
     const List<List<scalar> >& x0_flatFld,
+    const List<scalar>& T1_flatFld,
+    const List<scalar>& T0_flatFld,
     const List<scalar>& alpha1_flatFld,
     const volScalarField& alpha1,
     const volScalarField& rho1,
     const volScalarField& rho0,
+    const volScalarField& T1,
+    const volScalarField& T0,
+    volScalarField& Ts,
+    const volScalarField& P,
+    const PtrList<volScalarField>& C1,
+    const PtrList<volScalarField>& C0,
+    const PtrList<volScalarField>& X1,
+    const PtrList<volScalarField>& X0,
+    const PtrList<volScalarField>& Y1,
+    const PtrList<volScalarField>& Y0,
     const List<vector>& C_ph1_flatFld,
     const List<vector>& C_ph0_flatFld,
     const volVectorField& C_intfc,
@@ -6205,32 +6692,75 @@ void calc_Js_Ys
     const volVectorField& nHat,
     PtrList<volScalarField>& Ys1,
     PtrList<volScalarField>& Ys0,
-    PtrList<volScalarField>& xs1,
-    PtrList<volScalarField>& xs0,
+    PtrList<volScalarField>& Xs1,
+    PtrList<volScalarField>& Xs0,
     PtrList<volScalarField>& Js1,
-    PtrList<volScalarField>& Js0,    
+    PtrList<volScalarField>& Js0,
+    PtrList<volScalarField>& mS1,
+    volScalarField& JsTot,
+    volScalarField& mS1Tot,
+    volScalarField& alphaS1,
+    volScalarField& alphaS0,
+    labelList& n_iters_Ts,
+    labelList& status_transLLE,
+    labelList& cell_had_intfc,
+    int n_flux_type,
+    LPT_UMFPACK flux_umf,
     const label& nSpecies,
     const scalar& ALPHA_2PH_MIN,
     const scalar& A_INTFC_2PH_MIN,
+    double Ts_TOL,
+    int MAX_ITERS_Ts,
+    double MASS_FRAC_TOL,
     const bool debug,
     OFstream& os
 )
 {
-    int n = nSpecies;
-    scalar alpha1_cellI;
-    vector nf; vector C_intfc_cellI;
-    labelList curCellsAll = cellStencil[0];
-    double dn1, dn0;
-    double *xeff1; double *xeff0;    
+    int n, i, iLLE, iTs;
+    label curCell_had_intfc;
+    double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI, dt; 
+    double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
+    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI;
+    double limiter_mS1Tot, limiter_min;
+    vector nf, C_intfc_cellI;
+    labelList curCellsAll = cellStencil[0];    
+    double *xeff1, *xeff0, *C1_cellI, *C0_cellI;
+    double *x1_cellI, *x0_cellI, *y1_cellI, *y0_cellI;
+    double *xs1, *xs0, *ys1, *ys0, *flux_m_1, *flux_m_0, *Js1_cellI, *Js0_cellI;
+    double *mS1_cellI, *limiter_mS1;
 
+    n = nSpecies;
+
+    _NEW_(xeff1, double, n);
+    _NEW_(xeff0, double, n);
+    _NEW_(C1_cellI, double, n);
+    _NEW_(C0_cellI, double, n);
+    _NEW_(x1_cellI, double, n);
+    _NEW_(x0_cellI, double, n);
+    _NEW_(y1_cellI, double, n);
+    _NEW_(y0_cellI, double, n);
+    _NEW_(xs1, double, n);
+    _NEW_(xs0, double, n);
+    _NEW_(ys1, double, n);
+    _NEW_(ys0, double, n);
+    _NEW_(xs1, double, n);
+    _NEW_(flux_m_1, double, n);
+    _NEW_(flux_m_0, double, n);
+    _NEW_(Js1_cellI, double, n);
+    _NEW_(Js0_cellI, double, n);
+    _NEW_(mS1_cellI, double, n);
+    _NEW_(limiter_mS1, double, n);
+    
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
+    /*
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
 
     const surfaceVectorField& Sf = mesh.Sf();
     const surfaceScalarField& magSf = mesh.magSf();
     const surfaceVectorField& Cf = mesh.Cf();
+    */
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const vectorField& C_intfcCells = C_intfc.internalField();
@@ -6238,6 +6768,14 @@ void calc_Js_Ys
     const vectorField& nHatCells = nHat.internalField();
     const scalarField& rho1Cells = rho1.internalField();
     const scalarField& rho0Cells = rho0.internalField();
+    const scalarField& T1Cells = T1.internalField();
+    const scalarField& T0Cells = T0.internalField();
+    scalarField& TsCells = Ts.internalField();
+    const scalarField& PCells = P.internalField();
+    scalarField& JsTotCells = JsTot.internalField();
+    scalarField& mS1TotCells = mS1Tot.internalField();
+    scalarField& alphaS1Cells = alphaS1.internalField();
+    scalarField& alphaS0Cells = alphaS0.internalField();
 
     if(debug)
     {
@@ -6261,11 +6799,20 @@ void calc_Js_Ys
             curCellsAll = cellStencil[cellI];
             rho1_cellI = rho1Cells[cellI];
             rho0_cellI = rho0Cells[cellI];
+            T1_cellI = T1Cells[cellI];
+            T0_cellI = T0Cells[cellI];
+            Ts_cellI_old = TsCells[cellI];
+            P_cellI = PCells[cellI];
             for(i=0; i<n; i++)
             {
                 C1_cellI[i] = C1[i].internalField()[cellI];
                 C0_cellI[i] = C0[i].internalField()[cellI];
-            }            
+                x1_cellI[i] = C1[i].internalField()[cellI];
+                x0_cellI[i] = C0[i].internalField()[cellI];
+                y1_cellI[i] = C1[i].internalField()[cellI];
+                y0_cellI[i] = C0[i].internalField()[cellI];
+            }
+            curCell_had_intfc = cell_had_intfc[cellI];
 
             //phase-1
             //ensure nf direction is into the phase
@@ -6285,7 +6832,7 @@ void calc_Js_Ys
                 Ts_cellI = 0.5*(T1_cellI + T0_cellI);
             }
 
-            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, iLLE, iTs, flux_umf, Ts_TOL, MAX_ITERS_Ts, debug, os);
+            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
                         
             for(i=0; i<n; i++)
             {
@@ -6293,7 +6840,7 @@ void calc_Js_Ys
                 Js0_cellI[i] = -A_intfc_cellI*flux_m_0[i];                
             }
             mS1Tot_cellI = -A_intfc_cellI*JsTot_cellI;
-            JsTot.internalField()[cellI] = mS1Tot_cellI;
+            JsTotCells[cellI] = mS1Tot_cellI;
 
             //calculate the interfacial mass transfer source terms
             //from above fluxes. Involves limiter step for total phase change
@@ -6305,7 +6852,7 @@ void calc_Js_Ys
                 mS1_cellI[i] = mS1Tot_cellI*ys1[i] + Js1_cellI[i];
             }
 
-            calc_limiter_mS1(mS1Tot_cellI, mS1_cellI, C1_cellI, C0_cellI, alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, dt, limiter_mS1Tot, limiter_mS1, limiter_min, debug, os);
+            calc_limiter_mS1(mS1Tot_cellI, mS1_cellI, C1_cellI, C0_cellI, alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, dt, n, limiter_mS1Tot, limiter_mS1, limiter_min, debug, os);
             
             //assign the calculated values to corresponding fields
             mS1Tot_cellI *= limiter_min/V_cellI;
@@ -6323,16 +6870,63 @@ void calc_Js_Ys
             }
             alphaS1Cells[cellI] = mS1Tot_cellI/rho1_cellI;
             alphaS0Cells[cellI] = -mS1Tot_cellI/rho0_cellI;
-            Ts.internalField()[cellI] = Ts_cellI;
+            TsCells[cellI] = Ts_cellI;
 
             n_iters_Ts[cellI] = iTs;
             status_transLLE[cellI] = iLLE;
             
-            cell_had_intfc{cellI] = 1;
+            cell_had_intfc[cellI] = 1;
+
+            if(debug)
+            {
+                print_line(os, 80);
+                print_line(os, 80);                
+                os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << nl
+                    << "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
+                    << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
+                    << "T1 = " << T1Cells[cellI] << "  T0 = " << T0Cells[cellI] << "  rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << endl;
+                print_line(os, 80);
+                os<< setw(7) << "Species" << "  " << setw(10) << "x1" << "  " << setw(10) << "x0" << "  " << setw(10) << "y1" << "  " << setw(10) << "y0" << "  " << setw(10) << "C1" << "  " << setw(10) << "C0" << endl;
+                print_line(os, 80);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << y1_cellI[i] << "  " << setw(10) << y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
+                }
+                print_line(os, 80);
+                os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << "  Teff1 = " << Teff1 << "  Teff0 = " << Teff0 << endl;
+                print_line(os, 80);
+                os<< setw(7) << "Species" << "  " << setw(10) << "xeff1" << "  " << setw(10) << "xeff0" << endl;
+                print_line(os, 80);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(7) << i << "  " << setw(10) << xeff1[i] << "  " << setw(10) << xeff0[i] << endl;                
+                }
+                print_line(os, 80);
+                os<< "Ts = " << Ts_cellI << "  mS1Tot = " << mS1Tot_cellI << "  alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << nl
+                    << "limiter_mS1Tot = " << limiter_mS1Tot << "  limiter_min = " << limiter_min << nl
+                    << "iLLE = " << iLLE << "  iTs = " << iTs << endl;
+                print_line(os, 80);
+                os<< setw(7) << "Species" << "  " << setw(10) << "xs1" << "  " << setw(10) << "xs0" << "  " << setw(10) << "ys1" << "  " << setw(10) << "ys0" << endl;
+                print_line(os, 80);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(7) << i << "  " << setw(10) << xs1[i] << "  " << setw(10) << xs0[i] << "  " << setw(10) << ys1[i] << "  " << setw(10) << ys0[i] << endl;
+                }
+                print_line(os, 80);
+                os<< setw(7) << "Species" << "  " << setw(10) << "flux_m_1" << "  " << setw(10) << "flux_m_0" << "  " << setw(10) << "Js1" << "  " << setw(10) << "Js0" << "  " << setw(10) << "mS1" << "  " << setw(10) << "limiter" << endl;
+                print_line(os, 80);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(7) << i << "  " << setw(10) << flux_m_1[i] << "  " << setw(10) << flux_m_0[i] << "  " << setw(10) << Js1_cellI[i] << "  " << setw(10) << Js0_cellI[i] << "  " << setw(10) << mS1_cellI[i] << "  " << setw(10) << limiter_mS1[i] << endl;
+                }
+                print_line(os, 80);
+                print_line(os, 80);
+            }
         }
         else
         {
             //assign the calculated values to corresponding fields
+            JsTotCells[cellI] = 0;
             mS1TotCells[cellI] = 0;
             for(i=0; i<n; i++)
             {                
@@ -6347,54 +6941,28 @@ void calc_Js_Ys
             status_transLLE[cellI] = 0;
             
             cell_had_intfc[cellI] = 0;
-        }
-
-        if(debug)
-        {
-            print_line(os, 80);
-            print_line(os, 80);                
-            os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << nl
-                << "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
-                << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
-                << "T1 = " << T1Cells[cellI] << "  T0 = " << T0Cells[cellI] << "  rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << endl;
-            print_line(os, 80);
-            os<< setw(7) << "Species" << "  " << setw(10) << "x1" << "  " << setw(10) << "x0" << "  " << setw(10) << "y1" << "  " << setw(10) << "y0" << "  " << setw(10) << "C1" << "  " << setw(10) << "C0" << endl;
-            print_line(os, 80);
-            for(i=0; i<n; i++)
-            {
-                os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << y1_cellI[i] << "  " << setw(10) << y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
-            }
-            print_line(os, 80);
-            os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << "  Teff1 = " << Teff1 << "  Teff0 = " << Teff0 << endl;
-            print_line(os, 80);
-            os<< setw(7) << "Species" << "  " << setw(10) << "xeff1" << "  " << setw(10) << "xeff0" << endl;
-            print_line(os, 80);
-            for(i=0; i<n; i++)
-            {
-                os<< setw(7) << i << "  " << setw(10) << xeff1[i] << "  " << setw(10) << xeff0[i] << endl;                
-            }
-            print_line(os, 80);
-            os<< "Ts = " << Ts_cellI << "  mS1Tot = " << mS1Tot_cellI << "  alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << nl
-                << "limiter_mS1Tot = " << limiter_mS1Tot << "  limiter_min = " << limiter_min << nl
-                << "iLLE = " << iLLE << "  iTs = " << iTs << endl;
-            print_line(os, 80);
-            os<< setw(7) << "Species" << "  " << setw(10) << "xs1" << "  " << setw(10) << "xs0" << "  " << setw(10) << "ys1" << "  " << setw(10) << "ys0" << endl;
-            print_line(os, 80);
-            for(i=0; i<n; i++)
-            {
-                os<< setw(7) << i << "  " << setw(10) << xs1[i] << "  " << setw(10) << xs0[i] << "  " << setw(10) << ys1[i] << "  " << setw(10) << ys0[i] << endl;
-            }
-            print_line(os, 80);
-            os<< setw(7) << "Species" << "  " << setw(10) << "flux_m_1" << "  " << setw(10) << "flux_m_0" << "  " << setw(10) << "Js1" << "  " << setw(10) << "Js0" << "  " << setw(10) << "mS1" << "  " << setw(10) << "limiter" << endl;
-            print_line(os, 80);
-            for(i=0; i<n; i++)
-            {
-                os<< setw(7) << i << "  " << setw(10) << flux_m_1[i] << "  " << setw(10) << flux_m_0[i] << "  " << setw(10) << Js1_cellI[i] << "  " << setw(10) << Js0_cellI[i] << "  " << setw(10) << mS1_cellI[i] << "  " << setw(10) << limiter_mS1[i] << endl;
-            }
-            print_line(os, 80);
-            print_line(os, 80);
-        }
+        }        
     }
+
+    _DELETE_(xeff1);
+    _DELETE_(xeff0);
+    _DELETE_(C1_cellI);
+    _DELETE_(C0_cellI);
+    _DELETE_(x1_cellI);
+    _DELETE_(x0_cellI);
+    _DELETE_(y1_cellI);
+    _DELETE_(y0_cellI);
+    _DELETE_(xs1);
+    _DELETE_(xs0);
+    _DELETE_(ys1);
+    _DELETE_(ys0);
+    _DELETE_(xs1);
+    _DELETE_(flux_m_1);
+    _DELETE_(flux_m_0);
+    _DELETE_(Js1_cellI);
+    _DELETE_(Js0_cellI);
+    _DELETE_(mS1_cellI);
+    _DELETE_(limiter_mS1);
 
     if(debug)
     {
