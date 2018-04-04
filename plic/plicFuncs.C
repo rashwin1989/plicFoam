@@ -6243,7 +6243,7 @@ void calc_Js_Ys
     {
         print_line(os, 80);
         print_line(os, 80);
-        os<< "Interfacial Species Fluxes Calculation with Transport-LLE Constraints" << nl
+        os<< "Interfacial Species Fluxes Calculation with Transport-LLE Constraints" << endl;
         print_line(os, 80);
         os<< endl;
     }
@@ -6257,7 +6257,7 @@ void calc_Js_Ys
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX && A_intfc_cellI > A_INTFC_2PH_MIN)
         {
             nf = nHatCells[cellI];
-            C_intfc_cellI = C_intfcCells[cellI];            
+            C_intfc_cellI = C_intfcCells[cellI];
             curCellsAll = cellStencil[cellI];
             rho1_cellI = rho1Cells[cellI];
             rho0_cellI = rho0Cells[cellI];
