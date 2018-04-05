@@ -6,7 +6,7 @@ if(ist_debug)
          << nl << endl;
 }
 
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
 //Make flat fields for alpha1 and phase centroids required for gradient calculation
 plicFuncs::makeFlatFld(alpha1, istMap, alpha1_flatFld_ist);
 plicFuncs::makeFlatFld(interface.C_ph1(), istMap, C_ph1_flatFld_ist);
@@ -20,21 +20,17 @@ for(label i=0; i<nSpecies; i++)
     plicFuncs::makeFlatFld(Y0[i], istMap, Y0i_flatFld_ist);    
 }
 //Done make flat fields for alpha1 and phase centroids required for gradient calculation
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
 
-//------------------------------------------------------------------//
-//Calculate interfacial species mass fluxes
-plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, interface.C_intfc(), interface.A_intfc(), interface.nHat(), Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, ist_debug2, osIst);
-//Done calculate interfacial species mass fluxes
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
+//Calculate interfacial species concentrations and mass fluxes
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, ist_debug2, osIst);
+plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, X1_flatFld, X0_flatFld, alpha1_flatFld, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, X1, X0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Xs1, Xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
+//Done calculate interfacial species concentrations and mass fluxes
 //Done calculate interfacial species transfer source terms and alpha source terms
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
 
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------//
 //Apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 scalar dt = runTime.deltaTValue();
 scalar C1Tot_cellI;
@@ -154,9 +150,9 @@ for(label i=0; i<nSpecies; i++)
 }
 
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------------//
 
-//------------------------------------------------------------------//
+//-----------------------------------------------------------------------------------------------------------//
 //Reset the allowable limits for concentrations and mass fractions in the phases
 for(label i=0; i<nSpecies; i++)
 {

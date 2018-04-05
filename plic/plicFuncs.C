@@ -6023,6 +6023,8 @@ void calc_intfc_transLLE
     double& JsTot,
     double *flux_m_1,
     double *flux_m_0,
+    double& cond1,
+    double *h1,
     int& iLLE,
     int& iTs,
     int n_flux_type,
@@ -6038,11 +6040,11 @@ void calc_intfc_transLLE
     double Ts_tmp, V1, V0; 
     double Cp1, Cp0, Cv, dVdT, G, am, bm, V_tmp, CvIG;
     //double rho1, rho0;
-    double cond1, cond0, vis1, vis0;
+    double cond0, vis1, vis0;
     double J1, J0, qs, TNum, TDen, Ts_err;
     double *kij_tmp; 
     double *lnphi1; double *lnphi0; double *dlnphi1; double *dlnphi0; double *Dij1; double *Dij0; 
-    double *h1; double *h0; 
+    double *h0; 
     double *H1; double *H0; double *CpIG; double *Hdep1; double *Hdep0; double *Vpar;
 
     _NEW_(kij_tmp, double, n*n);
@@ -6051,8 +6053,7 @@ void calc_intfc_transLLE
     _NEW_(dlnphi1, double, n*n);
     _NEW_(dlnphi0, double, n*n);
     _NEW_(Dij1, double, n*n);
-    _NEW_(Dij0, double, n*n);
-    _NEW_(h1, double, n);
+    _NEW_(Dij0, double, n*n);    
     _NEW_(h0, double, n);
     _NEW_(H1, double, n);
     _NEW_(H0, double, n);
@@ -6117,7 +6118,7 @@ void calc_intfc_transLLE
 
         if(num > 0)
         {
-            JsTot = JsTot/(double)(num);
+            JsTot = JsTot/(static_cast<double>(num));
         }
 
         //calculate the enthalpy flux due to species fluxes
@@ -6157,7 +6158,7 @@ void calc_intfc_transLLE
 
         //update prev iteration value of Ts
         Ts = Ts_tmp;
-    }
+    }    
 
     _DELETE_(kij_tmp);
     _DELETE_(lnphi1);
@@ -6165,8 +6166,7 @@ void calc_intfc_transLLE
     _DELETE_(dlnphi1);
     _DELETE_(dlnphi0);
     _DELETE_(Dij1);
-    _DELETE_(Dij0);
-    _DELETE_(h1);
+    _DELETE_(Dij0);    
     _DELETE_(h0);
     _DELETE_(H1);
     _DELETE_(H0);
@@ -6701,6 +6701,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     volScalarField& mS1Tot,
     volScalarField& alphaS1,
     volScalarField& alphaS0,
+    volScalarField& Qs,
     labelList& n_iters_Ts,
     labelList& status_transLLE,
     labelList& cell_had_intfc,
@@ -6720,13 +6721,13 @@ void calc_Xs_Ys_Js_mS_alphaS
     label curCell_had_intfc;
     double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI, dt; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
-    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI;
+    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1;
     double limiter_mS1Tot, limiter_min;
     vector nf, C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];    
     double *xeff1, *xeff0, *C1_cellI, *C0_cellI;
     double *x1_cellI, *x0_cellI, *y1_cellI, *y0_cellI;
-    double *xs1, *xs0, *ys1, *ys0, *flux_m_1, *flux_m_0, *Js1_cellI, *Js0_cellI;
+    double *xs1, *xs0, *ys1, *ys0, *flux_m_1, *flux_m_0, *Js1_cellI, *Js0_cellI, *hs1;
     double *mS1_cellI, *limiter_mS1;
 
     n = nSpecies;
@@ -6750,6 +6751,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     _NEW_(Js0_cellI, double, n);
     _NEW_(mS1_cellI, double, n);
     _NEW_(limiter_mS1, double, n);
+    _NEW_(hs1, double, n);
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
@@ -6776,6 +6778,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     scalarField& mS1TotCells = mS1Tot.internalField();
     scalarField& alphaS1Cells = alphaS1.internalField();
     scalarField& alphaS0Cells = alphaS0.internalField();
+    scalarField& QsCells = Qs.internalField();
 
     if(debug)
     {
@@ -6832,7 +6835,7 @@ void calc_Xs_Ys_Js_mS_alphaS
                 Ts_cellI = 0.5*(T1_cellI + T0_cellI);
             }
 
-            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
+            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
                         
             for(i=0; i<n; i++)
             {
@@ -6853,13 +6856,25 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
 
             calc_limiter_mS1(mS1Tot_cellI, mS1_cellI, C1_cellI, C0_cellI, alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, dt, n, limiter_mS1Tot, limiter_mS1, limiter_min, debug, os);
-            
-            //assign the calculated values to corresponding fields
+
             mS1Tot_cellI *= limiter_min/V_cellI;
-            mS1TotCells[cellI] = mS1Tot_cellI;
             for(i=0; i<n; i++)
             {
                 mS1_cellI[i] *= limiter_min/V_cellI;
+            }
+
+            //calculate the interfacial enthalpy transfer
+            Qs_cellI = conds1*(Teff1 - Ts_cellI)/dn1;
+            for(i=0; i<n; i++)
+            {
+                Qs_cellI += mS1_cellI[i]*hs1[i]/(MW[i]*1e-3);
+            }
+            
+            //assign the calculated values to corresponding fields
+            TsCells[cellI] = Ts_cellI;
+            mS1TotCells[cellI] = mS1Tot_cellI;
+            for(i=0; i<n; i++)
+            {                
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
                 Js1[i].internalField()[cellI] = Js1_cellI[i];
                 Js0[i].internalField()[cellI] = Js0_cellI[i];
@@ -6870,11 +6885,10 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
             alphaS1Cells[cellI] = mS1Tot_cellI/rho1_cellI;
             alphaS0Cells[cellI] = -mS1Tot_cellI/rho0_cellI;
-            TsCells[cellI] = Ts_cellI;
+            QsCells[cellI] = Qs_cellI;            
 
             n_iters_Ts[cellI] = iTs;
-            status_transLLE[cellI] = iLLE;
-            
+            status_transLLE[cellI] = iLLE;            
             cell_had_intfc[cellI] = 1;
 
             if(debug)
@@ -6934,12 +6948,12 @@ void calc_Xs_Ys_Js_mS_alphaS
                 Js1[i].internalField()[cellI] = 0;
                 Js0[i].internalField()[cellI] = 0;                
             }
-            alphaS1Cells[cellI] = mS1Tot_cellI/rho1_cellI;
-            alphaS0Cells[cellI] = -mS1Tot_cellI/rho0_cellI;
+            alphaS1Cells[cellI] = 0;
+            alphaS0Cells[cellI] = 0;
+            QsCells[cellI] = 0;
 
             n_iters_Ts[cellI] = 0;
-            status_transLLE[cellI] = 0;
-            
+            status_transLLE[cellI] = 0;            
             cell_had_intfc[cellI] = 0;
         }        
     }
@@ -6963,6 +6977,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     _DELETE_(Js0_cellI);
     _DELETE_(mS1_cellI);
     _DELETE_(limiter_mS1);
+    _DELETE_(hs1);
 
     if(debug)
     {

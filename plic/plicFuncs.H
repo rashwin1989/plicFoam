@@ -64,7 +64,7 @@ SourceFiles
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "MACROS.H"
+//#include "MACROS.H"
 #include "PR_EoS.h"
 #include "myUmfpack.h"
 #include "vis_n_therm.h"
@@ -82,7 +82,11 @@ namespace Foam
 \*---------------------------------------------------------------------------*/
 
 namespace plicFuncs
-{    
+{
+
+#define    _NEW_(var,type,size)    var = new type[size];
+#define    _DELETE_(var)           delete[] var;
+    
     template <class Type>
     void display_field
     (
@@ -655,6 +659,8 @@ namespace plicFuncs
         double& JsTot,
         double *flux_m_1,
         double *flux_m_0,
+        double& cond1,
+        double *h1,
         int& iLLE,
         int& iTs,
         int n_flux_type,
@@ -758,6 +764,7 @@ namespace plicFuncs
         volScalarField& mS1Tot,
         volScalarField& alphaS1,
         volScalarField& alphaS0,
+        volScalarField& Qs,
         labelList& n_iters_Ts,
         labelList& status_transLLE,
         labelList& cell_had_intfc,
