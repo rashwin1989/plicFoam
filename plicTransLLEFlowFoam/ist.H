@@ -25,7 +25,7 @@ for(label i=0; i<nSpecies; i++)
 //-----------------------------------------------------------------------------------------------------//
 //Calculate interfacial species concentrations and mass fluxes
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, X1_flatFld, X0_flatFld, alpha1_flatFld, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, X1, X0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Xs1, Xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
+plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, X1_flatFld, X0_flatFld, alpha1_flatFld, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, X1, X0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Xs1, Xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, Qs, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
 //Done calculate interfacial species concentrations and mass fluxes
 //Done calculate interfacial species transfer source terms and alpha source terms
 //-----------------------------------------------------------------------------------------------------//
@@ -55,11 +55,11 @@ forAll(alpha1.internalField(), cellI)
         osIst<< "--------------------------------------------------------------------------" << nl
             << "Interfacial source terms" << nl
             << "--------------------------------------------------------------------------" << nl
-            << "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << mS0Tot.internalField()[cellI] << nl
+            << "mS1Tot = " << mS1Tot.internalField()[cellI] << "  mS0Tot = " << -mS1Tot.internalField()[cellI] << nl
             << "alphaS1 = " << alphaS1.internalField()[cellI] << "  alphaS0 = " << alphaS0.internalField()[cellI] << endl;
         for(label i=0; i<nSpecies; i++)
         {
-            osIst<< "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << mS0[i].internalField()[cellI]
+            osIst<< "mS1[" << i << "] = " << mS1[i].internalField()[cellI] << "  mS0[" << i << "] = " << -mS1[i].internalField()[cellI]
                 << endl;
         }
     }
@@ -71,7 +71,7 @@ forAll(alpha1.internalField(), cellI)
     {
         C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;
         C1[i].internalField()[cellI] = max(C1[i].internalField()[cellI], 0);
-        C0[i].internalField()[cellI] += mS0[i].internalField()[cellI]*dt;
+        C0[i].internalField()[cellI] += -mS1[i].internalField()[cellI]*dt;
         C0[i].internalField()[cellI] = max(C0[i].internalField()[cellI], 0);
         C1Tot_cellI += C1[i].internalField()[cellI];
         C0Tot_cellI += C0[i].internalField()[cellI];
