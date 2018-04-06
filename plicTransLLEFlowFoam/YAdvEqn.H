@@ -147,25 +147,28 @@ for(label i=0; i<(nSpecies - 1); i++)
             << "---------------------------------------------------------------------" << nl
             << endl;
     }
+    
+    if(redist_C)
+    {
+        plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
 
-    plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
-
-    Info<< "Phase-1 Ci after redistribution = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()
-        << nl
-        << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
-        << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
-        << nl
-        << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
-        << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
-        << endl;
-        
+        Info<< "Phase-1 Ci after redistribution = "
+            << (C1i).weightedAverage(mesh.Vsc()).value()
+            << nl
+            << "Min(C1i) = " << min(C1i).value()
+            << "  Max(C1i) = " << max(C1i).value()
+            << nl
+            << "Min(Y1i) = " << min(Y1i).value()
+            << "  Max(Y1i) = " << max(Y1i).value()
+            << nl
+            << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
+            << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
+            << nl
+            << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
+            << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+            << endl;
+    }
+   
     forAll(C1iCells,cellI)
     {        
         if(Y1iCells[cellI] < Y1min[i])
@@ -319,24 +322,27 @@ for(label i=0; i<(nSpecies - 1); i++)
             << endl;
     }
 
-    plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
+    if(redist_C)
+    {
+        plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
 
-    Info<< "Phase-0 Ci after redistribution = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << nl
-        << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
-        << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
-        << nl
-        << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
-        << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-        << endl;      
-          
+        Info<< "Phase-0 Ci after redistribution = "
+            << (C0i).weightedAverage(mesh.Vsc()).value()
+            << nl
+            << "Min(C0i) = " << min(C0i).value()
+            << "  Max(C0i) = " << max(C0i).value()
+            << nl
+            << "Min(Y0i) = " << min(Y0i).value()
+            << "  Max(Y0i) = " << max(Y0i).value()
+            << nl
+            << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
+            << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
+            << nl
+            << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
+            << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
+            << endl;      
+    }     
+     
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < Y0min[i])

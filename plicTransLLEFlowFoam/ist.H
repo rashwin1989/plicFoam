@@ -16,8 +16,12 @@ for(label i=0; i<nSpecies; i++)
 {
     List<scalar>& Y1i_flatFld_ist = Y1_flatFld_ist[i];
     List<scalar>& Y0i_flatFld_ist = Y0_flatFld_ist[i];
-    plicFuncs::makeFlatFld(Y1[i], istMap, Y1i_flatFld_ist);    
-    plicFuncs::makeFlatFld(Y0[i], istMap, Y0i_flatFld_ist);    
+    plicFuncs::makeFlatFld(Y1[i], istMap, Y1i_flatFld_ist);
+    plicFuncs::makeFlatFld(Y0[i], istMap, Y0i_flatFld_ist);
+    List<scalar>& X1i_flatFld_ist = X1_flatFld_ist[i];
+    List<scalar>& X0i_flatFld_ist = X0_flatFld_ist[i];
+    plicFuncs::makeFlatFld(X1[i], istMap, X1i_flatFld_ist);
+    plicFuncs::makeFlatFld(X0[i], istMap, X0i_flatFld_ist);
 }
 //Done make flat fields for alpha1 and phase centroids required for gradient calculation
 //-----------------------------------------------------------------------------------------------------//

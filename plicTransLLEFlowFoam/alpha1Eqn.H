@@ -6,12 +6,25 @@ if(alpha_debug)
            << nl << endl;
 }
 
+/*
 fvScalarMatrix alpha1Eqn
 (
     fvm::ddt(alpha1) + fvc::div(phiAlpha1)
 );
 
 alpha1Eqn.solve();
+*/
+
+scalar dt = runTime.deltaTValue();
+scalarField& alphaCells = alpha1.internalField();
+
+volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
+scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
+
+forAll(alphaCells, cellI)
+{
+    alphaCells[cellI] += -surfInt_phiAlpha1Cells[cellI]*dt;
+}
 
 Info<< "Phase-1 volume fraction = "
     << alpha1.weightedAverage(mesh.Vsc()).value()
@@ -22,7 +35,6 @@ Info<< "Phase-1 volume fraction = "
     << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
     << endl;
 
-scalarField& alphaCells = alpha1.internalField();
 label nCells = mesh.nCells();
 
 scalar maxAlpha1 = 1;
@@ -264,6 +276,17 @@ if(redist_alpha)
             maxAlpha1Cell = cellI;
         }
     }
+
+    alpha1.correctBoundaryConditions();
+
+    Info<< "Phase-1 volume fraction after redistribution = "
+        << alpha1.weightedAverage(mesh.Vsc()).value()
+        << "  Min(alpha1) = " << min(alpha1).value()
+        << "  Max(alpha1) = " << max(alpha1).value()
+        << nl
+        << "alpha1 undershoot = " << min(alpha1).value()
+        << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
+        << endl;
 }
 
 if(alpha_debug)
@@ -285,17 +308,6 @@ if(alpha_debug)
         << "Max alpha1 cell: " << maxAlpha1Cell  << " Max cell loc: " << maxAlpha1CellC << " Max alpha1 value: " << maxAlpha1 << nl
         << endl;
 }
-
-alpha1.correctBoundaryConditions();
-
-Info<< "Phase-1 volume fraction after redistribution = "
-    << alpha1.weightedAverage(mesh.Vsc()).value()
-    << "  Min(alpha1) = " << min(alpha1).value()
-    << "  Max(alpha1) = " << max(alpha1).value()
-    << nl
-    << "alpha1 undershoot = " << min(alpha1).value()
-    << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
-    << endl;
 
 alpha1.max(0.0);
 alpha1.min(1.0);

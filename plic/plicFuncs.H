@@ -236,6 +236,34 @@ namespace plicFuncs
         OFstream&
     );
 
+    void calcCellGradWeights
+    (
+        const label& curCell_lbl,
+        const vector& nf,
+        const List<List<scalar> >& Y,
+        const List<scalar>& T,
+        const List<scalar>& alpha1,
+        const List<vector>& C,
+        const labelList& curCellsAll,
+        const scalar& MIN_ALPHA_DIFF,
+        const label& phaseLbl,
+        scalar& alpha,
+        scalar& beta,
+        scalar& magt1,
+        scalar& magt2,
+        List<scalar>& Yp,
+        List<scalar>& Y1,
+        List<scalar>& Y2,
+        scalar& Tp,
+        scalar& T1,
+        scalar& T2,
+        bool& foundCell1,
+        bool& foundCell2,
+        const label& n,
+        bool debug, 
+        OFstream& os
+    );
+
     void calcCellGrad
     (
         const label&,
@@ -249,6 +277,24 @@ namespace plicFuncs
         scalar&,
         bool, 
         OFstream&
+    );
+
+    void calcCellGrad
+    (
+        const label& curCell_lbl,
+        const vector& nf,
+        const List<List<scalar> >& Y,
+        const List<scalar>& T,
+        const List<scalar>& alpha1,
+        const List<vector>& C,
+        const labelList& curCellsAll,
+        const scalar& MIN_ALPHA_DIFF,
+        const label& phaseLbl,
+        List<scalar>& cellGrad_Y,
+        scalar& cellGrad_T,
+        const label& n,
+        bool debug, 
+        OFstream& os
     );
 
     void calcTwoSidedFaceGradWeights
@@ -288,6 +334,43 @@ namespace plicFuncs
         OFstream&
     );
 
+    void calcFaceGradFromWeights
+    (
+        const vector& nf,
+        const vector& Cf,
+        const vector& Cp,    
+        const scalar& alphap,
+        const scalar& betap,
+        const scalar& magt1p,
+        const scalar& magt2p,
+        const List<scalar>& Yp,
+        const List<scalar>& Y1p,
+        const List<scalar>& Y2p,
+        const scalar& Tp,
+        const scalar& T1p,
+        const scalar& T2p,
+        const bool& foundCell1p,
+        const bool& foundCell2p,
+        const vector& Cm,
+        const scalar& alpham,
+        const scalar& betam,
+        const scalar& magt1m,
+        const scalar& magt2m,
+        const List<scalar>& Ym,
+        const List<scalar>& Y1m,
+        const List<scalar>& Y2m,
+        const scalar& Tm,
+        const scalar& T1m,
+        const scalar& T2m,
+        const bool& foundCell1m,
+        const bool& foundCell2m,
+        List<scalar>& faceGrad_Y,
+        scalar& faceGrad_T,
+        const label& n,
+        bool debug, 
+        OFstream& os
+    );
+
     template<class Type>
     void makeFlatFld
     (
@@ -313,6 +396,36 @@ namespace plicFuncs
         const label& i,
         const scalar& MIN_ALPHA_DIFF,
         const bool debug, 
+        OFstream& os
+    );
+
+    void calc_2ph_gradf
+    (    
+        const fvMesh& mesh,
+        const labelListList& diffCellStencil,
+        const PtrList<volScalarField>& Y1,
+        const PtrList<volScalarField>& Y0,
+        const volScalarField& T1,
+        const volScalarField& T0,
+        const List<List<scalar> >& Y1_flatFld_diff,
+        const List<List<scalar> >& Y0_flatFld_diff,
+        const List<scalar>& T1_flatFld_diff,
+        const List<scalar>& T0_flatFld_diff,
+        const List<scalar>& alpha1_flatFld_diff,
+        const List<vector>& C_ph1_flatFld_diff,
+        const List<vector>& C_ph0_flatFld_diff,
+        const vectorField& Cf_ph1_own,
+        const vectorField& Cf_ph1_nei,
+        const vectorField& Cf_ph0_own,
+        const vectorField& Cf_ph0_nei,
+        const labelList& face_phaseState_diff,
+        PtrList<surfaceScalarField>& gradf_Y1,
+        PtrList<surfaceScalarField>& gradf_Y0,
+        surfaceScalarField& gradf_T1,
+        surfaceScalarField& gradf_T0,
+        const label& n,
+        const scalar& MIN_ALPHA_DIFF,
+        const bool debug,
         OFstream& os
     );
 

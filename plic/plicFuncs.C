@@ -1175,6 +1175,272 @@ void calcCellGradWeights
 }
 
 
+void calcCellGradWeights
+(
+    const label& curCell_lbl,
+    const vector& nf,
+    const List<List<scalar> >& Y,
+    const List<scalar>& T,
+    const List<scalar>& alpha1,
+    const List<vector>& C,
+    const labelList& curCellsAll,
+    const scalar& MIN_ALPHA_DIFF,
+    const label& phaseLbl,
+    scalar& alpha,
+    scalar& beta,
+    scalar& magt1,
+    scalar& magt2,
+    List<scalar>& Yp,
+    List<scalar>& Y1,
+    List<scalar>& Y2,
+    scalar& Tp,
+    scalar& T1,
+    scalar& T2,
+    bool& foundCell1,
+    bool& foundCell2,
+    const label& n,
+    bool debug, 
+    OFstream& os
+)
+{
+    label i, n_ph, cellI, cellI_lbl, C1_lbl, C2_lbl;    
+    scalar MAX_ALPHA_DIFF, costheta1, theta1, magt1t2, theta2_sign, theta2, theta2_1, costheta2;
+    scalar sintheta12, T2_1;
+    vector Cp, C1, C2, t1, t2;
+    labelList curCells(curCellsAll.size());    
+    List<scalar> Y2_1(n);    
+
+    if(debug)
+    {
+        os<< "Calculating cell grad weights in cell " << curCell_lbl << nl
+            << endl;
+    }
+
+    MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;        
+    n_ph = 0;
+
+    if(debug)
+    {
+        os<< "Reducing cell stencil for phase " << phaseLbl << nl
+            << "Full cell stencil" << nl
+            << curCellsAll << nl
+            << endl;
+    }
+
+    if(phaseLbl == 1)
+    {
+        for(cellI=0; cellI<curCellsAll.size(); cellI++)
+        {            
+            cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MIN_ALPHA_DIFF = " << MIN_ALPHA_DIFF << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] > MIN_ALPHA_DIFF && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = cellI_lbl;
+            }            
+        }        
+    }
+    else
+    {
+        for(cellI=0; cellI<curCellsAll.size(); cellI++)
+        {
+            cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MAX_ALPHA_DIFF = " << MAX_ALPHA_DIFF << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] < MAX_ALPHA_DIFF && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = curCellsAll[cellI];
+            }            
+        }
+    }
+    
+    curCells.setSize(n_ph);
+
+    if(debug)
+    {
+        os<< "Cell reduced stencil" << nl
+            << curCells << nl
+            << endl;
+    }
+
+    // suffix 1: direction closest to nf
+    // suffix 2: direction closest orthogonal to nf in 2-D
+    // further improvements needed for 3-D calculation
+    Cp = C[curCell_lbl];
+    Tp = T[curCell_lbl];
+    for(i=0; i<n; i++)
+    {
+        Yp[i] = Y[i][curCell_lbl];
+    }
+    foundCell1 = false;
+    C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,foundCell1,debug,os);
+    if(foundCell1)
+    {
+        C1 = C[C1_lbl];
+        for(i=0; i<n; i++)
+        {
+            Y1[i] = Y[i][C1_lbl];
+        }        
+        T1 = T[C1_lbl];
+
+        t1 = C1 - Cp;
+        magt1 = mag(t1);
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << endl;
+        }
+        if(magt1 < SMALL){magt1 += SMALL;}
+        costheta1 = (nf & t1)/magt1;
+        if(mag(costheta1) > 1){costheta1 = 1;}
+        theta1 = acos(costheta1);
+
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << "costheta1 = " << costheta1 << "  theta1 = " << theta1
+                << endl;
+        }
+
+        if(theta1 > 1E-3)
+        {
+            foundCell2 = false;
+            C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,foundCell2,debug,os);
+
+            if(foundCell2)
+            {
+                C2 = C[C2_lbl];
+                for(i=0; i<n; i++)
+                {
+                    Y2[i] = Y[i][C2_lbl];
+                    Y2_1[i] = Y2[i];
+                }
+                T2 = T[C2_lbl];
+                T2_1 = T2;
+                t2 = C2 - Cp;
+                magt2 = mag(t2);
+                if(magt2 < SMALL){magt2 += SMALL;}    
+                magt1t2 = magt1*magt2;
+                if(magt1t2 < SMALL){magt1t2 += SMALL;}
+
+                if(debug)
+                {
+                    os<< "C2_lbl: " << C2_lbl << "  C2 = " << C2 << " t1 = " << t2 << "  mag(t2) = " << magt2 << "  mag(t1*t2) = " << magt1t2
+                        << endl;
+                }
+
+                theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;                
+
+                if(debug)
+                {
+                    os<< "mag(t1*t2) = " << magt1t2 << "  theta2_sign = " << theta2_sign;
+                }
+                
+                costheta2 = (nf & t2)/magt2;
+                if(debug)
+                {
+                    os<< "  costheta2 = " << costheta2; 
+                }
+                if(mag(costheta2) > 1){costheta2 /= mag(costheta2);}
+                if(theta2_sign >= 0)
+                {
+                    theta2 = acos(costheta2);
+                    theta2_1 = theta2;
+                }
+                else
+                {
+                    theta2 = constant::mathematical::pi - acos(costheta2);
+                    theta2_1 = acos(costheta2);
+                    for(i=0; i<n; i++)
+                    {
+                        Y2[i] = Yp[i] + (Yp[i] - Y2_1[i]);
+                    }
+                    T2 = Tp + (Tp - T2_1);
+                }
+
+                if(debug)
+                {
+                    os<< "theta2 = " << theta2 << "  theta2_1 = " << theta2_1 << nl                    
+                        << setw(7) << "Species" << "  " << setw(10) << "Yp" << "  " << setw(10) << "Y1" << "  " << setw(10) << "Y2" << "  " <<setw(10) << "Y2_1" << endl;
+                    for(i=0; i<n; i++)
+                    {
+                        os<< setw(7) << i << "  " << setw(10) << Yp[i] << "  " << setw(10) << Y1[i] << "  " << setw(10) << Y2[i] << "  " <<setw(10) << Y2_1[i] << endl;
+                    }
+                    os<< "Tp = " << Tp << "  T1 = " << T1 << "  T2 = " << T2 << "  T2_1 = " << T2_1 << endl;
+                }
+
+                sintheta12 = sin(theta1 + theta2);
+                if(sintheta12 < SMALL){sintheta12 += SMALL;}
+
+                alpha = sin(theta2)/sintheta12;
+                beta = sin(theta1)/sintheta12;                
+            }
+            else
+            {
+                magt2 = mag(C[curCellsAll[0]] - C[curCellsAll[1]]);
+                alpha = 1;
+                beta = 0;
+                for(i=0; i<n; i++)
+                {
+                    Y2[i] = Y1[i];
+                }
+            }
+            T2 = Tp;
+        }
+        else
+        {
+            foundCell2 = false;
+            magt2 = mag(C[curCellsAll[0]] - C[curCellsAll[1]]);
+            alpha = 1;
+            beta = 0;
+            for(i=0; i<n; i++)
+            {
+                Y2[i] = Y1[i];
+            }
+            T2 = Tp;
+        }
+    }
+    else
+    {
+        os<< "Cell 1 not found! Fatal error!" << nl
+            << endl;
+        foundCell1 = false;
+        foundCell2 = false;
+        magt1 = mag(C[curCellsAll[0]] - C[curCellsAll[1]]);
+        magt2 = mag(C[curCellsAll[0]] - C[curCellsAll[1]]);
+        alpha = 0;
+        beta = 0;
+        for(i=0; i<n; i++)
+        {
+            Y1[i] = Yp[i];
+            Y2[i] = Yp[i];            
+        }
+        T1 = Tp;
+        T2 = Tp;
+    }
+
+    if(debug)
+    {
+        os<< "alpha = " << alpha << "  beta = " << beta << nl
+            << endl;
+    }
+}
+
+
 void calcCellGrad
 (
     const label& curCell_lbl,
@@ -1367,6 +1633,269 @@ void calcCellGrad
 }
 
 
+void calcCellGrad
+(
+    const label& curCell_lbl,
+    const vector& nf,
+    const List<List<scalar> >& Y,
+    const List<scalar>& T,
+    const List<scalar>& alpha1,
+    const List<vector>& C,
+    const labelList& curCellsAll,
+    const scalar& MIN_ALPHA_DIFF,
+    const label& phaseLbl,
+    List<scalar>& cellGrad_Y,
+    scalar& cellGrad_T,
+    const label& n,
+    bool debug, 
+    OFstream& os
+)
+{    
+    label i, n_ph, cellI, cellI_lbl, C1_lbl, C2_lbl;
+    bool foundCell1, foundCell2;
+    scalar MAX_ALPHA_DIFF, costheta1, theta1, magt1t2, theta2_sign, theta2, theta2_1, costheta2;
+    scalar sintheta12, alpha, beta, magt1, magt2, Tp, T1, T2, T2_1;
+    vector Cp, C1, C2, t1, t2;
+    labelList curCells(curCellsAll.size());
+    List<scalar> Yp(n);
+    List<scalar> Y1(n);
+    List<scalar> Y2(n);
+    List<scalar> Y2_1(n);
+
+    if(debug)
+    {
+        os<< "Calculating cell grad weights in cell " << curCell_lbl << nl
+            << endl;
+    }
+
+    MAX_ALPHA_DIFF = 1 - MIN_ALPHA_DIFF;        
+    n_ph = 0;
+
+    if(debug)
+    {
+        os<< "Reducing cell stencil for phase " << phaseLbl << nl
+            << "Full cell stencil" << nl
+            << curCellsAll << nl
+            << endl;
+    }
+
+    if(phaseLbl == 1)
+    {
+        for(cellI=0; cellI<curCellsAll.size(); cellI++)
+        {            
+            cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MIN_ALPHA_DIFF = " << MIN_ALPHA_DIFF << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] > MIN_ALPHA_DIFF && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = cellI_lbl;
+            }            
+        }        
+    }
+    else
+    {
+        for(cellI=0; cellI<curCellsAll.size(); cellI++)
+        {
+            cellI_lbl = curCellsAll[cellI];
+
+            if(debug)
+            {
+                os<< "cellI: " << cellI << "  cellI_lbl: " << cellI_lbl << nl
+                    << "alpha1 = " << alpha1[cellI_lbl] << "  MAX_ALPHA_DIFF = " << MAX_ALPHA_DIFF << nl
+                    << endl;
+            }
+
+            if(alpha1[cellI_lbl] < MAX_ALPHA_DIFF && cellI_lbl != curCell_lbl)
+            {
+                curCells[n_ph++] = curCellsAll[cellI];
+            }            
+        }
+    }
+    
+    curCells.setSize(n_ph);
+
+    if(debug)
+    {
+        os<< "Cell reduced stencil" << nl
+            << curCells << nl
+            << endl;
+    }
+
+    // suffix 1: direction closest to nf
+    // suffix 2: direction closest orthogonal to nf in 2-D
+    // further improvements needed for 3-D calculation
+    Cp = C[curCell_lbl];
+    for(i=0; i<n; i++)
+    {
+        Yp[i] = Y[i][curCell_lbl];
+    }
+    Tp = T[curCell_lbl];
+    foundCell1 = false;
+    C1_lbl = findCellInFaceDir(curCells,C,Cp,nf,-1,foundCell1,debug,os);
+    if(foundCell1)
+    {
+        C1 = C[C1_lbl];
+        for(i=0; i<n; i++)
+        {
+            Y1[i] = Y[i][C1_lbl];
+        }
+        T1 = T[C1_lbl];
+
+        t1 = C1 - Cp;
+        magt1 = mag(t1);
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << endl;
+        }
+        if(magt1 < SMALL){magt1 += SMALL;}
+        costheta1 = (nf & t1)/magt1;
+        if(mag(costheta1) > 1){costheta1 = 1;}
+        theta1 = acos(costheta1);
+
+        if(debug)
+        {
+            os<< "Cell: " << curCell_lbl << "  Cp = " << Cp << "  nf = " << nf << nl
+                << "C1_lbl: " << C1_lbl << "  C1 = " << C1 << " t1 = " << t1 << "  mag(t1) = " << magt1
+                << "costheta1 = " << costheta1 << "  theta1 = " << theta1
+                << endl;
+        }
+
+        if(theta1 > 1E-3)
+        {
+            foundCell2 = false;
+            C2_lbl = findCellInFaceOrthDir(curCells,C,Cp,C1,nf,C1_lbl,foundCell2,debug,os);
+
+            if(foundCell2)
+            {
+                C2 = C[C2_lbl];
+                for(i=0; i<n; i++)
+                {
+                    Y2[i] = Y[i][C2_lbl];
+                    Y2_1[i] = Y2[i];
+                }
+                T2 = T[C2_lbl];
+                T2_1 = T2;
+                t2 = C2 - Cp;
+                magt2 = mag(t2);
+                if(magt2 < SMALL){magt2 += SMALL;}    
+                magt1t2 = magt1*magt2;
+                if(magt1t2 < SMALL){magt1t2 += SMALL;}
+
+                if(debug)
+                {
+                    os<< "C2_lbl: " << C2_lbl << "  C2 = " << C2 << " t1 = " << t2 << "  mag(t2) = " << magt2 << "  mag(t1*t2) = " << magt1t2
+                        << endl;
+                }
+
+                theta2_sign = -((nf ^ t1) & (nf ^ t2))/magt1t2;                
+
+                if(debug)
+                {
+                    os<< "mag(t1*t2) = " << magt1t2 << "  theta2_sign = " << theta2_sign;
+                }
+                
+                costheta2 = (nf & t2)/magt2;
+                if(debug)
+                {
+                    os<< "  costheta2 = " << costheta2; 
+                }
+                if(mag(costheta2) > 1){costheta2 /= mag(costheta2);}
+                if(theta2_sign >= 0)
+                {
+                    theta2 = acos(costheta2);
+                    theta2_1 = theta2;
+                }
+                else
+                {
+                    theta2 = constant::mathematical::pi - acos(costheta2);
+                    theta2_1 = acos(costheta2);
+                    for(i=0; i<n; i++)
+                    {
+                        Y2[i] = Yp[i] + (Yp[i] - Y2_1[i]);
+                    }
+                    T2 = Tp + (Tp - T2_1);
+                }
+
+                if(debug)
+                {
+                    os<< "theta2 = " << theta2 << "  theta2_1 = " << theta2_1 << nl                    
+                        << setw(7) << "Species" << "  " << setw(10) << "Yp" << "  " << setw(10) << "Y1" << "  " << setw(10) << "Y2" << "  " <<setw(10) << "Y2_1" << endl;
+                    for(i=0; i<n; i++)
+                    {
+                        os<< setw(7) << i << "  " << setw(10) << Yp[i] << "  " << setw(10) << Y1[i] << "  " << setw(10) << Y2[i] << "  " <<setw(10) << Y2_1[i] << endl;
+                    }
+                    os<< "Tp = " << Tp << "  T1 = " << T1 << "  T2 = " << T2 << "  T2_1 = " << T2_1 << endl;
+                }
+
+                sintheta12 = sin(theta1 + theta2);
+                if(sintheta12 < SMALL){sintheta12 += SMALL;}
+
+                alpha = sin(theta2)/sintheta12;
+                beta = sin(theta1)/sintheta12;
+                for(i=0; i<n; i++)
+                {
+                    cellGrad_Y[i] = alpha*(Y1[i] - Yp[i])/magt1 + beta*(Y2[i] - Yp[i])/magt2;
+                }
+                cellGrad_T = alpha*(T1 - Tp)/magt1 + beta*(T2 - Tp)/magt2;
+            }
+            else
+            {                
+                alpha = 1;
+                beta = 0;
+                for(i=0; i<n; i++)
+                {
+                    cellGrad_Y[i] = (Y1[i] - Yp[i])/magt1;
+                }
+                cellGrad_T = (T1 - Tp)/magt1;
+            }
+        }
+        else
+        {
+            alpha = 1;
+            beta = 0;
+            for(i=0; i<n; i++)
+            {
+                cellGrad_Y[i] = (Y1[i] - Yp[i])/magt1;
+            }
+            cellGrad_T = (T1 - Tp)/magt1;
+        }
+    }
+    else
+    {
+        os<< "Cell 1 not found! Fatal error!" << nl
+            << endl;
+        
+        alpha = 0;
+        beta = 0;
+        for(i=0; i<n; i++)
+        {
+            cellGrad_Y[i] = 0;
+        }
+        cellGrad_T = 0;
+    }
+
+    if(debug)
+    {
+        os<< "alpha = " << alpha << "  beta = " << beta << nl 
+            << setw(7) << "Species" << "  " << setw(10) << "cellGrad_Y" << endl;
+        for(i=0; i<n; i++)
+        {
+            os<< setw(7) << i << "  " << setw(10) << cellGrad_Y[i] << endl;
+        }
+        os<< "cellGrad_T = " << cellGrad_T << endl;
+        os<< endl;
+    }
+}
+
+
 void calcTwoSidedFaceGradWeights
 (
     const label& faceI,
@@ -1509,6 +2038,120 @@ void calcFaceGradFromWeights
             << "wOwn = " << wOwn << "  wNei = " << wNei << nl
             << "YOwn = " << Yp << "  YNei = " << Ym << nl
             << "face grad = " << faceGrad << nl
+            << endl;
+    }
+}
+
+
+void calcFaceGradFromWeights
+(
+    const vector& nf,
+    const vector& Cf,
+    const vector& Cp,    
+    const scalar& alphap,
+    const scalar& betap,
+    const scalar& magt1p,
+    const scalar& magt2p,
+    const List<scalar>& Yp,
+    const List<scalar>& Y1p,
+    const List<scalar>& Y2p,
+    const scalar& Tp,
+    const scalar& T1p,
+    const scalar& T2p,
+    const bool& foundCell1p,
+    const bool& foundCell2p,
+    const vector& Cm,
+    const scalar& alpham,
+    const scalar& betam,
+    const scalar& magt1m,
+    const scalar& magt2m,
+    const List<scalar>& Ym,
+    const List<scalar>& Y1m,
+    const List<scalar>& Y2m,
+    const scalar& Tm,
+    const scalar& T1m,
+    const scalar& T2m,
+    const bool& foundCell1m,
+    const bool& foundCell2m,
+    List<scalar>& faceGrad_Y,
+    scalar& faceGrad_T,
+    const label& n,
+    bool debug, 
+    OFstream& os
+)
+{
+    label i;
+    scalar mup, mum, dp, dm, dpdm, gradTOwn, gradTNei;
+    List<scalar> gradYOwn(n);
+    List<scalar> gradYNei(n);
+
+    if(debug)
+    {
+        os<< "Calculating face grad from weights" << nl            
+            << endl;
+    }
+
+    if(!foundCell1p && !foundCell1m)
+    {
+        mup = 0;
+        mum = 0;
+    }
+    else
+    {
+        if(!foundCell1p)
+        {
+            mup = 0;
+            mum = 1 - mup;
+        }
+        else
+        {
+            if(!foundCell1m)
+            {
+                mup = 1;
+                mum = 1 - mup;
+            }
+            else
+            {
+                dp = mag(nf & (Cf - Cp));
+                dm = mag(nf & (Cf - Cm));
+                if(dp < SMALL && dm < SMALL)
+                {
+                    mup = 0.5;
+                    mum = 1 - mup;
+                }
+                else
+                {
+                    dpdm = dp + dm;
+                    if(dpdm < SMALL) dpdm += SMALL;
+                    mup = dm/dpdm;
+                    mup = min(mup, 1);
+                    mum = 1 - mup;
+                }
+            }
+        }
+    }
+
+    for(i=0; i<n; i++)
+    {
+        gradYOwn[i] = alphap*(Y1p[i] - Yp[i])/magt1p + betap*(Y2p[i] - Yp[i])/magt2p;
+        gradYNei[i] = alpham*(Y1m[i] - Ym[i])/magt1m + betam*(Y2m[i] - Ym[i])/magt2m;
+        faceGrad_Y[i] = mup*gradYOwn[i] - mum*gradYNei[i];
+    }
+    gradTOwn = alphap*(T1p - Tp)/magt1p + betap*(T2p - Tp)/magt2p;
+    gradTNei = alpham*(T1m - Tm)/magt1m + betam*(T2m - Tm)/magt2m;
+    faceGrad_T = mup*gradTOwn - mum*gradTNei;
+
+    if(debug)
+    {
+        os<< "mup = " << mup << "  mum = " << mum << nl
+            << setw(7) << "Species" << "  " << setw(16) << "gradYOwn" << "  " << setw(16) << "gradYNei" << "  " << setw(16) << "faceGradY"
+            << endl;
+        for(i=0; i<n; i++)
+        {
+            os<< setw(7) << i << "  " << setw(16) << gradYOwn[i] << "  " << setw(16) << gradYNei[i] << "  " << setw(16) << faceGrad_Y[i]
+                << endl;
+        }
+        os<< "gradTOwn = " << gradTOwn << "  gradTNei = " << gradTNei << "  faceGradT = " << faceGrad_T << nl
             << endl;
     }
 }
@@ -2219,6 +2862,1013 @@ void calc_2ph_gradf
                 pgradf_Y0i[fcI] = 0;
 
                 faceI++;
+            }
+        }//end if(pp.coupled())        
+    }//end forAll(patches,patchI)
+
+    //end boundary faces
+}
+
+
+void calc_2ph_gradf
+(    
+    const fvMesh& mesh,
+    const labelListList& diffCellStencil,
+    const PtrList<volScalarField>& Y1,
+    const PtrList<volScalarField>& Y0,
+    const volScalarField& T1,
+    const volScalarField& T0,
+    const List<List<scalar> >& Y1_flatFld_diff,
+    const List<List<scalar> >& Y0_flatFld_diff,
+    const List<scalar>& T1_flatFld_diff,
+    const List<scalar>& T0_flatFld_diff,
+    const List<scalar>& alpha1_flatFld_diff,
+    const List<vector>& C_ph1_flatFld_diff,
+    const List<vector>& C_ph0_flatFld_diff,
+    const vectorField& Cf_ph1_own,
+    const vectorField& Cf_ph1_nei,
+    const vectorField& Cf_ph0_own,
+    const vectorField& Cf_ph0_nei,
+    const labelList& face_phaseState_diff,
+    PtrList<surfaceScalarField>& gradf_Y1,
+    PtrList<surfaceScalarField>& gradf_Y0,
+    surfaceScalarField& gradf_T1,
+    surfaceScalarField& gradf_T0,
+    const label& n,
+    const scalar& MIN_ALPHA_DIFF,
+    const bool debug,
+    OFstream& os
+)
+{   
+    label faceI, curPhaseState, faceOwn, faceNei, i, nBnd, bndFaceI;
+    bool foundCell1p, foundCell2p, foundCell1m, foundCell2m;
+    scalar curMagSf, alpha1Own, gradf_T1_faceI, gradf_T0_faceI;
+    scalar alphap, betap, magt1p, magt2p, Tp, T1p, T2p;
+    scalar alpham, betam, magt1m, magt2m, Tm, T1m, T2m;
+    vector nf, Cf_ph1_faceI, Cf_ph0_faceI, Cp_ph1, Cp_ph0, Cm_ph1, Cm_ph0;
+
+    List<scalar> gradf_Y1_faceI(n);
+    List<scalar> gradf_Y0_faceI(n);
+    List<scalar> Yp(n);
+    List<scalar> Y1p(n);
+    List<scalar> Y2p(n);
+    List<scalar> Ym(n);
+    List<scalar> Y1m(n);
+    List<scalar> Y2m(n);
+
+    nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    List<vector> Cp_ph1_bnd(nBnd);
+    List<scalar> alphap_ph1_bnd(nBnd);
+    List<scalar> betap_ph1_bnd(nBnd);
+    List<scalar> magt1p_ph1_bnd(nBnd);
+    List<scalar> magt2p_ph1_bnd(nBnd);
+    List<List<scalar> > Yp_ph1_bnd(n);
+    List<List<scalar> > Y1p_ph1_bnd(n);
+    List<List<scalar> > Y2p_ph1_bnd(n);
+    List<scalar> Tp_ph1_bnd(nBnd);
+    List<scalar> T1p_ph1_bnd(nBnd);
+    List<scalar> T2p_ph1_bnd(nBnd);
+    List<bool> foundCell1p_ph1_bnd(nBnd);
+    List<bool> foundCell2p_ph1_bnd(nBnd);
+
+    List<vector> Cp_ph0_bnd(nBnd);
+    List<scalar> alphap_ph0_bnd(nBnd);
+    List<scalar> betap_ph0_bnd(nBnd);
+    List<scalar> magt1p_ph0_bnd(nBnd);
+    List<scalar> magt2p_ph0_bnd(nBnd);
+    List<List<scalar> > Yp_ph0_bnd(n);
+    List<List<scalar> > Y1p_ph0_bnd(n);
+    List<List<scalar> > Y2p_ph0_bnd(n);
+    List<scalar> Tp_ph0_bnd(nBnd);
+    List<scalar> T1p_ph0_bnd(nBnd);
+    List<scalar> T2p_ph0_bnd(nBnd);
+    List<bool> foundCell1p_ph0_bnd(nBnd);
+    List<bool> foundCell2p_ph0_bnd(nBnd);
+
+    List<vector> Cm_ph1_bnd(nBnd);
+    List<scalar> alpham_ph1_bnd(nBnd);
+    List<scalar> betam_ph1_bnd(nBnd);
+    List<scalar> magt1m_ph1_bnd(nBnd);
+    List<scalar> magt2m_ph1_bnd(nBnd);
+    List<List<scalar> > Ym_ph1_bnd(n);
+    List<List<scalar> > Y1m_ph1_bnd(n);
+    List<List<scalar> > Y2m_ph1_bnd(n);
+    List<scalar> Tm_ph1_bnd(nBnd);
+    List<scalar> T1m_ph1_bnd(nBnd);
+    List<scalar> T2m_ph1_bnd(nBnd);
+    List<bool> foundCell1m_ph1_bnd(nBnd);
+    List<bool> foundCell2m_ph1_bnd(nBnd);
+
+    List<vector> Cm_ph0_bnd(nBnd);
+    List<scalar> alpham_ph0_bnd(nBnd);
+    List<scalar> betam_ph0_bnd(nBnd);
+    List<scalar> magt1m_ph0_bnd(nBnd);
+    List<scalar> magt2m_ph0_bnd(nBnd);
+    List<List<scalar> > Ym_ph0_bnd(n);
+    List<List<scalar> > Y1m_ph0_bnd(n);
+    List<List<scalar> > Y2m_ph0_bnd(n);
+    List<scalar> Tm_ph0_bnd(nBnd);
+    List<scalar> T1m_ph0_bnd(nBnd);
+    List<scalar> T2m_ph0_bnd(nBnd);
+    List<bool> foundCell1m_ph0_bnd(nBnd);
+    List<bool> foundCell2m_ph0_bnd(nBnd);
+
+    for(i=0; i<n; i++)
+    {
+        Yp_ph1_bnd[i].setSize(nBnd);
+        Yp_ph0_bnd[i].setSize(nBnd);
+        Ym_ph1_bnd[i].setSize(nBnd);
+        Ym_ph0_bnd[i].setSize(nBnd);
+    }    
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const surfaceVectorField& meshSf = mesh.Sf();
+    const surfaceScalarField& meshMagSf = mesh.magSf();
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+    if(debug)
+    {
+        os<< "Gradient calculation" << nl
+            << nl
+            << "Internal faces" << nl
+            << endl;
+    }
+
+    //Internal faces
+    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        curMagSf = meshMagSf[faceI];        
+        nf = meshSf[faceI]/curMagSf;
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+        curPhaseState = face_phaseState_diff[faceI];
+        Cf_ph1_faceI = 0.5*(Cf_ph1_own[faceI] + Cf_ph1_nei[faceI]);
+        Cf_ph0_faceI = 0.5*(Cf_ph0_own[faceI] + Cf_ph0_nei[faceI]);
+        Cp_ph1 = C_ph1_flatFld_diff[faceOwn];
+        Cp_ph0 = C_ph0_flatFld_diff[faceOwn];
+        Cm_ph1 = C_ph1_flatFld_diff[faceNei];
+        Cm_ph0 = C_ph0_flatFld_diff[faceNei];
+
+        if(debug)
+        {
+            os<< "Face: " << faceI << "  mag(Sf) = " << curMagSf << nl                
+                << "phase state for gradient calculation: " << curPhaseState << nl
+                << "Own: " << faceOwn << "  Nei: " << faceNei << endl;
+            print_line(os, 80);
+            os<< setw(7) << "Species" << "  " << setw(16) << "Y1Own" << "  " << setw(16) << "Y0Own" << "  " << setw(16) << "Y1Nei" << "  " << setw(16) << "Y0Nei" << endl;
+            print_line(os, 80);
+            for(i=0; i<n; i++)
+            {
+                os<< setw(7) << i << "  " << setw(16) << Y1_flatFld_diff[i][faceOwn] << "  " << setw(16) << Y0_flatFld_diff[i][faceOwn] << "  " << setw(16) << Y1_flatFld_diff[i][faceNei] << "  " << setw(16) << Y0_flatFld_diff[i][faceNei] << endl;
+            }
+            print_line(os, 80);
+            os<< "T1Own = " << T1_flatFld_diff[faceOwn] << "  T0Own = " << T0_flatFld_diff[faceOwn] << "T1Nei = " << T1_flatFld_diff[faceNei] << "  T0Nei = " << T0_flatFld_diff[faceNei] << endl;
+            print_line(os, 80);
+            os<< endl;
+        }
+
+        if(curPhaseState == 3)
+        {
+            for(i=0; i<n; i++)
+            {
+                gradf_Y1_faceI[i] = 0;
+                gradf_Y0_faceI[i] = 0;
+            }
+            gradf_T1_faceI = 0;
+            gradf_T0_faceI = 0;
+        }//end if(curPhaseState == 3)
+        else if(curPhaseState == 0)
+        {
+            //ph-0
+            //own
+            calcCellGradWeights(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, diffCellStencil[faceOwn], 0.1*MIN_ALPHA_DIFF, 0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+            //nei
+            calcCellGradWeights(faceNei, -nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, diffCellStencil[faceNei], 0.1*MIN_ALPHA_DIFF, 0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, n, debug, os);
+
+            calcFaceGradFromWeights(nf, Cf_ph0_faceI, Cp_ph0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+            //ph-1
+            for(i=0; i<n; i++)
+            {
+                gradf_Y1_faceI[i] = 0;
+            }
+            gradf_T1_faceI = 0;
+        }//end if(curPhaseState == 0)        
+        else if(curPhaseState == 1)
+        {
+            //ph-1
+            //own
+            calcCellGradWeights(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, diffCellStencil[faceOwn], 0.1*MIN_ALPHA_DIFF, 1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+            //nei
+            calcCellGradWeights(faceNei, -nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, diffCellStencil[faceNei], 0.1*MIN_ALPHA_DIFF, 1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, n, debug, os);
+
+            calcFaceGradFromWeights(nf, Cf_ph1_faceI, Cp_ph1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+            //ph-0
+            for(i=0; i<n; i++)
+            {
+                gradf_Y0_faceI[i] = 0;
+            }
+            gradf_T0_faceI = 0;
+        }//end if(curPhaseState == 1)
+        else
+        {
+            //ph-1
+            //own
+            calcCellGradWeights(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, diffCellStencil[faceOwn], 0.1*MIN_ALPHA_DIFF, 1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+            //nei
+            calcCellGradWeights(faceNei, -nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, diffCellStencil[faceNei], 0.1*MIN_ALPHA_DIFF, 1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, n, debug, os);
+
+            calcFaceGradFromWeights(nf, Cf_ph1_faceI, Cp_ph1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+            //ph-0
+            //own
+            calcCellGradWeights(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, diffCellStencil[faceOwn], 0.1*MIN_ALPHA_DIFF, 0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+            //nei
+            calcCellGradWeights(faceNei, -nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, diffCellStencil[faceNei], 0.1*MIN_ALPHA_DIFF, 0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, n, debug, os);
+
+            calcFaceGradFromWeights(nf, Cf_ph0_faceI, Cp_ph0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+        }//end if(curPhaseState == 2)
+
+        for(i=0; i<n; i++)
+        {
+            gradf_Y1[i][faceI] = gradf_Y1_faceI[i];
+            gradf_Y0[i][faceI] = gradf_Y0_faceI[i];
+        }
+        gradf_T1[faceI] = gradf_T1_faceI;
+        gradf_T0[faceI] = gradf_T0_faceI;
+
+        if(debug)
+        {
+            print_line(os, 80);
+            os<< setw(7) << "Species" << "  " << setw(16) << "gradf_Y1" << "  " << setw(16) << "  " << "gradf_Y0" << endl;
+            print_line(os, 80);
+            for(i=0; i<n; i++)
+            {
+                os<< setw(7) << i << "  " << setw(16) << gradf_Y1_faceI[i] << "  " << setw(16) << "  " << gradf_Y0_faceI[i] << endl;
+            }
+            print_line(os, 80);
+            os<< "gradf_T1 = " << gradf_T1_faceI << "  gradf_T0 = " << gradf_T0_faceI << endl;
+            print_line(os, 80);
+            os<< endl;
+        }        
+    }//end for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+
+    //end internal faces
+
+    if(debug)
+    {
+        os<< "Boundary faces" << nl
+            << endl;
+    }
+
+    //Boundary faces    
+    forAll(Y1[0].boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pY10 = Y1[0].boundaryField()[patchI];
+        const fvsPatchVectorField& pSf = meshSf.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];
+
+        if(pp.coupled())
+        {
+            if(debug)
+            {
+                os<< "---------------------------------------------------------------------------------" << nl
+                    << "Calculation of weights for own and nei cell gradient for coupled patch " << patchI << nl
+                    << "---------------------------------------------------------------------------------" << nl
+                    << endl;
+            }
+
+            faceI = pp.start();
+
+            forAll(pY10, fcI)
+            {
+                bndFaceI = faceI - mesh.nInternalFaces();                
+
+                nf = pSf[fcI]/pMagSf[fcI];
+                faceOwn = own[faceI];
+                alpha1Own = alpha1_flatFld_diff[faceOwn];
+                const labelList& ownCells = diffCellStencil[faceOwn];
+                curPhaseState = face_phaseState_diff[faceI];
+
+                if(curPhaseState == 0)
+                {                    
+                    //ph-0
+                    //own
+                    calcCellGradWeights(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    
+                    Cp_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alphap_ph0_bnd[bndFaceI] = alphap;
+                    betap_ph0_bnd[bndFaceI] = betap;
+                    magt1p_ph0_bnd[bndFaceI] = magt1p;
+                    magt2p_ph0_bnd[bndFaceI] = magt2p;
+                    Tp_ph0_bnd[bndFaceI] = Tp;
+                    T1p_ph0_bnd[bndFaceI] = T1p;
+                    T2p_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alpham_ph0_bnd[bndFaceI] = alphap;
+                    betam_ph0_bnd[bndFaceI] = betap;
+                    magt1m_ph0_bnd[bndFaceI] = magt1p;
+                    magt2m_ph0_bnd[bndFaceI] = magt2p;
+                    Tm_ph0_bnd[bndFaceI] = Tp;
+                    T1m_ph0_bnd[bndFaceI] = T1p;
+                    T2m_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+
+                    //ph-1
+                    //own
+                    Cp_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alphap_ph1_bnd[bndFaceI] = alphap;
+                    betap_ph1_bnd[bndFaceI] = betap;
+                    magt1p_ph1_bnd[bndFaceI] = magt1p;
+                    magt2p_ph1_bnd[bndFaceI] = magt2p;
+                    Tp_ph1_bnd[bndFaceI] = Tp;
+                    T1p_ph1_bnd[bndFaceI] = T1p;
+                    T2p_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alpham_ph1_bnd[bndFaceI] = alphap;
+                    betam_ph1_bnd[bndFaceI] = betap;
+                    magt1m_ph1_bnd[bndFaceI] = magt1p;
+                    magt2m_ph1_bnd[bndFaceI] = magt2p;
+                    Tm_ph1_bnd[bndFaceI] = Tp;
+                    T1m_ph1_bnd[bndFaceI] = T1p;
+                    T2m_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
+                {
+                    //ph-1
+                    //own
+                    calcCellGradWeights(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    
+                    Cp_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alphap_ph1_bnd[bndFaceI] = alphap;
+                    betap_ph1_bnd[bndFaceI] = betap;
+                    magt1p_ph1_bnd[bndFaceI] = magt1p;
+                    magt2p_ph1_bnd[bndFaceI] = magt2p;
+                    Tp_ph1_bnd[bndFaceI] = Tp;
+                    T1p_ph1_bnd[bndFaceI] = T1p;
+                    T2p_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alpham_ph1_bnd[bndFaceI] = alphap;
+                    betam_ph1_bnd[bndFaceI] = betap;
+                    magt1m_ph1_bnd[bndFaceI] = magt1p;
+                    magt2m_ph1_bnd[bndFaceI] = magt2p;
+                    Tm_ph1_bnd[bndFaceI] = Tp;
+                    T1m_ph1_bnd[bndFaceI] = T1p;
+                    T2m_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+
+                    //ph-0
+                    //own
+                    Cp_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alphap_ph0_bnd[bndFaceI] = alphap;
+                    betap_ph0_bnd[bndFaceI] = betap;
+                    magt1p_ph0_bnd[bndFaceI] = magt1p;
+                    magt2p_ph0_bnd[bndFaceI] = magt2p;
+                    Tp_ph0_bnd[bndFaceI] = Tp;
+                    T1p_ph0_bnd[bndFaceI] = T1p;
+                    T2p_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alpham_ph0_bnd[bndFaceI] = alphap;
+                    betam_ph0_bnd[bndFaceI] = betap;
+                    magt1m_ph0_bnd[bndFaceI] = magt1p;
+                    magt2m_ph0_bnd[bndFaceI] = magt2p;
+                    Tm_ph0_bnd[bndFaceI] = Tp;
+                    T1m_ph0_bnd[bndFaceI] = T1p;
+                    T2m_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                }//end else if(curPhaseState == 0)
+                else if(curPhaseState == 2)
+                {                    
+                    //ph-1
+                    //own
+                    calcCellGradWeights(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    
+                    Cp_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alphap_ph1_bnd[bndFaceI] = alphap;
+                    betap_ph1_bnd[bndFaceI] = betap;
+                    magt1p_ph1_bnd[bndFaceI] = magt1p;
+                    magt2p_ph1_bnd[bndFaceI] = magt2p;
+                    Tp_ph1_bnd[bndFaceI] = Tp;
+                    T1p_ph1_bnd[bndFaceI] = T1p;
+                    T2p_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alpham_ph1_bnd[bndFaceI] = alphap;
+                    betam_ph1_bnd[bndFaceI] = betap;
+                    magt1m_ph1_bnd[bndFaceI] = magt1p;
+                    magt2m_ph1_bnd[bndFaceI] = magt2p;
+                    Tm_ph1_bnd[bndFaceI] = Tp;
+                    T1m_ph1_bnd[bndFaceI] = T1p;
+                    T2m_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+
+                    //ph-0
+                    //own
+                    calcCellGradWeights(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    
+                    Cp_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alphap_ph0_bnd[bndFaceI] = alphap;
+                    betap_ph0_bnd[bndFaceI] = betap;
+                    magt1p_ph0_bnd[bndFaceI] = magt1p;
+                    magt2p_ph0_bnd[bndFaceI] = magt2p;
+                    Tp_ph0_bnd[bndFaceI] = Tp;
+                    T1p_ph0_bnd[bndFaceI] = T1p;
+                    T2p_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alpham_ph0_bnd[bndFaceI] = alphap;
+                    betam_ph0_bnd[bndFaceI] = betap;
+                    magt1m_ph0_bnd[bndFaceI] = magt1p;
+                    magt2m_ph0_bnd[bndFaceI] = magt2p;
+                    Tm_ph0_bnd[bndFaceI] = Tp;
+                    T1m_ph0_bnd[bndFaceI] = T1p;
+                    T2m_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    if(alpha1Own < MIN_ALPHA_DIFF)
+                    {
+                        //ph-0
+                        //own
+                        calcCellGradWeights(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    }
+                    else
+                    {
+                        //ph-1
+                        //own
+                        calcCellGradWeights(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, 0.1*MIN_ALPHA_DIFF, 1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, n, debug, os);
+                    }
+
+                    //ph-1
+                    //own
+                    Cp_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alphap_ph1_bnd[bndFaceI] = alphap;
+                    betap_ph1_bnd[bndFaceI] = betap;
+                    magt1p_ph1_bnd[bndFaceI] = magt1p;
+                    magt2p_ph1_bnd[bndFaceI] = magt2p;
+                    Tp_ph1_bnd[bndFaceI] = Tp;
+                    T1p_ph1_bnd[bndFaceI] = T1p;
+                    T2p_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph1_bnd[bndFaceI] = C_ph1_flatFld_diff[faceOwn];
+                    alpham_ph1_bnd[bndFaceI] = alphap;
+                    betam_ph1_bnd[bndFaceI] = betap;
+                    magt1m_ph1_bnd[bndFaceI] = magt1p;
+                    magt2m_ph1_bnd[bndFaceI] = magt2p;
+                    Tm_ph1_bnd[bndFaceI] = Tp;
+                    T1m_ph1_bnd[bndFaceI] = T1p;
+                    T2m_ph1_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph1_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph1_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph1_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph1_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph1_bnd[i][bndFaceI] = Y2p[i];
+                    }
+
+                    //ph-0
+                    //own
+                    Cp_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alphap_ph0_bnd[bndFaceI] = alphap;
+                    betap_ph0_bnd[bndFaceI] = betap;
+                    magt1p_ph0_bnd[bndFaceI] = magt1p;
+                    magt2p_ph0_bnd[bndFaceI] = magt2p;
+                    Tp_ph0_bnd[bndFaceI] = Tp;
+                    T1p_ph0_bnd[bndFaceI] = T1p;
+                    T2p_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1p_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2p_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Yp_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1p_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2p_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                    //nei
+                    Cm_ph0_bnd[bndFaceI] = C_ph0_flatFld_diff[faceOwn];
+                    alpham_ph0_bnd[bndFaceI] = alphap;
+                    betam_ph0_bnd[bndFaceI] = betap;
+                    magt1m_ph0_bnd[bndFaceI] = magt1p;
+                    magt2m_ph0_bnd[bndFaceI] = magt2p;
+                    Tm_ph0_bnd[bndFaceI] = Tp;
+                    T1m_ph0_bnd[bndFaceI] = T1p;
+                    T2m_ph0_bnd[bndFaceI] = T2p;
+                    foundCell1m_ph0_bnd[bndFaceI] = foundCell1p;
+                    foundCell2m_ph0_bnd[bndFaceI] = foundCell2p;
+                    for(i=0; i<n; i++)
+                    {
+                        Ym_ph0_bnd[i][bndFaceI] = Yp[i];
+                        Y1m_ph0_bnd[i][bndFaceI] = Y1p[i];
+                        Y2m_ph0_bnd[i][bndFaceI] = Y2p[i];
+                    }
+                }//end if(curPhaseState == 3)
+
+                faceI++;
+            }//end forAll(pp, fcI)
+        }//end if(pp.coupled())
+    }//end forAll(patches,patchI)
+
+    syncTools::swapBoundaryFaceList(mesh, Cm_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, alpham_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, betam_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, magt1m_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, magt2m_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, Tm_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, T1m_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, T2m_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, foundCell1m_ph0_bnd);
+    syncTools::swapBoundaryFaceList(mesh, foundCell2m_ph0_bnd);
+    for(i=0; i<n; i++)
+    {
+        syncTools::swapBoundaryFaceList(mesh, Ym_ph0_bnd[i]);
+        syncTools::swapBoundaryFaceList(mesh, Y1m_ph0_bnd[i]);
+        syncTools::swapBoundaryFaceList(mesh, Y2m_ph0_bnd[i]);
+    }
+
+    syncTools::swapBoundaryFaceList(mesh, Cm_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, alpham_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, betam_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, magt1m_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, magt2m_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, Tm_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, T1m_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, T2m_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, foundCell1m_ph1_bnd);
+    syncTools::swapBoundaryFaceList(mesh, foundCell2m_ph1_bnd);
+    for(i=0; i<n; i++)
+    {
+        syncTools::swapBoundaryFaceList(mesh, Ym_ph1_bnd[i]);
+        syncTools::swapBoundaryFaceList(mesh, Y1m_ph1_bnd[i]);
+        syncTools::swapBoundaryFaceList(mesh, Y2m_ph1_bnd[i]);
+    }
+    
+    if(debug)
+    {
+        os<< "Done calculation of weights for own and nei cell gradient for coupled patches" << nl
+            << "---------------------------------------------------------------------------------" << nl 
+            << endl;
+    }    
+
+    forAll(Y1[0].boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];        
+        const fvPatchScalarField& pY10 = Y1[0].boundaryField()[patchI];        
+        const fvPatchScalarField& pT1 = T1.boundaryField()[patchI];        
+        const fvsPatchVectorField& pSf = meshSf.boundaryField()[patchI];
+        const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];
+        faceI = pp.start();
+
+        if(pp.coupled())
+        {
+            forAll(pY10, fcI)
+            {
+                bndFaceI = faceI - mesh.nInternalFaces();
+                curMagSf = pMagSf[fcI];        
+                nf = pSf[fcI]/curMagSf;
+                faceOwn = own[faceI];                
+                curPhaseState = face_phaseState_diff[faceI];
+                Cf_ph1_faceI = 0.5*(Cf_ph1_own[faceI] + Cf_ph1_nei[faceI]);
+                Cf_ph0_faceI = 0.5*(Cf_ph0_own[faceI] + Cf_ph0_nei[faceI]);
+
+                if(curPhaseState == 0)
+                {
+                    //ph-0
+                    Cp_ph0 = Cp_ph0_bnd[bndFaceI];
+                    alphap = alphap_ph0_bnd[bndFaceI];
+                    betap = betap_ph0_bnd[bndFaceI];
+                    magt1p = magt1p_ph0_bnd[bndFaceI];
+                    magt2p = magt2p_ph0_bnd[bndFaceI];
+                    Tp = Tp_ph0_bnd[bndFaceI];
+                    T1p = T1p_ph0_bnd[bndFaceI];
+                    T2p = T2p_ph0_bnd[bndFaceI];
+                    foundCell1p = foundCell1p_ph0_bnd[bndFaceI];
+                    foundCell2p = foundCell2p_ph0_bnd[bndFaceI];
+                    Cm_ph0 = Cm_ph0_bnd[bndFaceI];
+                    alpham = alpham_ph0_bnd[bndFaceI];
+                    betam = betam_ph0_bnd[bndFaceI];
+                    magt1m = magt1m_ph0_bnd[bndFaceI];
+                    magt2m = magt2m_ph0_bnd[bndFaceI];
+                    Tm = Tm_ph0_bnd[bndFaceI];
+                    T1m = T1m_ph0_bnd[bndFaceI];
+                    T2m = T2m_ph0_bnd[bndFaceI];
+                    foundCell1m = foundCell1m_ph0_bnd[bndFaceI];
+                    foundCell2m = foundCell2m_ph0_bnd[bndFaceI];
+                    for(i=0; i<n; i++)
+                    {
+                        Yp[i] = Yp_ph0_bnd[i][bndFaceI];
+                        Y1p[i] = Y1p_ph0_bnd[i][bndFaceI];
+                        Y2p[i] = Y2p_ph0_bnd[i][bndFaceI];
+                        Ym[i] = Ym_ph0_bnd[i][bndFaceI];
+                        Y1m[i] = Y1m_ph0_bnd[i][bndFaceI];
+                        Y2m[i] = Y2m_ph0_bnd[i][bndFaceI];
+                    }
+
+                    calcFaceGradFromWeights(nf, Cf_ph0_faceI, Cp_ph0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                    //ph-1
+                    gradf_T1_faceI = 0;
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1_faceI[i] = 0;
+                    }
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
+                {
+                    //ph-1
+                    Cp_ph1 = Cp_ph1_bnd[bndFaceI];
+                    alphap = alphap_ph1_bnd[bndFaceI];
+                    betap = betap_ph1_bnd[bndFaceI];
+                    magt1p = magt1p_ph1_bnd[bndFaceI];
+                    magt2p = magt2p_ph1_bnd[bndFaceI];
+                    Tp = Tp_ph1_bnd[bndFaceI];
+                    T1p = T1p_ph1_bnd[bndFaceI];
+                    T2p = T2p_ph1_bnd[bndFaceI];
+                    foundCell1p = foundCell1p_ph1_bnd[bndFaceI];
+                    foundCell2p = foundCell2p_ph1_bnd[bndFaceI];
+                    Cm_ph1 = Cm_ph1_bnd[bndFaceI];
+                    alpham = alpham_ph1_bnd[bndFaceI];
+                    betam = betam_ph1_bnd[bndFaceI];
+                    magt1m = magt1m_ph1_bnd[bndFaceI];
+                    magt2m = magt2m_ph1_bnd[bndFaceI];
+                    Tm = Tm_ph1_bnd[bndFaceI];
+                    T1m = T1m_ph1_bnd[bndFaceI];
+                    T2m = T2m_ph1_bnd[bndFaceI];
+                    foundCell1m = foundCell1m_ph1_bnd[bndFaceI];
+                    foundCell2m = foundCell2m_ph1_bnd[bndFaceI];
+                    for(i=0; i<n; i++)
+                    {
+                        Yp[i] = Yp_ph1_bnd[i][bndFaceI];
+                        Y1p[i] = Y1p_ph1_bnd[i][bndFaceI];
+                        Y2p[i] = Y2p_ph1_bnd[i][bndFaceI];
+                        Ym[i] = Ym_ph1_bnd[i][bndFaceI];
+                        Y1m[i] = Y1m_ph1_bnd[i][bndFaceI];
+                        Y2m[i] = Y2m_ph1_bnd[i][bndFaceI];
+                    }
+
+                    calcFaceGradFromWeights(nf, Cf_ph1_faceI, Cp_ph1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                    //ph-0
+                    gradf_T0_faceI = 0;
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y0_faceI[i] = 0;
+                    }
+                }//end if(curPhaseState == 1)
+                else if(curPhaseState == 2)
+                {
+                    //ph-1
+                    Cp_ph1 = Cp_ph1_bnd[bndFaceI];
+                    alphap = alphap_ph1_bnd[bndFaceI];
+                    betap = betap_ph1_bnd[bndFaceI];
+                    magt1p = magt1p_ph1_bnd[bndFaceI];
+                    magt2p = magt2p_ph1_bnd[bndFaceI];
+                    Tp = Tp_ph1_bnd[bndFaceI];
+                    T1p = T1p_ph1_bnd[bndFaceI];
+                    T2p = T2p_ph1_bnd[bndFaceI];
+                    foundCell1p = foundCell1p_ph1_bnd[bndFaceI];
+                    foundCell2p = foundCell2p_ph1_bnd[bndFaceI];
+                    Cm_ph1 = Cm_ph1_bnd[bndFaceI];
+                    alpham = alpham_ph1_bnd[bndFaceI];
+                    betam = betam_ph1_bnd[bndFaceI];
+                    magt1m = magt1m_ph1_bnd[bndFaceI];
+                    magt2m = magt2m_ph1_bnd[bndFaceI];
+                    Tm = Tm_ph1_bnd[bndFaceI];
+                    T1m = T1m_ph1_bnd[bndFaceI];
+                    T2m = T2m_ph1_bnd[bndFaceI];
+                    foundCell1m = foundCell1m_ph1_bnd[bndFaceI];
+                    foundCell2m = foundCell2m_ph1_bnd[bndFaceI];
+                    for(i=0; i<n; i++)
+                    {
+                        Yp[i] = Yp_ph1_bnd[i][bndFaceI];
+                        Y1p[i] = Y1p_ph1_bnd[i][bndFaceI];
+                        Y2p[i] = Y2p_ph1_bnd[i][bndFaceI];
+                        Ym[i] = Ym_ph1_bnd[i][bndFaceI];
+                        Y1m[i] = Y1m_ph1_bnd[i][bndFaceI];
+                        Y2m[i] = Y2m_ph1_bnd[i][bndFaceI];
+                    }
+
+                    calcFaceGradFromWeights(nf, Cf_ph1_faceI, Cp_ph1, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph1, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+
+                    //ph-0
+                    Cp_ph0 = Cp_ph0_bnd[bndFaceI];
+                    alphap = alphap_ph0_bnd[bndFaceI];
+                    betap = betap_ph0_bnd[bndFaceI];
+                    magt1p = magt1p_ph0_bnd[bndFaceI];
+                    magt2p = magt2p_ph0_bnd[bndFaceI];
+                    Tp = Tp_ph0_bnd[bndFaceI];
+                    T1p = T1p_ph0_bnd[bndFaceI];
+                    T2p = T2p_ph0_bnd[bndFaceI];
+                    foundCell1p = foundCell1p_ph0_bnd[bndFaceI];
+                    foundCell2p = foundCell2p_ph0_bnd[bndFaceI];
+                    Cm_ph0 = Cm_ph0_bnd[bndFaceI];
+                    alpham = alpham_ph0_bnd[bndFaceI];
+                    betam = betam_ph0_bnd[bndFaceI];
+                    magt1m = magt1m_ph0_bnd[bndFaceI];
+                    magt2m = magt2m_ph0_bnd[bndFaceI];
+                    Tm = Tm_ph0_bnd[bndFaceI];
+                    T1m = T1m_ph0_bnd[bndFaceI];
+                    T2m = T2m_ph0_bnd[bndFaceI];
+                    foundCell1m = foundCell1m_ph0_bnd[bndFaceI];
+                    foundCell2m = foundCell2m_ph0_bnd[bndFaceI];
+                    for(i=0; i<n; i++)
+                    {
+                        Yp[i] = Yp_ph0_bnd[i][bndFaceI];
+                        Y1p[i] = Y1p_ph0_bnd[i][bndFaceI];
+                        Y2p[i] = Y2p_ph0_bnd[i][bndFaceI];
+                        Ym[i] = Ym_ph0_bnd[i][bndFaceI];
+                        Y1m[i] = Y1m_ph0_bnd[i][bndFaceI];
+                        Y2m[i] = Y2m_ph0_bnd[i][bndFaceI];
+                    }
+
+                    calcFaceGradFromWeights(nf, Cf_ph0_faceI, Cp_ph0, alphap, betap, magt1p, magt2p, Yp, Y1p, Y2p, Tp, T1p, T2p, foundCell1p, foundCell2p, Cm_ph0, alpham, betam, magt1m, magt2m, Ym, Y1m, Y2m, Tm, T1m, T2m, foundCell1m, foundCell2m, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    //ph-1
+                    gradf_T1_faceI = 0;
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1_faceI[i] = 0;
+                    }
+
+                    //ph-0
+                    gradf_T0_faceI = 0;
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y0_faceI[i] = 0;
+                    }
+                }//end if(curPhaseState == 3)
+                
+                for(i=0; i<n; i++)
+                {
+                    gradf_Y1[i].boundaryField()[patchI][fcI] = gradf_Y1_faceI[i];
+                    gradf_Y0[i].boundaryField()[patchI][fcI] = gradf_Y0_faceI[i];
+                }
+                gradf_T1.boundaryField()[patchI][fcI] = gradf_T1_faceI;
+                gradf_T0.boundaryField()[patchI][fcI] = gradf_T0_faceI;
+
+                faceI++;
+            }//end forAll(pY10, fcI)
+        }//end if(pp.coupled())
+        else if(isA<zeroGradientFvPatchScalarField>(pY10))
+        {
+            if(isA<zeroGradientFvPatchScalarField>(pT1))
+            {
+                forAll(pY10, fcI)
+                {                
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1[i].boundaryField()[patchI][fcI] = 0;
+                        gradf_Y0[i].boundaryField()[patchI][fcI] = 0;
+                    }
+                    gradf_T1.boundaryField()[patchI][fcI] = 0;
+                    gradf_T0.boundaryField()[patchI][fcI] = 0;                
+                }
+            }
+            else
+            {
+                forAll(pY10, fcI)
+                {
+                    nf = pSf[fcI]/pMagSf[fcI];
+                    faceOwn = own[faceI];
+                    const labelList& ownCells = diffCellStencil[faceOwn];
+                    curPhaseState = face_phaseState_diff[faceI];
+
+                    if(curPhaseState == 0)
+                    {   
+                        //ph-0
+                        calcCellGrad(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 0, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                        //ph-1
+                        for(i=0; i<n; i++)
+                        {
+                            gradf_Y1_faceI[i] = 0;
+                        }
+                        gradf_T1_faceI = 0;
+                    }//end if(curPhaseState == 0)
+                    else if(curPhaseState == 1)
+                    {
+                        //ph-1
+                        calcCellGrad(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 1, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+                        //ph-0
+                        for(i=0; i<n; i++)
+                        {
+                            gradf_Y0_faceI[i] = 0;
+                        }
+                        gradf_T0_faceI = 0;
+                    }//end if(curPhaseState == 1)
+                    else if(curPhaseState == 2)
+                    {
+                        //ph-1
+                        calcCellGrad(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 1, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+                        //ph-0
+                        calcCellGrad(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 0, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                    }//end if(curPhaseState == 2)
+                    else
+                    {
+                        for(i=0; i<n; i++)
+                        {
+                            gradf_Y1_faceI[i] = 0;
+                            gradf_Y0_faceI[i] = 0;
+                        }
+                        gradf_T1_faceI = 0;
+                        gradf_T0_faceI = 0;
+                    }//end if(curPhaseState == 3)
+
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1[i].boundaryField()[patchI][fcI] = 0;
+                        gradf_Y0[i].boundaryField()[patchI][fcI] = 0;
+                    }                                        
+                    gradf_T1.boundaryField()[patchI][fcI] = gradf_T1_faceI;
+                    gradf_T0.boundaryField()[patchI][fcI] = gradf_T0_faceI;
+
+                    faceI++;
+                }
+            }
+        }//end if(isA<zeroGradientFvPatchScalarField>(pY10))
+        else if(isA<fixedValueFvPatchScalarField>(pY10))
+        {            
+            forAll(pY10, fcI)
+            {
+                nf = pSf[fcI]/pMagSf[fcI];
+                faceOwn = own[faceI];
+                const labelList& ownCells = diffCellStencil[faceOwn];
+                curPhaseState = face_phaseState_diff[faceI];
+
+                if(curPhaseState == 0)
+                {   
+                    //ph-0
+                    calcCellGrad(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 0, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                    //ph-1
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1_faceI[i] = 0;
+                    }
+                    gradf_T1_faceI = 0;
+                }//end if(curPhaseState == 0)
+                else if(curPhaseState == 1)
+                {
+                    //ph-1
+                    calcCellGrad(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 1, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+                    //ph-0
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y0_faceI[i] = 0;
+                    }
+                    gradf_T0_faceI = 0;
+                }//end if(curPhaseState == 1)
+                else if(curPhaseState == 2)
+                {
+                    //ph-1
+                    calcCellGrad(faceOwn, nf, Y1_flatFld_diff, T1_flatFld_diff, alpha1_flatFld_diff, C_ph1_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 1, gradf_Y1_faceI, gradf_T1_faceI, n, debug, os);
+                    //ph-0
+                    calcCellGrad(faceOwn, nf, Y0_flatFld_diff, T0_flatFld_diff, alpha1_flatFld_diff, C_ph0_flatFld_diff, ownCells, MIN_ALPHA_DIFF, 0, gradf_Y0_faceI, gradf_T0_faceI, n, debug, os);
+                }//end if(curPhaseState == 2)
+                else
+                {
+                    for(i=0; i<n; i++)
+                    {
+                        gradf_Y1_faceI[i] = 0;
+                        gradf_Y0_faceI[i] = 0;
+                    }
+                    gradf_T1_faceI = 0;
+                    gradf_T0_faceI = 0;
+                }//end if(curPhaseState == 3)
+
+                for(i=0; i<n; i++)
+                {
+                    gradf_Y1[i].boundaryField()[patchI][fcI] = gradf_Y1_faceI[i];
+                    gradf_Y0[i].boundaryField()[patchI][fcI] = gradf_Y0_faceI[i];
+                }
+
+                if(isA<fixedValueFvPatchScalarField>(pT1))
+                {                    
+                    gradf_T1.boundaryField()[patchI][fcI] = gradf_T1_faceI;
+                    gradf_T0.boundaryField()[patchI][fcI] = gradf_T0_faceI;
+                }
+                else
+                {
+                    gradf_T1.boundaryField()[patchI][fcI] = 0;
+                    gradf_T0.boundaryField()[patchI][fcI] = 0;
+                }
+
+                faceI++;            
+            }//end forAll(pY10, fcI)                        
+        }//end if(isA<fixedValueFvPatchScalarField>(pY10))
+        else
+        {
+            forAll(pY10, fcI)
+            {                
+                for(i=0; i<n; i++)
+                {
+                    gradf_Y1[i].boundaryField()[patchI][fcI] = 0;
+                    gradf_Y0[i].boundaryField()[patchI][fcI] = 0;
+                }
+                gradf_T1.boundaryField()[patchI][fcI] = 0;
+                gradf_T0.boundaryField()[patchI][fcI] = 0;                
             }
         }//end if(pp.coupled())        
     }//end forAll(patches,patchI)
