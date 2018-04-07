@@ -6181,11 +6181,12 @@ void calc_diffFlux_limiter_T
     const scalar& TNei,
     const scalar& HNei,
     const scalar& VNei,
+    double P,
     int n,
     double *Pc,
-    double* Tc,
-    double* w,
-    double* MW,
+    double *Tc,
+    double *w,
+    double *MW,
     int *tk,
     double *coef_ab,
     const scalar& dt,
@@ -6195,7 +6196,21 @@ void calc_diffFlux_limiter_T
     const scalar& TMAX
 )
 {
-    
+    TOld = 0.5*(TOwn + TNei);
+
+    for(iter=0; iter<MAX_ITER_T; iter++)
+    {
+        calc_rho_Cp_h_dVdT_(&P, &TOld, &n, xOwn_tmp, Pc, Tc, w, MW, tk, coef_ab, &rhoOwn_tmp, &CpOwn_tmp, &hOwn_tmp, &dVdTOwn_tmp);
+
+        calc_rho_Cp_h_dVdT_(&P, &TOld, &n, xNei_tmp, Pc, Tc, w, MW, tk, coef_ab, &rhoNei_tmp, &CpNei_tmp, &hNei_tmp, &dVdTNei_tmp);
+
+        F = alphaOwn*rhoOwn_tmp*hOwn_tmp + alphaNei*rhoNei_tmp*hNei_tmp - HOwn - HNei;
+        dFOwn = alphaOwn*rhoOwn_tmp*(CpOwn_tmp - hOwn_tmp*rhoOwn_tmp*dVdTOwn_tmp/MWOwn_tmp);
+        dFNei = alphaNei*rhoNei_tmp*(CpNei_tmp - hNei_tmp*rhoNei_tmp*dVdTNei_tmp/MWNei_tmp);
+        dF = dFOwn + dFNei;
+
+        TNew = TOld - F/dF;
+    }
 }
 
 
