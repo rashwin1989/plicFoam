@@ -6192,8 +6192,8 @@ void calc_diffFlux_limiter_T
     const scalar& dt,
     const scalar& diffFlux,
     scalar& diffFlux_limiter,
-    const scalar& TMIN,
-    const scalar& TMAX
+    const double& TMIN,
+    const double& TMAX
 )
 {
     TOld = 0.5*(TOwn + TNei);
@@ -6210,6 +6210,30 @@ void calc_diffFlux_limiter_T
         dF = dFOwn + dFNei;
 
         TNew = TOld - F/dF;
+        
+        T_err = mag(TNew - TOld);
+        F_err = mag(F);
+
+        TOld = TNew;
+        
+        if(T_err < T_TOL || F_err < H_TOL) break;
+    }
+
+    if(diffFlux > 0)
+    {
+        if(TOwn > TNei)
+        {
+            diffFlux_max_1 = HOwn - alphaOwn*rhoOwn_tmp*hOwn_tmp;
+            calc_rho_h_(&P, &TMIN, &n, xOwn_tmp, Pc, Tc, w, MW, tk, coef_ab, &rhoOwn_tmp, &hOwn_tmp);
+        }
+        else
+        {
+            diffFlux_max = 0;
+        }
+    }
+    else
+    {
+
     }
 }
 
