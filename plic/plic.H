@@ -187,6 +187,10 @@ class plic
     surfaceScalarField frho0_;
     PtrList<surfaceScalarField> fY1_;
     PtrList<surfaceScalarField> fY0_;
+    PtrList<surfaceScalarField> fc1_;
+    PtrList<surfaceScalarField> fc0_;
+    surfaceScalarField fh1_;
+    surfaceScalarField fh0_;
 
     //- Flat fields for extended stencil use
     //- Use mapDistribute to obtain remote values
@@ -201,6 +205,10 @@ class plic
     List<scalar> rho0_flatFld_;
     List<List<scalar> > Y1_flatFld_;
     List<List<scalar> > Y0_flatFld_;
+    List<List<scalar> > c1_flatFld_;
+    List<List<scalar> > c0_flatFld_;
+    List<scalar> h1_flatFld_;
+    List<scalar> h0_flatFld_;
 
     //-mesh faces info
     vectorField Cf_;
@@ -301,6 +309,15 @@ class plic
 
     void calcFaceFluxTets(const label, const scalar&, List<tetPoints>&, List<scalar>&);
 
+    void calcFaceFluxTets
+    (
+        const label curFcI,
+        const scalar& curPhi,
+        List<tetPoints>& tets,
+        List<scalar>& tetVols,
+        const scalar& deltaT
+    );
+
     face face_from_lbls(const label, const label, const label, const label);
 
     void makePatchFaceCellInfo(const fvPatch&, const label, cellInfo&);
@@ -313,6 +330,14 @@ class plic
     (
         const PtrList<volScalarField>&,
         const PtrList<volScalarField>&
+    );
+
+    void c_h_collectData
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0,
+        const volScalarField& h1,
+        const volScalarField& h0
     );
 
     scalar tet_cell_intersect(tetPoints&, const label&);
@@ -363,6 +388,24 @@ class plic
         const PtrList<volScalarField>&,
         PtrList<surfaceScalarField>&,
         PtrList<surfaceScalarField>&
+    );
+
+    void calc_2ph_advFluxes
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0,    
+        const volScalarField& h1,
+        const volScalarField& h0,        
+        const scalar& deltaT,
+        surfaceScalarField& advFlux_rho1,
+        surfaceScalarField& advFlux_rho0,
+        PtrList<surfaceScalarField>& advFlux_c1,
+        PtrList<surfaceScalarField>& advFlux_c0,
+        surfaceScalarField& advFlux_h1,
+        surfaceScalarField& advFlux_h0,
+        const bool debug,
+        const bool debug2,
+        OFstream& os
     );
 
     void plic_correct();

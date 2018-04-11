@@ -417,6 +417,196 @@ subroutine thermo_properties(P,T,n,Pc,Tc,w,MW,x,Tb,SG,H_8,type_k, &
 END subroutine thermo_properties
 !***************************************************************************
 
+!***************************************************************************
+subroutine calc_v_Cp_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
+                             V, Cp, h)
+!{
+  implicit none
+
+  integer :: n, type_k(n)
+  integer :: i,j
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
+  real(8) :: V, Cp, h
+  real(8) :: dadT(n),d2adT2(n), am, dadTm, d2adT2m, bm, Tr, kappa, alpha, Vterm, h_IG_m, Cp_IG_m, term1
+  real(8) :: CP_IG(n), H_IG(n), coef_ab(n)  
+  real(8) :: ac(n), a(n), b(n), delta(n,n), delta_d(n,n), delta_d2(n,n)
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  coef_ab = -1
+
+  ! PR coefficients of pure components and their derivatives
+  do i=1,n
+  !{
+    Tr = T/Tc(i)
+    if (w(i) .le. 0.491d0) then
+      kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
+    else
+      kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
+    endif
+    alpha = (1d0+kappa*(1d0-dsqrt(Tr)))**2
+
+    ac(i) = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i) 
+    b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
+
+    a(i)      =  ac(i)*alpha
+    dadT(i)   = -ac(i)*kappa/dsqrt(T*Tc(i))*alpha
+    d2adT2(i) =  ac(i)*kappa/dsqrt(T*Tc(i))/T/2.*(1.+kappa)
+  !}
+  enddo
+
+  call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+
+  ! PR coefficients of the mixture and its derivatives
+
+  bm = 0d0
+  am = 0d0
+  dadTm = 0d0
+  d2adT2m = 0d0
+
+  do i=1,n
+  !{
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+    dadTm   = dadTm + x(i)**2*dadT(i) 
+    d2adT2m = d2adT2m + x(i)**2*d2adT2(i)
+    delta_d (i,i) = 0.0d0
+    delta_d2(i,i) = 0.0d0
+
+    do j=i+1,n
+
+      delta_d (i,j) = 0.0d0
+      delta_d (j,i) = 0.0d0
+      delta_d2(i,j) = 0.0d0
+      delta_d2(j,i) = 0.0d0
+
+      am      = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-delta(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  &
+              + 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*delta_d(i,j)
+
+      d2adT2m = d2adT2m + x(i)*x(j) * (1.d0-delta(i,j)) &
+                * ( dsqrt(a(i)/a(j)) * ( d2adT2(j)-0.5d0/a(j)*dadT(j)**2d0 ) + &
+                    dsqrt(a(j)/a(i)) * ( d2adT2(i)-0.5d0/a(i)*dadT(i)**2d0 ) + &
+                    1.d0/dsqrt(a(i)*a(j))*dadT(i)*dadT(j) )  &
+              + 2.d0*x(i)*x(j)* ( (dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i)) &
+                               *(-1.)*delta_d(i,j) &
+                               + dsqrt(a(i)*a(j))*(-1.d0)*delta_d2(i,j))
+    enddo
+  !}
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)  
+  
+  Vterm = (V**2+2.*V*bm-bm**2)
+  
+  Cp_IG_m = 0d0
+  h_IG_m = 0d0
+  ! adding the ideal gass specific heats
+  do i=1,n
+    call IG_CP_H(Tb(i),Tc(i),SG(i),H_8(i),MW(i),T,H_IG(i),CP_IG(i))
+    Cp_IG_m = cp_IG_m + x(i)* CP_IG(i)
+    h_IG_m = h_IG_m + x(i)* H_IG(i)
+  enddo
+
+  term1 = 1./2./sqr2/bm*dlog( (V+bm*(1.+sqr2))/(V+bm*(1.-sqr2)) )
+
+  h = h_IG_m + P*V - R_gas*T + term1*(T*dadTm - am)
+  ! specific heats residuals
+  
+  Cp = Cp_IG_m - R_gas
+  Cp = Cp + T*term1*d2adT2m
+  Cp = Cp - T*( R_gas  /(V-bm)    -     dadTm   / Vterm )**2  &
+        /(-R_gas*T/(V-bm)**2 + 2.*am*(V+bm)/ Vterm**2 )
+!}
+END subroutine calc_v_Cp_h
+!***************************************************************************
+
+!***************************************************************************
+subroutine calc_v_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
+                             V, h)
+!{
+  implicit none
+
+  integer :: n, type_k(n)
+  integer :: i,j
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
+  real(8) :: V, Cp, h
+  real(8) :: dadT(n), am, dadTm, bm, Tr, kappa, alpha, Vterm, h_IG_m, term1
+  real(8) :: CP_IG(n), H_IG(n), coef_ab(n)  
+  real(8) :: ac(n), a(n), b(n), delta(n,n), delta_d(n,n)
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  coef_ab = -1
+
+  ! PR coefficients of pure components and their derivatives
+  do i=1,n
+  !{
+    Tr = T/Tc(i)
+    if (w(i) .le. 0.491d0) then
+      kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
+    else
+      kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
+    endif
+    alpha = (1d0+kappa*(1d0-dsqrt(Tr)))**2
+
+    ac(i) = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i) 
+    b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
+
+    a(i)      =  ac(i)*alpha
+    dadT(i)   = -ac(i)*kappa/dsqrt(T*Tc(i))*alpha
+  !}
+  enddo
+
+  call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+
+  ! PR coefficients of the mixture and its derivatives
+
+  bm = 0d0
+  am = 0d0
+  dadTm = 0d0
+
+  do i=1,n
+  !{
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+    dadTm   = dadTm + x(i)**2*dadT(i)
+    delta_d (i,i) = 0.0d0
+
+    do j=i+1,n
+
+      delta_d (i,j) = 0.0d0
+      delta_d (j,i) = 0.0d0      
+
+      am      = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-delta(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  &
+              + 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*delta_d(i,j)
+    enddo
+  !}
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)  
+  
+  Vterm = (V**2+2.*V*bm-bm**2)
+    
+  h_IG_m = 0d0
+  ! adding the ideal gass specific heats
+  do i=1,n
+    call IG_CP_H(Tb(i),Tc(i),SG(i),H_8(i),MW(i),T,H_IG(i),CP_IG(i))
+    h_IG_m = h_IG_m + x(i)* H_IG(i)
+  enddo
+
+  term1 = 1./2./sqr2/bm*dlog( (V+bm*(1.+sqr2))/(V+bm*(1.-sqr2)) )
+
+  h = h_IG_m + P*V - R_gas*T + term1*(T*dadTm - am)
+  
+END subroutine calc_v_h
+!***************************************************************************
+
 !function [H Cp H_Btu_lb Cp_Btu_lbF] = Kesler_Lee_Enthalpy_Star2(K, SG, Tc, H_8, T)
 subroutine KL_IG_Cp_H(K,SG,Tc,H_8,T,H,Cp)
 !{

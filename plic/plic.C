@@ -1236,6 +1236,235 @@ void Foam::plic::calcFaceFluxTets
 }
 
 
+void Foam::plic::calcFaceFluxTets
+(
+    const label curFcI,
+    const scalar& curPhi,
+    List<tetPoints>& tets,
+    List<scalar>& tetVols,
+    const scalar& deltaT
+)
+{
+    const faceList& faces = mesh_.faces();
+    const pointField& points = mesh_.points();
+    const labelListList& pointCells = mesh_.pointCells();
+    const vectorField& UCells = U_.internalField();
+    const labelList& own = mesh_.owner();
+    const labelList& nei = mesh_.neighbour();
+
+    face curFc = faces[curFcI];
+
+    // Construct the face flux polyhedron by Lagrangian backtracking of 
+    // face vertices. Calculate the centroid of backtracked face so
+    // as to obtain a face flux polyhedron consistent with mass
+    // conservation. Finally, decompose the polyhedron into 20
+    // tetrahedrons which will give the correct sign of their 
+    // contribution to the face flux based on their placement w.r.t
+    // the face, that is, inflow or outflow tet
+
+    pointField pts(8);
+    faceList fcs(6);
+    pointField fcCtrs(6);    
+
+    scalar dt = deltaT;
+
+    if(debugF_)
+    {
+        Info<< "Current time step:  " << dt << nl << nl
+            << "--------------------------------------------------------------------" << nl
+            << "            Lagrangian backtracking of face vertices" << nl
+            << "--------------------------------------------------------------------" << nl << endl;
+    }
+
+    vector U_fcCtr = vector::zero;
+    label nFcPts = 0;
+
+    for(label ptI=0; ptI<curFc.size(); ptI++)
+    {
+        label curPtI = curFc[ptI];
+        point curPt = points[curPtI];
+        pts[ptI] = curPt;
+        pts[ptI+4] = curPt - U_pts_[curPtI]*dt;
+
+        U_fcCtr += U_pts_[curPtI];
+        nFcPts++;        
+        
+        if(debugF_)
+        {
+            Info<< "vertex " << ptI << ":  " << pts[ptI] << nl
+                << "velocity vector:  " << U_pts_[curPtI] << nl
+                << "backtrack vector:  " << U_pts_[curPtI]*dt << nl
+                << "backtrack vertex " << (ptI+4) << ":  " << pts[ptI+4] << nl << endl;
+        }
+
+        const labelList& pcp = pointCells[curPtI];
+
+        if(debugF_)
+        {
+            forAll(pcp, cI)
+            {
+                if(pcp[cI]<mesh_.nCells())
+                {
+                    Info<< "cell " << pcp[cI] << " vel = " << UCells[pcp[cI]] << endl;
+                }
+            }
+            Info<< endl;
+        }
+    }
+    U_fcCtr /= nFcPts;
+    vector curFcArea = Sf_[curFcI];
+    scalar curFcCtrPhi = U_fcCtr & curFcArea;   
+
+    if(debugF_)
+    {
+        Info<< "Face flux: " << curPhi << nl
+            << "Face vel. based on flux: " << curPhi*Sf_[curFcI]/magSf_[curFcI]/magSf_[curFcI] << nl
+            << "Face vel. based on cells: " << (UCells[own[curFcI]]+UCells[nei[curFcI]])/2.0 << nl
+            << "Face vel. based on points: " << U_fcCtr << nl
+            << "Face own vel.: " << UCells[own[curFcI]] << "  Face nei vel.: " << UCells[nei[curFcI]] << nl
+            << "Flux based on face ctr vel.: " << curFcCtrPhi << nl
+            << "Flux polyhedron vertex points:" << endl;
+        Foam::plicFuncs::display_pointField(pts);
+        Info<< "--------------------------------------------------------------------" << nl
+            << "         Done Lagrangian backtracking of face vertices" << nl
+            << "--------------------------------------------------------------------" << nl << endl;
+    }
+
+    fcs[0] = face_from_lbls(0,1,2,3);
+    fcs[1] = face_from_lbls(0,4,5,1);
+    fcs[2] = face_from_lbls(1,5,6,2);
+    fcs[3] = face_from_lbls(2,6,7,3);
+    fcs[4] = face_from_lbls(3,7,4,0);
+    fcs[5] = face_from_lbls(4,7,6,5);
+
+    for(label fcI=0; fcI<fcCtrs.size(); fcI++)
+    {
+        fcCtrs[fcI] = fcs[fcI].centre(pts);
+
+        if(debugF_)
+        {
+            Info<< "Face " << fcI << " of flux polyhedron: " << endl;
+            Foam::plicFuncs::display_face(fcs[fcI], pts);
+            Info<< "Face centroid:  " << fcCtrs[fcI] << nl << endl;
+        }
+    }
+
+    if(debugF_)
+    {
+        Info<< nl
+            << "Constructing first 16 flux tetrahedra..." << nl << endl;
+    }
+    
+    point a = fcCtrs[0];
+    scalar V16 = 0;
+    label tetI = 0;
+
+    for(label fcI=1; fcI<(fcs.size()-1); fcI++)
+    {
+        face curFace = fcs[fcI];
+        label nPts = curFace.size();
+        point b = fcCtrs[fcI];
+        for(label ptI=0; ptI<nPts; ptI++)
+        {
+            point c = pts[curFace[ptI]];
+            point d = pts[curFace[(ptI + 1) % nPts]];
+            tets[tetI] = tetPoints(a, b, c, d);
+            tetVols[tetI] = tets[tetI].tet().mag();
+
+            if(debugF_)
+            {
+                Info<< "Tetrahedron " << tetI << nl
+                    << "Points: " << a << "  " << b << "  " << c << "  " << d << nl
+                    << "Volume: " << tetVols[tetI] << nl << endl;
+            }
+
+            V16 += tetVols[tetI];
+            tetI++;
+        } 
+    }    
+
+    scalar L02 = fcs[0].mag(pts);
+    //scalar L02 = L0*L0;
+    //scalar L03 = L0*L0*L0;
+    scalar Vf_curFc = curPhi*dt/L02;
+    V16 /= L02;
+    //vector niHat = (fcCtrs[5] - fcCtrs[0]);
+    face curFace = fcs[5];
+    vector niHat = (pts[curFace[0]] - fcCtrs[5]) ^ (pts[curFace[1]] - fcCtrs[5]);
+    niHat /= (mag(niHat) + VSMALL);
+
+    if(debugF_)
+    {
+        Info<< "Calculating face centre of last face..." << nl
+            << "Current face flux: " << curPhi << nl
+            << "Normalization factor L02: " << L02 << nl
+            << "Total flux volume: " << Vf_curFc*L02 << nl
+            << "Vol of 1st 16 tets: " << V16*L02 << nl
+            << "Vector from 1st face to last face centre: " << niHat << endl;
+    }
+
+    vector B = vector::zero;
+    //face curFace = fcs[5];
+    label nPts = curFace.size();
+    for(label ptI=0; ptI<nPts; ptI++)
+    {
+        point c = pts[curFace[ptI]];
+        point d = pts[curFace[(ptI + 1) % nPts]];
+        B += ((c - a) ^ (d - a))/L02;
+    } 
+
+    scalar den = (niHat & B);
+    /*if(mag(den)<VSMALL)
+        {
+        den += VSMALL;
+        }*/
+
+    scalar lambda = 6.0*(Vf_curFc - V16)/(mag(den) + VSMALL)*sign(den);
+    point n = fcCtrs[0] + lambda*niHat;
+    fcCtrs[5] = n;
+
+    if(debugF_)
+    {
+        Info<< "Vector B: " << B*L02 << nl
+            << "denominator: " << den*L02 << nl
+            << "lambda: " << lambda << nl
+            << "Last face centre calculated: " << n << nl << nl
+            << "Constructing last 4 flux tetrahedra..." << nl << endl;
+    }
+
+    V16 *= L02;
+    Vf_curFc *= L02;
+
+    scalar V20 = V16;
+    point b = fcCtrs[5];
+    for(label ptI=0; ptI<nPts; ptI++)
+    {
+        point c = pts[curFace[ptI]];
+        point d = pts[curFace[(ptI + 1) % nPts]];
+        tets[tetI] = tetPoints(a, b, c, d);
+        tetVols[tetI] = tets[tetI].tet().mag();
+        V20 += tetVols[tetI];
+        if(debugF_)
+        {
+            Info<< "Tetrahedron " << tetI << nl
+                << "Points: " << a << "  " << b << "  " << c << "  " << d << nl
+                << "Volume: " << tetVols[tetI] << nl << endl;
+        }
+        tetI++;
+    }
+
+    scalar Vf_err = mag(Vf_curFc - V20);
+
+    if(debugF_)
+    {
+        Info<< "Face flux volume: " << Vf_curFc << " Total volume of face flux tets: " << V20 << nl
+            << "Face flux tetrahedrons flux error: " << Vf_err << nl << endl;
+    }
+
+    // end of tetrahedral decomposition of face flux polygon volume
+}
+
+
 Foam::face Foam::plic::face_from_lbls
 (
     const label a,
@@ -1648,6 +1877,94 @@ void Foam::plic::Y_collectData
             Foam::plicFuncs::write_flatFld(Y1i_flatFld, Y1i);
             Foam::plicFuncs::write_flatFld(Y0i_flatFld, Y0i);
         }
+    }
+}
+
+
+void Foam::plic::c_h_collectData
+(
+    const PtrList<volScalarField>& c1,
+    const PtrList<volScalarField>& c0,
+    const volScalarField& h1,
+    const volScalarField& h0
+)
+{
+    const mapDistribute& map = faceStencil().map();
+
+    for(label i=0; i<(nSpecies_ - 1); i++)
+    {
+        const volScalarField& c1i = c1[i];
+        const volScalarField& c0i = c0[i];
+        List<scalar>& c1i_flatFld = c1_flatFld_[i];
+        List<scalar>& c0i_flatFld = c0_flatFld_[i];
+
+        // Insert my internal values
+        forAll(c1i, cellI)
+        {        
+            c1i_flatFld[cellI] = c1i[cellI];
+            c0i_flatFld[cellI] = c0i[cellI];
+        }
+        // Insert my boundary values
+        forAll(c1i.boundaryField(), patchI)
+        {        
+            const fvPatchScalarField& pc1i = c1i.boundaryField()[patchI];        
+            const fvPatchScalarField& pc0i = c0i.boundaryField()[patchI];      
+            label nCompact =
+                pc1i.patch().start()
+                -c1i.mesh().nInternalFaces()
+                +c1i.mesh().nCells();
+
+            forAll(pc1i, faceI)
+            {           
+                c1i_flatFld[nCompact] = pc1i[faceI];
+                c0i_flatFld[nCompact] = pc0i[faceI];
+                nCompact++;
+            }
+        }
+
+        // Do all swapping    
+        map.distribute(c1i_flatFld);
+        map.distribute(c0i_flatFld);
+    
+        if(debug2_)
+        {        
+            Foam::plicFuncs::write_flatFld(c1i_flatFld, c1i);
+            Foam::plicFuncs::write_flatFld(c0i_flatFld, c0i);
+        }
+    }    
+
+    // Insert my internal values
+    forAll(h1, cellI)
+    {        
+        h1_flatFld_[cellI] = h1[cellI];
+        h0_flatFld_[cellI] = h0[cellI];
+    }
+    // Insert my boundary values
+    forAll(h1.boundaryField(), patchI)
+    {        
+        const fvPatchScalarField& ph1 = h1.boundaryField()[patchI];        
+        const fvPatchScalarField& ph0 = h0.boundaryField()[patchI];      
+        label nCompact =
+            ph1.patch().start()
+            -h1.mesh().nInternalFaces()
+            +h1.mesh().nCells();
+
+        forAll(ph1, faceI)
+        {           
+            h1_flatFld_[nCompact] = ph1[faceI];
+            h0_flatFld_[nCompact] = ph0[faceI];
+            nCompact++;
+        }
+    }
+
+    // Do all swapping    
+    map.distribute(h1_flatFld_);
+    map.distribute(h0_flatFld_);
+    
+    if(debug2_)
+    {        
+        Foam::plicFuncs::write_flatFld(h1_flatFld_, h1);
+        Foam::plicFuncs::write_flatFld(h0_flatFld_, h0);
     }
 }
 
@@ -2230,7 +2547,35 @@ Foam::plic::plic
     frho1_(fvc::interpolate(rho1_,"rho")),
     frho0_(fvc::interpolate(rho0_,"rho")),
     fY1_(nSpecies_ - 1),
-    fY0_(nSpecies_ - 1)
+    fY0_(nSpecies_ - 1),
+    fc1_(nSpecies_ - 1),
+    fc0_(nSpecies_ - 1),
+    fh1_
+    (
+        IOobject
+        (
+            "fh1",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("zeroh", dimMass/dimLength/dimTime/dimTime, 0)
+    ),
+    fh0_
+    (
+        IOobject
+        (
+            "fh0",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("zeroh", dimMass/dimLength/dimTime/dimTime, 0)
+    )
 {
     //Foam::plicFuncs::write_stencil(faceStencil().stencil(), mesh, "centredFPCCellToFaceStencil");
 
@@ -2293,52 +2638,94 @@ Foam::plic::plic
     forAll(fY1_, i)
     {
         fY1_.set
+        (
+            i,
+            new surfaceScalarField
             (
-                i,
-                new surfaceScalarField
+                IOobject
                 (
-                    IOobject
-                    (
-                        "fY1"+Foam::name(i),
-                        mesh.time().timeName(),
-                        mesh,
-                        IOobject::NO_READ,
-                        IOobject::NO_WRITE
-                    ),
+                    "fY1"+Foam::name(i),
+                    mesh.time().timeName(),
                     mesh,
-                    dimensionedScalar("zeroY", dimless, 0)
-                )
-            );
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroY", dimless, 0)
+            )
+        );
 
         fY0_.set
+        (
+            i,
+            new surfaceScalarField
             (
-                i,
-                new surfaceScalarField
+                IOobject
                 (
-                    IOobject
-                    (
-                        "fY0"+Foam::name(i),
-                        mesh.time().timeName(),
-                        mesh,
-                        IOobject::NO_READ,
-                        IOobject::NO_WRITE
-                    ),
+                    "fY0"+Foam::name(i),
+                    mesh.time().timeName(),
                     mesh,
-                    dimensionedScalar("zeroY", dimless, 0)
-                )
-            );
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroY", dimless, 0)
+            )
+        );
+
+        fc1_.set
+        (
+            i,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    "fc1"+Foam::name(i),
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroc", dimDensity, 0)
+            )
+        );
+
+        fc0_.set
+        (
+            i,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    "fc0"+Foam::name(i),
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("zeroc", dimDensity, 0)
+            )
+        );
     }
 
     rho1_flatFld_.setSize(nflatFld);
     rho0_flatFld_.setSize(nflatFld);
+    h1_flatFld_.setSize(nflatFld);
+    h0_flatFld_.setSize(nflatFld);
     
     Y1_flatFld_.setSize(nSpecies_ - 1);
     Y0_flatFld_.setSize(nSpecies_ - 1);
+    c1_flatFld_.setSize(nSpecies_ - 1);
+    c0_flatFld_.setSize(nSpecies_ - 1);
 
     for(label i=0; i<(nSpecies_ - 1); i++)
     {
         Y1_flatFld_[i].setSize(nflatFld);
         Y0_flatFld_[i].setSize(nflatFld);
+        c1_flatFld_[i].setSize(nflatFld);
+        c0_flatFld_[i].setSize(nflatFld);
     }
 
     ALPHA_2PH_MIN = transPropDict_.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
@@ -4760,6 +5147,941 @@ void Foam::plic::calc_2ph_advFluxes
     if(debugF_)
     {
         Info<< "//====================================================================\\" << nl
+            << "                 Done calculating face 2-phase fluxes" << nl
+            << "\\====================================================================//" << nl << nl << endl;
+    }
+}
+
+
+void Foam::plic::calc_2ph_advFluxes
+(
+    const PtrList<volScalarField>& c1,
+    const PtrList<volScalarField>& c0,    
+    const volScalarField& h1,
+    const volScalarField& h0,    
+    const scalar& deltaT,
+    surfaceScalarField& advFlux_rho1,
+    surfaceScalarField& advFlux_rho0,
+    PtrList<surfaceScalarField>& advFlux_c1,
+    PtrList<surfaceScalarField>& advFlux_c0,
+    surfaceScalarField& advFlux_h1,
+    surfaceScalarField& advFlux_h0,
+    const bool debug,
+    const bool debug2,
+    OFstream& os
+)
+{
+    int n = nSpecies_;
+    int i;
+    label faceI, tetI, cellI, curCell_lbl;
+    scalar gradAlphaOwn, gradAlphaNei, curFacePhi;
+    scalar curFaceFlux_ph1, curFaceFlux_ph0, curFaceFlux_rho1, curFaceFlux_rho0, curFaceFlux_h1, curFaceFlux_h0;    
+    List<scalar> curFaceFlux_c1(n-1);
+    List<scalar> curFaceFlux_c0(n-1);
+    scalar curTetVolFlux_ph1, curTetVolFlux_ph0, curTetFlux_rho1, curTetFlux_rho0, curTetFlux_h1, curTetFlux_h0, curTetVolSign;
+    List<scalar> curTetFlux_c1(n-1);
+    List<scalar> curTetFlux_c0(n-1);
+    scalar curTetCurCellVolFlux_ph1, curTetCurCellVolFlux_ph0, curTetCurCellFlux_rho1, curTetCurCellFlux_rho0, curTetCurCellFlux_h1, curTetCurCellFlux_h0;
+    List<scalar> curTetCurCellFlux_c1(n-1);
+    List<scalar> curTetCurCellFlux_c0(n-1);
+
+    List<tetPoints> curFaceFluxTets(20);
+    List<scalar> curFaceFluxTetVols(20);
+    
+    const labelList& own = mesh().faceOwner();
+    const labelList& nei = mesh().faceNeighbour();
+
+    const vectorField& gradAlpha1Cells = gradAlpha1_.internalField();
+
+    const polyBoundaryMesh& patches = mesh().boundaryMesh();
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                 Interpolating U field to mesh points" << nl
+            << "\\====================================================================//" << nl << endl;
+    }
+
+    U_pts_ = ptInterp_.interpolate(U_);
+
+    if(debug2)
+    {
+        Foam::plicFuncs::write_point_field(U_pts_, mesh());
+    }
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                 Done interpolating U field to mesh points" << nl
+            << "\\====================================================================//" << nl << endl;
+    }
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "               Collecting and distributing interface info" << nl
+            << "\\====================================================================//" << nl << endl;
+    }
+
+    intfcInfo_collectData();
+
+    c_h_collectData(c1, c0, h1, h0);
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "            Done collecting and distributing interface info" << nl
+            << "\\====================================================================//" << nl << endl;
+    }
+
+    if(debug2)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                  Tagging near-interface cells" << nl
+            << "\\====================================================================//" << nl << nl
+            << "------------------------------------------------------------------------" << nl
+            << "cell index        mag(grad(alpha1))            near-intfc?" << nl
+            << "------------------------------------------------------------------------" << endl;
+    }
+
+    forAll(cell_near_intfc_, cellI)
+    {
+        if(mag(gradAlpha1Cells[cellI]) > GRADALPHA_MIN)
+        {
+            cell_near_intfc_[cellI] = true;
+        }
+        else
+        {
+            cell_near_intfc_[cellI] = false;
+        }
+
+        if(debug2)
+        {
+            os<< "    " << cellI << "                  " << mag(gradAlpha1Cells[cellI]) << "                              " << cell_near_intfc_[cellI] << endl; 
+        }
+    }
+    
+    if(debug)
+    {
+        os<< nl
+            << "//====================================================================\\" << nl
+            << "                Done tagging near-interface cells" << nl
+            << "\\====================================================================//" << nl << endl;
+    }
+
+    if(debug2)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                 Tagging faces requiring 2-phase flux" << nl
+            << "\\====================================================================//" << nl << nl
+            << "========================================================================" << nl
+            << "                           Internal faces" << nl
+            << "========================================================================" << nl << nl
+            << "------------------------------------------------------------------------" << nl
+            << "  face      own    own ni?      nei    nei ni?      need 2-phase flux?" << nl
+            << "------------------------------------------------------------------------" << endl;
+    }    
+
+    for(faceI=0; faceI<mesh().nInternalFaces(); faceI++)
+    {
+        if(cell_near_intfc_[own[faceI]] || cell_near_intfc_[nei[faceI]])
+        {
+            fc_2ph_flux_needed_[faceI] = true;
+        }
+        else
+        {
+            fc_2ph_flux_needed_[faceI] = false;
+        }
+        
+        if(debug2)
+        {
+            os<< "  " << faceI << "         " << own[faceI] << "      " << cell_near_intfc_[own[faceI]] << "          " << nei[faceI] << "      " << cell_near_intfc_[nei[faceI]]
+                << "                  " << fc_2ph_flux_needed_[faceI] << endl;
+        }
+    }
+
+    if(debug2)
+    {
+        os<< nl
+            << "========================================================================" << nl
+            << "                           Boundary faces" << nl
+            << "========================================================================" << nl << endl;            
+    }
+
+    forAll(patches, patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchVectorField& pGradAlpha1 = gradAlpha1_.boundaryField()[patchI];
+        faceI = pGradAlpha1.patch().start();
+
+        if(debug2)
+        {
+            os<< "--------------------------------------------------------------------" << nl
+                << "                         patch: " << patchI << nl
+                << "--------------------------------------------------------------------" << nl << endl;
+        }
+
+        if(pp.coupled())
+        {
+            if(debug2)
+            {
+                os<< "Coupled patch..." << nl << nl
+                    << "------------------------------------------------------------------------" << nl
+                    << "  face          ownGrad          neiGrad          need 2-phase flux?" << nl
+                    << "------------------------------------------------------------------------" << endl;
+            }
+
+            const vectorField& gradAlphaOwn_fld = pGradAlpha1.patchInternalField();
+            const vectorField& gradAlphaNei_fld = pGradAlpha1.patchNeighbourField();
+            forAll(pGradAlpha1, fcI)
+            {
+                gradAlphaOwn = mag(gradAlphaOwn_fld[fcI]);
+                gradAlphaNei = mag(gradAlphaNei_fld[fcI]);
+
+                if(gradAlphaOwn > GRADALPHA_MIN || gradAlphaNei > GRADALPHA_MIN)
+                {
+                    fc_2ph_flux_needed_[faceI] = true;
+                }
+                else
+                {
+                    fc_2ph_flux_needed_[faceI] = false;
+                }
+
+                if(debug2)
+                {
+                    os<< "  " << faceI << "        " << gradAlphaOwn << "        " << gradAlphaNei << "        " << fc_2ph_flux_needed_[faceI] << endl;
+                }
+
+                faceI++;
+            }
+        }
+        else if(isA<emptyPolyPatch>(pp))
+        {
+            if(debug2)
+            {
+                os<< "Empty patch..." << nl << endl;
+            }
+
+            forAll(pGradAlpha1, fcI)
+            {
+                fc_2ph_flux_needed_[faceI] = false;
+                faceI++;
+            }
+        }
+        else
+        {
+            if(debug2)
+            {
+                os<< "Non-coupled patch..." << nl << nl
+                    << "------------------------------------------------------------------------" << nl
+                    << "  face        own      own ni?          need 2-phase flux?" << nl
+                    << "------------------------------------------------------------------------" << endl;
+            }
+
+            forAll(pGradAlpha1, fcI)
+            {                
+                if(cell_near_intfc_[own[faceI]])
+                {
+                    fc_2ph_flux_needed_[faceI] = true;
+                }
+                else
+                {
+                    fc_2ph_flux_needed_[faceI] = false;
+                }
+
+                if(debug2)
+                {
+                    os<< "  " << faceI << "           " << own[faceI] << "        " << cell_near_intfc_[own[faceI]] << "                " << fc_2ph_flux_needed_[faceI] << endl;
+                }
+
+                faceI++;
+            }
+        }
+    }
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                 Done tagging faces requiring 2-phase flux" << nl
+            << "\\====================================================================//" << nl << nl << endl;
+    }
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
+            << "                  Calculating face 2-phase fluxes" << nl
+            << "\\====================================================================//" << nl << nl << endl;
+    }    
+
+    fAlpha1_ = fvc::interpolate(alpha_ph1_, "alpha1");
+    frho1_ = fvc::interpolate(rho1_, "rho");
+    frho0_ = fvc::interpolate(rho0_, "rho");
+    for(label i=0; i<(nSpecies_ - 1); i++)
+    {
+        fc1_[i] = fvc::interpolate(c1[i], "ci");
+        fc0_[i] = fvc::interpolate(c0[i], "ci");        
+    }
+    fh1_ = fvc::interpolate(h1, "h");
+    fh0_ = fvc::interpolate(h0, "h");
+
+    if(debug)
+    {
+        os<< "========================================================================" << nl
+            << "                    Internal face 2-phase fluxes" << nl
+            << "========================================================================" << nl << endl;
+    }
+
+    for(faceI=0; faceI<mesh().nInternalFaces(); faceI++)
+    {
+        curFacePhi = phi_[faceI];
+
+        if(fc_2ph_flux_needed_[faceI] && (mag(curFacePhi) > SMALLEST_PHI))
+        {
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "               Calculating 2-phase flux for face " << faceI << nl
+                    << "========================================================================" << nl << endl;
+            }
+
+            curFaceFlux_ph1 = 0;
+            curFaceFlux_ph0 = 0;
+            curFaceFlux_rho1 = 0;
+            curFaceFlux_rho0 = 0;
+            curFaceFlux_h1 = 0;
+            curFaceFlux_h0 = 0;
+            for(i=0; i<(n-1); i++)
+            {
+                curFaceFlux_c1[i] = 0;
+                curFaceFlux_c0[i] = 0;
+            }            
+            
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "              Step 1: Calculating face flux tetrahedrons " << nl
+                    << "========================================================================" << nl << endl;
+            }
+            
+            calcFaceFluxTets(faceI, curFacePhi, curFaceFluxTets, curFaceFluxTetVols, deltaT);
+
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "            Done Step 1: Calculating face flux tetrahedrons" << nl
+                    << "========================================================================" << nl << endl;
+            }
+            
+            // clip each of 20 tets with the cells in the stencil for the
+            // current face to find from which cell that portion of flux
+            // comes from                
+            const labelList& curFaceCells = faceStencil().stencil()[faceI];
+
+            if(debug)
+            {
+                os<< "Stencil for face " << faceI << endl;
+                Foam::plicFuncs::display_labelList(curFaceCells);
+            }
+
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "   Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
+                    << "========================================================================" << nl << endl;
+            }
+
+            for(tetI=0; tetI<curFaceFluxTets.size(); tetI++)
+            {
+                if(debug)
+                {
+                    os<< "--------------------------------------------------------------------" << nl
+                        << "           Calculating contributions of tetrahedron " << tetI << nl
+                        << "--------------------------------------------------------------------" << nl << endl;
+                }
+
+                curTetVolFlux_ph1 = 0;
+                curTetVolFlux_ph0 = 0;
+                curTetFlux_rho1 = 0;
+                curTetFlux_rho0 = 0;
+                curTetFlux_h1 = 0;
+                curTetFlux_h0 = 0;
+                for(i=0; i<(n-1); i++)
+                {
+                    curTetFlux_c1[i] = 0;
+                    curTetFlux_c0[i] = 0;
+                }                
+
+                for(cellI=0; cellI<curFaceCells.size(); cellI++)
+                {
+                    if(debug)
+                    {
+                        os<< "--------------------------------------------------------------------" << nl
+                            << "                   Intersecting with cell " << curFaceCells[cellI] << nl
+                            << "--------------------------------------------------------------------" << nl << endl;
+                    }
+
+                    curCell_lbl = curFaceCells[cellI];
+                    curTetCurCellVolFlux_ph1 = 0;
+                    curTetCurCellVolFlux_ph0 = 0;
+                    tet_cell_intersect(curFaceFluxTets[tetI], curCell_lbl, curTetCurCellVolFlux_ph1, curTetCurCellVolFlux_ph0);
+                    curTetVolFlux_ph1 += curTetCurCellVolFlux_ph1;
+                    curTetVolFlux_ph0 += curTetCurCellVolFlux_ph0;
+
+                    curTetCurCellFlux_rho1 = rho1_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph1;
+                    curTetCurCellFlux_rho0 = rho0_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph0;
+                    curTetFlux_rho1 += curTetCurCellFlux_rho1;
+                    curTetFlux_rho0 += curTetCurCellFlux_rho0;
+
+                    curTetCurCellFlux_h1 = h1_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph1;
+                    curTetCurCellFlux_h0 = h0_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph0;
+                    curTetFlux_h1 += curTetCurCellFlux_h1;
+                    curTetFlux_h0 += curTetCurCellFlux_h0;
+
+                    if(debug)
+                    {
+                        os<< "curCell alpha1 = " << alpha_ph1_flatFld_[curCell_lbl] << nl
+                            << "curTetCurCellVolFlux_ph1 = " << curTetCurCellVolFlux_ph1 << "  curTetCurCellVolFlux_ph0 = " << curTetCurCellVolFlux_ph0 << nl
+                            << "curCell rho1 = " << rho1_flatFld_[curCell_lbl] << "  curCell rho0 = " << rho0_flatFld_[curCell_lbl] << endl;
+                    }
+
+                    for(i=0; i<(n-1); i++)
+                    {
+                        curTetCurCellFlux_c1[i] = c1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;                        
+                        curTetCurCellFlux_c0[i] = c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
+                        curTetFlux_c1[i] += curTetCurCellFlux_c1[i];
+                        curTetFlux_c0[i] += curTetCurCellFlux_c0[i];
+                        
+                        if(debug)
+                        {
+                            os<< "  c1[" << i << "] = " << c1_flatFld_[i][curCell_lbl] << "  curTet curCell c1[" << i << "] flux = " << curTetCurCellFlux_c1[i] << nl
+                                << "  c0[" << i << "] = " << c0_flatFld_[i][curCell_lbl] << "  curTet curCell c0[" << i << "] flux = " << curTetCurCellFlux_c0[i] << endl;
+                        }
+                    }// end for(i=0; i<(n-1); i++)
+
+                    if(debug)
+                    {
+                        os<< nl
+                            << "--------------------------------------------------------------------" << endl;                            
+                    }
+                }// end for(cellI=0; cellI<curFaceCells.size(); cellI++)
+
+                curTetVolSign = sign(curFaceFluxTetVols[tetI]);
+                curFaceFlux_ph1 += curTetVolFlux_ph1*curTetVolSign;
+                curFaceFlux_ph0 += curTetVolFlux_ph0*curTetVolSign;
+                curFaceFlux_rho1 += curTetFlux_rho1*curTetVolSign;
+                curFaceFlux_rho0 += curTetFlux_rho0*curTetVolSign;
+                curFaceFlux_h1 += curTetFlux_h1*curTetVolSign;
+                curFaceFlux_h0 += curTetFlux_h0*curTetVolSign;
+
+                if(debug)
+                {
+                    os<< "Tetrahedron " << tetI << nl
+                        << "Phase-1 flux contribution:  " << curTetVolFlux_ph1 << nl
+                        << "Phase-0 flux contribution:  " << curTetVolFlux_ph0 << nl
+                        << "Phase-1 + Phase-0 flux:  " << curTetVolFlux_ph1 + curTetVolFlux_ph0 << nl
+                        << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
+                        << "Tetrahedron vol flux error: " << mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) << nl
+                        << "Sign of flux:  " << curTetVolSign << nl
+                        << "Cumulative phase-1 face flux:  " << curFaceFlux_ph1 << nl
+                        << "Cumulative phase-0 face flux:  " << curFaceFlux_ph0 << endl;
+
+                    if(mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) > 1E-15)
+                    {
+                        os<< "Tetrahedron vol flux error > 1E-15!!"
+                            << endl;
+                    }
+                }
+
+                for(i=0; i<(n-1); i++)
+                {
+                    curFaceFlux_c1[i] += curTetFlux_c1[i]*curTetVolSign;
+                    curFaceFlux_c0[i] += curTetFlux_c0[i]*curTetVolSign;
+
+                    if(debug)
+                    {
+                        os<< "c1[" << i << "] flux contribution:  " << curTetFlux_c1[i]*curTetVolSign << nl
+                            << "Cumulative c1[" << i << "] face flux:  " << curFaceFlux_c1[i] << nl
+                            << "c0[" << i << "] flux contribution:  " << curTetFlux_c0[i]*curTetVolSign << nl
+                            << "Cumulative c0[" << i << "] face flux:  " << curFaceFlux_c0[i] << endl;                            
+                    }
+                }// end for(i=0; i<(n-1); i++)
+
+                if(debug)
+                {
+                    os<< nl
+                        << "--------------------------------------------------------------------" << endl;                            
+                }
+            }// end for(label tetI=0; tetI<curFaceFluxTets.size(); tetI++)
+
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << " Done Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
+                    << "========================================================================" << nl << endl;
+            }
+
+            phiAlpha1_[faceI] = curFaceFlux_ph1/deltaT;
+            phiAlpha0_[faceI] = curFaceFlux_ph0/deltaT;
+            advFlux_rho1[faceI] = curFaceFlux_rho1/deltaT;
+            advFlux_rho0[faceI] = curFaceFlux_rho0/deltaT;
+            advFlux_h1[faceI] = curFaceFlux_h1/deltaT;
+            advFlux_h0[faceI] = curFaceFlux_h0/deltaT;
+
+            if(debug)
+            {
+                os<< "Total phase-1 face flux:  " << phiAlpha1_[faceI] << nl
+                    << "Total phase-0 face flux:  " << phiAlpha0_[faceI] << nl
+                    << "Total phase-1 + phase-0 face flux:  " << phiAlpha1_[faceI] + phiAlpha0_[faceI] << nl
+                    << "face phi:  " << curFacePhi << nl
+                    << "face phi error:  " << mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - curFacePhi) << endl;
+
+                if(mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - curFacePhi) > 1E-12)
+                {
+                    os<< "face phi error > 1E-12!!"
+                        << endl;
+                }
+            }
+
+            for(i=0; i<(n-1); i++)
+            {
+                advFlux_c1[i][faceI] = curFaceFlux_c1[i]/deltaT;
+                advFlux_c0[i][faceI] = curFaceFlux_c0[i]/deltaT;
+
+                if(debug)
+                {
+                    os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i][faceI] << nl
+                        << "Total c0[" << i << "] face flux:  " << advFlux_c0[i][faceI] << endl;                        
+                }
+            }            
+
+            if(debug)
+            {
+                os<< nl
+                    << "========================================================================" << nl
+                    << "              Done calculating 2-phase flux for face " << faceI << nl
+                    << "========================================================================" << nl << endl;
+            }
+        }// end if(fc_2ph_flux_needed_[faceI] && (mag(phi_[faceI]) > SMALLEST_PHI))
+        else
+        {
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "               Calculating 1-phase flux for face " << faceI << nl
+                    << "========================================================================" << nl << endl;
+            }
+
+            phiAlpha1_[faceI] = phi_[faceI]*fAlpha1_[faceI];
+            phiAlpha0_[faceI] = phi_[faceI]*(1 - fAlpha1_[faceI]);            
+
+            if(debug)
+            {
+                os<< "Face alpha1:  " << fAlpha1_[faceI] << nl
+                    << "Total phase-1 face flux:  " << phiAlpha1_[faceI] << nl
+                    << "Total phase-0 face flux:  " << phiAlpha0_[faceI] << nl
+                    << "Total phase-1 + phase-0 face flux:  " << phiAlpha1_[faceI] + phiAlpha0_[faceI] << nl
+                    << "face phi:  " << phi_[faceI] << nl
+                    << "face phi error:  " << mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - phi_[faceI]) << endl;
+
+                if(mag(phiAlpha1_[faceI] + phiAlpha0_[faceI] - phi_[faceI]) > 1E-12)
+                {
+                    os<< "face phi error > 1E-12!!"
+                        << endl;
+                }
+            }
+            
+            if(fAlpha1_[faceI] > 0.5)
+            {
+                advFlux_rho1[faceI] = phi_[faceI]*frho1_[faceI];
+                advFlux_rho0[faceI] = 0;
+                advFlux_h1[faceI] = phi_[faceI]*fh1_[faceI];
+                advFlux_h0[faceI] = 0;
+
+                for(i=0; i<(n-1); i++)
+                {
+                    advFlux_c1[i][faceI] = phi_[faceI]*fc1_[i][faceI];
+                    advFlux_c0[i][faceI] = 0;
+
+                    if(debug)
+                    {
+                        os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i][faceI] << nl
+                            << "Total c0[" << i << "] face flux:  " << advFlux_c0[i][faceI] << endl;                        
+                    }
+                }
+            }// end if (fAlpha1_[faceI] > 0.5)
+            else
+            {
+                advFlux_rho1[faceI] = 0;
+                advFlux_rho0[faceI] = phi_[faceI]*frho0_[faceI];
+                advFlux_h1[faceI] = 0;
+                advFlux_h0[faceI] = phi_[faceI]*fh0_[faceI];
+
+                for(i=0; i<(n-1); i++)
+                {
+                    advFlux_c1[i][faceI] = 0;
+                    advFlux_c0[i][faceI] = phi_[faceI]*fc0_[i][faceI];
+
+                    if(debug)
+                    {
+                        os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i][faceI] << nl
+                            << "Total c0[" << i << "] face flux:  " << advFlux_c0[i][faceI] << endl;                        
+                    }
+                }
+            }// end if (fAlpha1_[faceI] > 0.5)
+
+            if(debug)
+            {
+                os<< "========================================================================" << nl
+                    << "             Done calculating 1-phase flux for face " << faceI << nl
+                    << "========================================================================" << nl << endl;
+            }
+        }// end !if(fc_2ph_flux_needed_[faceI] && (mag(phi_[faceI]) > SMALLEST_PHI))
+    }
+
+    if(debug)
+    {
+        os<< nl
+            << "========================================================================" << nl
+            << "                    Boundary face 2-phase fluxes" << nl
+            << "========================================================================" << nl << endl;
+    }
+
+    forAll(phi_.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvsPatchScalarField& pphi = phi_.boundaryField()[patchI];
+        const fvsPatchScalarField& pfAlpha1 = fAlpha1_.boundaryField()[patchI];
+        const fvsPatchScalarField& pfrho1 = frho1_.boundaryField()[patchI];
+        const fvsPatchScalarField& pfrho0 = frho0_.boundaryField()[patchI];
+        const fvsPatchScalarField& pfh1 = fh1_.boundaryField()[patchI];
+        const fvsPatchScalarField& pfh0 = fh0_.boundaryField()[patchI];
+        fvsPatchScalarField& pphiAlpha1 = phiAlpha1_.boundaryField()[patchI];
+        fvsPatchScalarField& pphiAlpha0 = phiAlpha0_.boundaryField()[patchI];
+        fvsPatchScalarField& padvFlux_rho1 = advFlux_rho1.boundaryField()[patchI];
+        fvsPatchScalarField& padvFlux_rho0 = advFlux_rho0.boundaryField()[patchI];
+        fvsPatchScalarField& padvFlux_h1 = advFlux_h1.boundaryField()[patchI];
+        fvsPatchScalarField& padvFlux_h0 = advFlux_h0.boundaryField()[patchI];
+        
+        faceI = pp.start();
+
+        if(debug)
+        {
+            os<< "--------------------------------------------------------------------" << nl
+                << "                         patch: " << patchI << nl
+                << "--------------------------------------------------------------------" << nl << endl;
+        }
+
+        forAll(pphi, fcI)
+        {
+            curFacePhi = pphi[fcI];
+
+            if(fc_2ph_flux_needed_[faceI] && (mag(curFacePhi) > SMALLEST_PHI))
+            {
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "               Calculating 2-phase flux for face " << faceI << nl
+                        << "========================================================================" << nl << endl;
+                }
+                
+                curFaceFlux_ph1 = 0;
+                curFaceFlux_ph0 = 0;
+                curFaceFlux_rho1 = 0;
+                curFaceFlux_rho0 = 0;
+                curFaceFlux_h1 = 0;
+                curFaceFlux_h0 = 0;
+                for(i=0; i<(n-1); i++)
+                {
+                    curFaceFlux_c1[i] = 0;
+                    curFaceFlux_c0[i] = 0;
+                }
+
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "              Step 1: Calculating face flux tetrahedrons " << nl
+                        << "========================================================================" << nl << endl;
+                }                            
+
+                calcFaceFluxTets(faceI, curFacePhi, curFaceFluxTets, curFaceFluxTetVols, deltaT);
+            
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "            Done Step 1: Calculating face flux tetrahedrons" << nl
+                        << "========================================================================" << nl << endl;
+                }
+
+                // clip each of 20 tets with the cells in the stencil for the
+                // current face to find from which cell that portion of flux
+                // comes from    
+                const labelList& curFaceCells = faceStencil().stencil()[faceI];
+
+                if(debug)
+                {
+                    os<< "Stencil for face " << faceI << endl;
+                    Foam::plicFuncs::display_labelList(curFaceCells);
+                }
+
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "   Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
+                        << "========================================================================" << nl << endl;
+                }
+
+                for(tetI=0; tetI<curFaceFluxTets.size(); tetI++)
+                {
+                    if(debug)
+                    {
+                        os<< "--------------------------------------------------------------------" << nl
+                            << "           Calculating contributions of tetrahedron " << tetI << nl
+                            << "--------------------------------------------------------------------" << nl << endl;
+                    }
+
+                    curTetVolFlux_ph1 = 0;
+                    curTetVolFlux_ph0 = 0;
+                    curTetFlux_rho1 = 0;
+                    curTetFlux_rho0 = 0;
+                    curTetFlux_h1 = 0;
+                    curTetFlux_h0 = 0;
+                    for(i=0; i<(n-1); i++)
+                    {
+                        curTetFlux_c1[i] = 0;
+                        curTetFlux_c0[i] = 0;
+                    }
+
+                    for(cellI=0; cellI<curFaceCells.size(); cellI++)
+                    {
+                        if(debug)
+                        {
+                            os<< "--------------------------------------------------------------------" << nl
+                                << "                   Intersecting with cell " << curFaceCells[cellI] << nl
+                                << "--------------------------------------------------------------------" << nl << endl;
+                        }
+                        
+                        curCell_lbl = curFaceCells[cellI];
+                        curTetCurCellVolFlux_ph1 = 0;
+                        curTetCurCellVolFlux_ph0 = 0;
+                        tet_cell_intersect(curFaceFluxTets[tetI], curCell_lbl, curTetCurCellVolFlux_ph1, curTetCurCellVolFlux_ph0);
+                        curTetVolFlux_ph1 += curTetCurCellVolFlux_ph1;
+                        curTetVolFlux_ph0 += curTetCurCellVolFlux_ph0;
+
+                        curTetCurCellFlux_rho1 = rho1_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph1;
+                        curTetCurCellFlux_rho0 = rho0_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph0;
+                        curTetFlux_rho1 += curTetCurCellFlux_rho1;
+                        curTetFlux_rho0 += curTetCurCellFlux_rho0;
+
+                        curTetCurCellFlux_h1 = h1_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph1;
+                        curTetCurCellFlux_h0 = h0_flatFld_[curCell_lbl]*curTetCurCellVolFlux_ph0;
+                        curTetFlux_h1 += curTetCurCellFlux_h1;
+                        curTetFlux_h0 += curTetCurCellFlux_h0;
+
+                        if(debug)
+                        {
+                            os<< "curCell alpha1 = " << alpha_ph1_flatFld_[curCell_lbl] << nl
+                                << "curTetCurCellVolFlux_ph1 = " << curTetCurCellVolFlux_ph1 << "  curTetCurCellVolFlux_ph0 = " << curTetCurCellVolFlux_ph0 << nl
+                                << "curCell rho1 = " << rho1_flatFld_[curCell_lbl] << "  curCell rho0 = " << rho0_flatFld_[curCell_lbl] << endl;
+                        }
+
+                        for(i=0; i<(n-1); i++)
+                        {
+                            curTetCurCellFlux_c1[i] = c1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;                        
+                            curTetCurCellFlux_c0[i] = c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
+                            curTetFlux_c1[i] += curTetCurCellFlux_c1[i];
+                            curTetFlux_c0[i] += curTetCurCellFlux_c0[i];
+                        
+                            if(debug)
+                            {
+                                os<< "  c1[" << i << "] = " << c1_flatFld_[i][curCell_lbl] << "  curTet curCell c1[" << i << "] flux = " << curTetCurCellFlux_c1[i] << nl
+                                    << "  c0[" << i << "] = " << c0_flatFld_[i][curCell_lbl] << "  curTet curCell c0[" << i << "] flux = " << curTetCurCellFlux_c0[i] << endl;
+                            }
+                        }// end for(i=0; i<(n-1); i++)
+
+                        if(debug)
+                        {
+                            os<< nl
+                                << "--------------------------------------------------------------------" << endl;                            
+                        }
+                    }// end for(cellI=0; cellI<curFaceCells.size(); cellI++)
+
+                    curTetVolSign = sign(curFaceFluxTetVols[tetI]);
+                    curFaceFlux_ph1 += curTetVolFlux_ph1*curTetVolSign;
+                    curFaceFlux_ph0 += curTetVolFlux_ph0*curTetVolSign;
+                    curFaceFlux_rho1 += curTetFlux_rho1*curTetVolSign;
+                    curFaceFlux_rho0 += curTetFlux_rho0*curTetVolSign;
+                    curFaceFlux_h1 += curTetFlux_h1*curTetVolSign;
+                    curFaceFlux_h0 += curTetFlux_h0*curTetVolSign;
+
+                    if(debug)
+                    {
+                        os<< "Tetrahedron " << tetI << nl
+                            << "Phase-1 flux contribution:  " << curTetVolFlux_ph1 << nl
+                            << "Phase-0 flux contribution:  " << curTetVolFlux_ph0 << nl
+                            << "Phase-1 + Phase-0 flux:  " << curTetVolFlux_ph1 + curTetVolFlux_ph0 << nl
+                            << "Tetrahedron vol:  " << curFaceFluxTetVols[tetI] << nl
+                            << "Tetrahedron vol flux error: " << mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) << nl
+                            << "Sign of flux:  " << curTetVolSign << nl
+                            << "Cumulative phase-1 face flux:  " << curFaceFlux_ph1 << nl
+                            << "Cumulative phase-0 face flux:  " << curFaceFlux_ph0 << endl;
+
+                        if(mag(curTetVolFlux_ph1 + curTetVolFlux_ph0 - mag(curFaceFluxTetVols[tetI])) > 1E-15)
+                        {
+                            os<< "Tetrahedron vol flux error > 1E-15!!"
+                                << endl;
+                        }
+                    }
+
+                    for(i=0; i<(n-1); i++)
+                    {
+                        curFaceFlux_c1[i] += curTetFlux_c1[i]*curTetVolSign;
+                        curFaceFlux_c0[i] += curTetFlux_c0[i]*curTetVolSign;
+
+                        if(debug)
+                        {
+                            os<< "c1[" << i << "] flux contribution:  " << curTetFlux_c1[i]*curTetVolSign << nl
+                                << "Cumulative c1[" << i << "] face flux:  " << curFaceFlux_c1[i] << nl
+                                << "c0[" << i << "] flux contribution:  " << curTetFlux_c0[i]*curTetVolSign << nl
+                                << "Cumulative c0[" << i << "] face flux:  " << curFaceFlux_c0[i] << endl;                            
+                        }
+                    }// end for(i=0; i<(n-1); i++)
+
+                    if(debug)
+                    {
+                        os<< nl
+                            << "--------------------------------------------------------------------" << endl;                            
+                    }
+                }// end for(label tetI=0; tetI<curFaceFluxTets.size(); tetI++)
+
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << " Done Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
+                        << "========================================================================" << nl << endl;
+                }
+                
+                pphiAlpha1[fcI] = curFaceFlux_ph1/deltaT;
+                pphiAlpha0[fcI] = curFaceFlux_ph0/deltaT;
+                padvFlux_rho1[fcI] = curFaceFlux_rho1/deltaT;
+                padvFlux_rho0[fcI] = curFaceFlux_rho0/deltaT;
+                padvFlux_h1[fcI] = curFaceFlux_h1/deltaT;
+                padvFlux_h0[fcI] = curFaceFlux_h0/deltaT;
+
+                if(debug)
+                {
+                    os<< "Total phase-1 face flux:  " << pphiAlpha1[fcI] << nl
+                        << "Total phase-0 face flux:  " << pphiAlpha0[fcI] << nl
+                        << "phase-1 + phase-0 face flux:  " << pphiAlpha1[fcI] + pphiAlpha0[fcI] << nl
+                        << "face phi:  " << curFacePhi << nl
+                        << "face phi error:  " << mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - curFacePhi) << endl;
+
+                    if(mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - curFacePhi) > 1E-12)
+                    {
+                        os<< "face phi error > 1E-12!!"
+                            << endl;
+                    }
+                }
+
+                for(i=0; i<(n-1); i++)
+                {
+                    advFlux_c1[i].boundaryField()[patchI][fcI] = curFaceFlux_c1[i]/deltaT;
+                    advFlux_c0[i].boundaryField()[patchI][fcI] = curFaceFlux_c0[i]/deltaT;
+
+                    if(debug)
+                    {
+                        os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i].boundaryField()[patchI][fcI] << nl
+                            << "Total c0[" << i << "] face flux:  " << advFlux_c0[i].boundaryField()[patchI][fcI] << endl;                        
+                    }
+                }
+
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "              Done calculating 2-phase flux for face " << faceI << nl
+                        << "========================================================================" << nl << endl;
+                }
+            }// end if(fc_2ph_flux_needed_[faceI] && (mag(pphi[fcI]) > SMALLEST_PHI))
+            else
+            {             
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "               Calculating 1-phase flux for face " << faceI << nl
+                        << "========================================================================" << nl << endl;
+                }
+
+                pphiAlpha1[fcI] = pphi[fcI]*pfAlpha1[fcI];
+                pphiAlpha0[fcI] = pphi[fcI]*(1 - pfAlpha1[fcI]);
+
+                if(debug)
+                {
+                    os<< "Face alpha1:  " << pfAlpha1[fcI] << nl
+                        << "Total phase-1 face flux:  " << pphiAlpha1[fcI] << nl
+                        << "Total phase-0 face flux:  " << pphiAlpha0[fcI] << nl
+                        << "Total phase-1 + phase-0 face flux:  " << pphiAlpha1[fcI] + pphiAlpha0[fcI] << nl
+                        << "face phi:  " << pphi[fcI] << nl
+                        << "face phi error:  " << mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - pphi[fcI]) << endl;
+
+                    if(mag(pphiAlpha1[fcI] + pphiAlpha0[fcI] - pphi[fcI]) > 1E-12)
+                    {
+                        os<< "face phi error > 1E-12!!"
+                            << endl;
+                    }
+                }
+
+                if(pfAlpha1[fcI] > 0.5)
+                {
+                    padvFlux_rho1[fcI] = pphi[fcI]*pfrho1[fcI];
+                    padvFlux_rho0[fcI] = 0;
+                    padvFlux_h1[fcI] = pphi[fcI]*pfh1[fcI];
+                    padvFlux_h0[fcI] = 0;
+
+                    for(i=0; i<(n-1); i++)
+                    {
+                        advFlux_c1[i].boundaryField()[patchI][fcI] = pphi[fcI]*fc1_[i].boundaryField()[patchI][fcI];
+                        advFlux_c0[i].boundaryField()[patchI][fcI] = 0;
+
+                        if(debug)
+                        {
+                            os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i].boundaryField()[patchI][fcI] << nl
+                                << "Total c0[" << i << "] face flux:  " << advFlux_c0[i].boundaryField()[patchI][fcI] << endl;                        
+                        }
+                    }
+                }// end if (pfAlpha1[fcI] > 0.5)
+                else
+                {
+                    padvFlux_rho1[fcI] = 0;
+                    padvFlux_rho0[fcI] = pphi[fcI]*pfrho0[fcI];
+                    padvFlux_h1[fcI] = 0;
+                    padvFlux_h0[fcI] = pphi[fcI]*pfh0[fcI];
+
+                    for(label i=0; i<(nSpecies_ - 1); i++)
+                    {
+                        advFlux_c1[i].boundaryField()[patchI][fcI] = 0;
+                        advFlux_c0[i].boundaryField()[patchI][fcI] = pphi[fcI]*fc0_[i].boundaryField()[patchI][fcI];
+
+                        if(debug)
+                        {
+                            os<< "Total c1[" << i << "] face flux:  " << advFlux_c1[i].boundaryField()[patchI][fcI] << nl
+                                << "Total c0[" << i << "] face flux:  " << advFlux_c0[i].boundaryField()[patchI][fcI] << endl;
+                        }
+                    }
+                }// end if (pfAlpha1[fcI] > 0.5)
+
+                if(debug)
+                {
+                    os<< "========================================================================" << nl
+                        << "             Done calculating 1-phase flux for face " << faceI << nl
+                        << "========================================================================" << nl << endl;
+                }
+            }// end if(fc_2ph_flux_needed_[faceI] && (mag(pphi[fcI]) > SMALLEST_PHI))
+            faceI++;
+        }// end forAll(pphi, fcI)
+    }// end forAll(patches, patchI) 
+
+    if(debug)
+    {
+        os<< "//====================================================================\\" << nl
             << "                 Done calculating face 2-phase fluxes" << nl
             << "\\====================================================================//" << nl << nl << endl;
     }

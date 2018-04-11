@@ -77,50 +77,6 @@ int main(int argc, char *argv[])
     #include "diffCourantNo.H"
     #include "setInitialDeltaT.H"
 
-
-    double Z;
-    double *MW;
-    double *x;
-    double *Dij;
-    double *rhs_flux;
-    double *flux_m;
-    T_UMFPACK flux_umf;
-
-    _NEW_(MW, double, nSpecies);    
-    _NEW_(x, double, nSpecies);    
-    _NEW_(Dij, double, nSpecies*nSpecies);
-    _NEW_(rhs_flux, double, nSpecies);
-    _NEW_(flux_m, double, nSpecies);    
-
-    // initialize umfpack
-    initialUmfpack(&flux_umf);
-    flux_memoryMatVec(&flux_umf, nSpecies);
-    flux_compRow_setRowCol(&flux_umf, nSpecies);
-    
-    int iread;
-    FILE *f;
-    f = fopen("MW.dat+", "r");
-    for(int i=0; i<nSpecies; i++) iread=fscanf(f, "%lf", &MW[i]);
-    fclose(f);
-
-    for(int i=0; i<nSpecies; i++) x[i] = Y1[i].internalField()[0]/MW[i];
-
-    for(int i=0; i<nSpecies; i++)
-    {
-        for(int j=0; j<nSpecies; j++)
-        {
-            Dij[i+nSpecies*j] = D1_0[0].value();
-        }
-    }
-
-    for(int i=0; i<nSpecies; i++) rhs_flux[i] = -gradf_Y1[i].internalField()[0];
-
-    Z = 0.5;
-
-    Maxwell_Stefan_mass_flux(Z, nSpecies, MW, x, Dij, rhs_flux, flux_m, &flux_umf);
-
-
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     Info<< "\nStarting time loop\n" << endl;
@@ -141,107 +97,103 @@ int main(int argc, char *argv[])
         runTime++;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
-
-        //--------------------------------------------------------------------//
-        // code to check and debug big differences between face flux field
-        // and velocity field linearly interpolated to mesh faces
-        const labelList& own = mesh.owner();
-        const labelList& nei = mesh.neighbour();
-        surfaceVectorField U_interp(linearInterpolate(U));
- 
-        if(phi_interp_debug)
-        {            
-            forAll(phi.internalField(),faceI)
-            {
-                scalar curPhi = phi.internalField()[faceI];
-                vector curSf = mesh.Sf()[faceI];
-                scalar curMagSf = mesh.magSf()[faceI];
-                scalar curPhiU = curPhi/curMagSf;         
-                scalar curU_interp = (U_interp.internalField()[faceI] & curSf)/curMagSf;
-
-                if(mag((curPhiU - curU_interp)/(curU_interp + VSMALL)) > 0.5)
-                {
-                    Info<< "Face " << faceI << nl
-                        << "Flux = " << curPhi << "  Face vel. = " << curPhiU 
-                        << "  Interp. U = " << curU_interp << nl
-                        << "Own U = " << U.internalField()[own[faceI]] 
-                        << "  Nei U = " << U.internalField()[nei[faceI]] << endl;
-                }            
-            }            
-        }
-        //--------------------------------------------------------------------//
-
-        // --- Pressure-velocity PIMPLE corrector loop
-        while (pimple.loop())
+         
+        for(iOCorr=0; iOCorr<nOCorr; iOCorr++)
         {
-            if(pimple.firstIter())
-            {
-                Info<< "Calculating two-phase advective fluxes" << endl;
-            
-                interface.calc_2ph_advFluxes(Y1, Y0, advFlux_Y1, advFlux_Y0);
+            Info<< "Calculating two-phase advective fluxes" << endl;
+            dt = runTime.deltaTValue();
+            interface.calc_2ph_advFluxes(c1, c0, h1, h0, dt, advFlux_rho1, advFlux_rho0, advFlux_c1, advFlux_c0, advFlux_h1, advFlux_h0);
      
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << endl; 
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << endl; 
 
                 #include "alpha1Eqn.H"        
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl; 
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl; 
 
                 #include "YAdvEqn.H"
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
-                interface.intfc_correct();                
+                #include "hAdvEqn.H"
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
-                #include "ist.H"
+            interface.intfc_correct();                
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
-
-                interface.intfc_correct();                
-
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
                 #include "YDiffEqn.H"
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
-                //intfcProp.correct();
-                #include "curvature.H"
+                #include "hDiffEqn.H"
 
-                for(label i=0; i<nSpecies; i++)
-                {
-                    C_phAvg[i] = C0[i] + C1[i];
-                }
-            }
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
-            #include "UEqn.H"
+                #include "ist.H"
 
-            while(pimple.correct())
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            interface.intfc_correct();                
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+                #include "YDiffEqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+                #include "hDiffEqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+        
+                #include "curvature.H"        
+
+            rho = limitedAlpha1*rho1 + (scalar(1) - limitedAlpha1)*rho0;
+
+            rhoPhi = advFlux_rho1 + advFlux_rho0;
+
+                #include "UEqn.H"
+
+            for(iPCorr=0; iPCorr<nPCorr; iPCorr++)
             {
-                #include "pEqn.H"
+                    #include "pEqn.H"
                 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << endl; 
             }
-
-            Info<< nl << endl; 
         }
+
+        for(label i=0; i<nSpecies; i++)
+        {
+            C_phAvg[i] = C0[i] + C1[i];
+        }
+
+        #include "copyOldFields.H"
+
+        Info<< nl << endl; 
 
         runTime.write();        
     }    

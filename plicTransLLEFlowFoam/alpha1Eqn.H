@@ -15,15 +15,15 @@ fvScalarMatrix alpha1Eqn
 alpha1Eqn.solve();
 */
 
-scalar dt = runTime.deltaTValue();
 scalarField& alphaCells = alpha1.internalField();
+scalarField& alphaOldCells = alpha1_old.internalField();
 
 volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
 scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
 
 forAll(alphaCells, cellI)
 {
-    alphaCells[cellI] += -surfInt_phiAlpha1Cells[cellI]*dt;
+    alphaCells[cellI] = alphaOldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
 }
 
 Info<< "Phase-1 volume fraction = "
@@ -35,19 +35,15 @@ Info<< "Phase-1 volume fraction = "
     << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
     << endl;
 
-label nCells = mesh.nCells();
+nCells = mesh.nCells();
 
-scalar maxAlpha1 = 1;
-scalar minAlpha1 = 0;
-label maxAlpha1Cell = -1;
-label minAlpha1Cell = -1;
+maxAlpha1 = 1;
+minAlpha1 = 0;
+maxAlpha1Cell = -1;
+minAlpha1Cell = -1;
 
-scalar ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
-scalar ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
-
-const labelUList& owner = mesh.owner();
-const labelUList& neighbour = mesh.neighbour();
-const scalarField& meshV = mesh.V();
+ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
+ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
 
 if(alpha_debug)
 {
@@ -323,7 +319,3 @@ alpha1.correctBoundaryConditions();
 limitedAlpha1 = min(max(alpha1, scalar(0)), scalar(1));
 
 alpha0 = scalar(1) - limitedAlpha1;
-
-rho = limitedAlpha1*rho1 + (scalar(1) - limitedAlpha1)*rho0;
-
-rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
