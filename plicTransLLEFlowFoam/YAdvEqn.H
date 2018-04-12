@@ -1,26 +1,43 @@
 
+dt = deltaT;
+
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
-const cellList& meshCells = mesh.cells();
-
-if(adv_debug2)
+for(i=0; i<(n-1); i++)
 {
-    osAdv<< "Solution Time = " << runTime.timeName()
-        << nl << endl;
-}
+    if(adv_debug2)
+    {
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< "Solution Time = " << runTime.timeName() << "  Y[" << i << "] Adv" << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< endl;    
+    }
 
-for(label i=0; i<(nSpecies - 1); i++)
-{
     volScalarField& Y1i = Y1[i];
     volScalarField& Y0i = Y0[i];
+    volScalarField& c1i = c1[i];
+    volScalarField& c0i = c0[i];
     volScalarField& C1i = C1[i];
     volScalarField& C0i = C0[i];
+    volScalarField& C1Oldi = C1_old[i];
+    volScalarField& C0Oldi = C0_old[i];
 
     scalarField& Y1iCells = Y1i.internalField();
     scalarField& Y0iCells = Y0i.internalField();
+    scalarField& c1iCells = c1i.internalField();
+    scalarField& c0iCells = c0i.internalField();
     scalarField& C1iCells = C1i.internalField();
     scalarField& C0iCells = C0i.internalField();
+    scalarField& C1OldiCells = C1Oldi.internalField();
+    scalarField& C0OldiCells = C0Oldi.internalField();
+
+    word C1iName = "C1["+name(i)+"]";
+    word c1iName = "c1["+name(i)+"]";
+    word Y1iName = "Y1["+name(i)+"]";
+    word C0iName = "C0["+name(i)+"]";
+    word c0iName = "c0["+name(i)+"]";
+    word Y0iName = "Y0["+name(i)+"]";
 
     surfaceScalarField& advFlux_Y1i = advFlux_Y1[i];
     surfaceScalarField& advFlux_Y0i = advFlux_Y0[i];
@@ -31,81 +48,17 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     if(adv_debug2)
     {
-        osAdv<< "---------------------------------------------------------------------------------------" << nl
-            << "Advective fluxes Y1[" << i << "]" << nl
-            << "---------------------------------------------------------------------------------------" << nl
-            << endl;
-        
-        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
-        {
-            osAdv<< "face: " << faceI << "  advFlux_Y1i = " << advFlux_Y1i[faceI]
-                << endl;
-        }
-        osAdv<< endl;
-        forAll(advFlux_Y1i.boundaryField(), patchI)
-        {
-            const polyPatch& pp = mesh.boundaryMesh()[patchI];
-            const fvsPatchScalarField& padvFlux_Y1i = advFlux_Y1i.boundaryField()[patchI];
-            const fvPatchScalarField& pY1i = Y1i.boundaryField()[patchI];
-            label faceI = pp.start();
+        plicFuncs::print_advFluxFld(mesh, advFlux_Y1i, alpha1, C1i, c1i, Y1i, c1iName, Y1iName, osAdv);
+        plicFuncs::print_advFluxIntData(mesh, advFlux_Y1i, surfInt_advFlux_Y1iCells, dt, alpha1, C1i, c1i, Y1i, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", C1iName, c1iName, Y1iName, osAdv);
 
-            osAdv<< "-----------------------------------------------------------------------------------------" << nl
-                << "Patch " << mesh.boundaryMesh().names()[patchI] << nl
-                << "-----------------------------------------------------------------------------------------"
-                << endl;
-
-            forAll(padvFlux_Y1i, fcI)
-            {
-                osAdv<< "face: " << faceI << "  patch face index: " << fcI << "  advFlux_Y1i = " << padvFlux_Y1i[fcI] << "  own Y1i = " << Y1iCells[own[faceI]] << "  nei Y1i = " << pY1i[fcI]
-                    << endl;
-                faceI++;
-            }
-            osAdv<< endl;
-        }
-        osAdv<< "----------------------------------------------------------------------------------------" << nl
-            << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< setw(6) << "cellI" << "  " << setw(12) << C1iName << "  " << setw(12) << Y1iName << endl;
+        plicFuncs::print_line(osAdv, 80);
     }
 
     forAll(C1iCells,cellI)
-    {        
-        if(adv_debug2)
-        {
-            const cell& curCell = meshCells[cellI];
-
-            osAdv<< "Solving Y1[" << i << "] adv eqn in cell " << cellI << nl
-                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
-
-            forAll(curCell, faceI)
-            {
-                label curFaceLbl = curCell[faceI];
-                label curOwn = own[curFaceLbl];
-
-                osAdv<< "cell face label: " << curFaceLbl 
-                    << nl
-                    << "face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
-                    << endl;
-                if(curFaceLbl < mesh.nInternalFaces())
-                {
-                    label curNei = nei[curFaceLbl];
-                    osAdv<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
-                        << nl
-                        << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  advFlux_Y1i: " << advFlux_Y1i[curFaceLbl] 
-                        << endl;
-                }
-                else
-                {
-                    osAdv<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] 
-                        << endl;
-                }
-            }
-
-            osAdv<< "cell V: " << meshV[cellI] << endl;
-
-            osAdv<< "div(advFlux) = " << surfInt_advFlux_Y1iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue()
-                << endl;
-        }
-                
-        C1iCells[cellI] += -surfInt_advFlux_Y1iCells[cellI]*runTime.deltaTValue();
+    {                        
+        C1iCells[cellI] = C1OldiCells[cellI] - surfInt_advFlux_Y1iCells[cellI]*dt;
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
@@ -118,10 +71,13 @@ for(label i=0; i<(nSpecies - 1); i++)
 
         if(adv_debug2)
         {
-            osAdv<< "C1i = " << C1iCells[cellI] << nl
-                << "Y1i = " << Y1iCells[cellI] << nl
-                << endl;
+            osAdv<< setw(6) << cellI << "  " << setw(12) << C1iCells[cellI] << "  " << setw(12) << Y1iCells[cellI] << endl;
         }
+    }
+
+    if(adv_debug2)
+    {
+        plicFuncs::print_line(osAdv, 80);
     }
 
     Info<< "Phase-1 Ci = "
@@ -142,10 +98,10 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     if(adv_debug2)
     {
-        osAdv<< "---------------------------------------------------------------------" << nl
-            << "Redistributing C1[" << i << "] field" << nl
-            << "---------------------------------------------------------------------" << nl
-            << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< "Redistributing " << C1iName << " field" << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< endl;
     }
     
     if(redist_C)
@@ -173,17 +129,16 @@ for(label i=0; i<(nSpecies - 1); i++)
     {        
         if(Y1iCells[cellI] < Y1min[i])
         {
-            Y1iCells[cellI] = Y1min[i];
-            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+            Y1iCells[cellI] = Y1min[i];            
         }
         
         if(Y1iCells[cellI] > Y1max[i])
         {
             Y1iCells[cellI] = Y1max[i];
-            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         }   
 
         C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+        c1iCells[cellI] = rho1Cells[cellI]*Y1iCells[cellI];
     }
 
     Info<< "Phase-1 Ci after clipping = "
@@ -197,6 +152,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         << endl;
 
     C1i.correctBoundaryConditions();
+    c1i.correctBoundaryConditions();
     Y1i.correctBoundaryConditions();
 
     //Phase-0
@@ -205,81 +161,17 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     if(adv_debug2)
     {
-        osAdv<< "---------------------------------------------------------------------------------------" << nl
-            << "Advective fluxes Y0[" << i << "]" << nl
-            << "---------------------------------------------------------------------------------------" << nl
-            << endl;
-        
-        for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
-        {
-            osAdv<< "face: " << faceI << "  advFlux_Y0i = " << advFlux_Y0i[faceI]
-                << endl;
-        }
-        osAdv<< endl;
-        forAll(advFlux_Y0i.boundaryField(), patchI)
-        {
-            const polyPatch& pp = mesh.boundaryMesh()[patchI];
-            const fvsPatchScalarField& padvFlux_Y0i = advFlux_Y0i.boundaryField()[patchI];
-            const fvPatchScalarField& pY0i = Y0i.boundaryField()[patchI];
-            label faceI = pp.start();
+        plicFuncs::print_advFluxFld(mesh, advFlux_Y0i, alpha0, C0i, c0i, Y0i, c0iName, Y0iName, osAdv);
+        plicFuncs::print_advFluxIntData(mesh, advFlux_Y0i, surfInt_advFlux_Y0iCells, dt, alpha0, C0i, c0i, Y0i, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", C0iName, c0iName, Y0iName, osAdv);
 
-            osAdv<< "----------------------------------------------------------------------------------------" << nl
-                << "Patch " << mesh.boundaryMesh().names()[patchI] << nl
-                << "----------------------------------------------------------------------------------------"
-                << endl;
-
-            forAll(padvFlux_Y0i, fcI)
-            {
-                osAdv<< "face: " << faceI << "  patch face index: " << fcI << "  advFlux_Y0i = " << padvFlux_Y0i[fcI] << "  own Y0i = " << Y0iCells[own[faceI]] << "  nei Y0i = " << pY0i[fcI]
-                    << endl;
-                faceI++;
-            }
-            osAdv<< endl;
-        }
-        osAdv<< "---------------------------------------------------------------------------------------" << nl
-            << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< setw(6) << "cellI" << "  " << setw(12) << C0iName << "  " << setw(12) << Y0iName << endl;
+        plicFuncs::print_line(osAdv, 80);
     }
 
     forAll(C0iCells,cellI)
-    {
-        if(adv_debug2)
-        {
-            const cell& curCell = meshCells[cellI];
-
-            osAdv<< "Solving Y0[" << i << "] adv eqn in cell " << cellI << nl
-                << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;           
-
-            forAll(curCell, faceI)
-            {
-                label curFaceLbl = curCell[faceI];
-                label curOwn = own[curFaceLbl];
-
-                osAdv<< "cell face label: " << curFaceLbl 
-                    << nl
-                    << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
-                    << endl;
-                if(curFaceLbl < mesh.nInternalFaces())
-                {
-                    label curNei = nei[curFaceLbl];
-                    osAdv<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
-                        << nl
-                        << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  advFlux_Y0i: " << advFlux_Y0i[curFaceLbl] 
-                        << endl;
-                }            
-                else
-                {
-                    osAdv<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
-                        << endl;
-                }
-            }
-
-            osAdv<< "cell V: " << meshV[cellI] << endl;
-
-            osAdv<< "div(advFlux) = " << surfInt_advFlux_Y0iCells[cellI] << "  div(advFlux)*dt = " << surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue()
-                << endl;
-        }
-                
-        C0iCells[cellI] += -surfInt_advFlux_Y0iCells[cellI]*runTime.deltaTValue();
+    {                
+        C0iCells[cellI] = C0OldiCells[cellI] - surfInt_advFlux_Y0iCells[cellI]*dt;
 
         if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
@@ -289,13 +181,16 @@ for(label i=0; i<(nSpecies - 1); i++)
         {
             Y0iCells[cellI] = C0iCells[cellI]/alpha0Cells[cellI]/rho0Cells[cellI];
         }
-
+        
         if(adv_debug2)
         {
-            osAdv<< "C0i = " << C0iCells[cellI] << nl
-                << "Y0i = " << Y0iCells[cellI] << nl
-                << endl;
+            osAdv<< setw(6) << cellI << "  " << setw(12) << C0iCells[cellI] << "  " << setw(12) << Y0iCells[cellI] << endl;
         }
+    }
+
+    if(adv_debug2)
+    {
+        plicFuncs::print_line(osAdv, 80);
     }
 
     Info<< "Phase-0 Ci = "
@@ -316,10 +211,10 @@ for(label i=0; i<(nSpecies - 1); i++)
 
     if(adv_debug2)
     {
-        osAdv<< "---------------------------------------------------------------------" << nl
-            << "Redistributing C0[" << i << "] field" << nl
-            << "---------------------------------------------------------------------" << nl
-            << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< "Redistributing " << C0iName << " field" << endl;
+        plicFuncs::print_line(osAdv, 80);
+        osAdv<< endl;
     }
 
     if(redist_C)
@@ -347,27 +242,16 @@ for(label i=0; i<(nSpecies - 1); i++)
     {        
         if(Y0iCells[cellI] < Y0min[i])
         {
-            Y0iCells[cellI] = Y0min[i];
-            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
-
-            if(adv_debug2)
-            {
-                osAdv<< "Y0[" << i << "] < 0 in cell " << cellI << endl;
-            }
+            Y0iCells[cellI] = Y0min[i];            
         }
         
         if(Y0iCells[cellI] > Y0max[i])
         {
             Y0iCells[cellI] = Y0max[i];
-            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
-
-            if(adv_debug2)
-            {
-                osAdv<< "Y0[" << i << "] > 1 in cell " << cellI << endl;
-            }
         }   
 
         C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+        c0iCells[cellI] = rho0Cells[cellI]*Y0iCells[cellI];
     }
 
     Info<< "Phase-0 Ci after clipping = "
@@ -381,6 +265,7 @@ for(label i=0; i<(nSpecies - 1); i++)
         << endl;
         
     C0i.correctBoundaryConditions();
+    c0i.correctBoundaryConditions();
     Y0i.correctBoundaryConditions();
 
     Y1t += Y1i;
@@ -388,13 +273,38 @@ for(label i=0; i<(nSpecies - 1); i++)
 }
 
 Y1[nSpecies - 1] = scalar(1.0) - Y1t;
-//Y1[nSpecies - 1].max(0.0);
-//Y1[nSpecies - 1].min(1.0);
+Y1[nSpecies - 1].max(0.0);
+Y1[nSpecies - 1].min(1.0);
 C1[nSpecies - 1] = rho1*alpha1*Y1[nSpecies - 1];
+c1[nSpecies - 1] = rho1*Y1[nSpecies - 1];
 
 Y0[nSpecies - 1] = scalar(1.0) - Y0t;
-//Y0[nSpecies - 1].max(0.0);
-//Y0[nSpecies - 1].min(1.0);
+Y0[nSpecies - 1].max(0.0);
+Y0[nSpecies - 1].min(1.0);
 C0[nSpecies - 1] = rho0*alpha0*Y0[nSpecies - 1];
+c0[nSpecies - 1] = rho0*Y0[nSpecies - 1];
+
+forAll(alpha1Cells, cellI)
+{
+    for(i=0; i<n; i++)
+    {
+        y_cellI_tmp[i] = Y1[i].internalField()[cellI];
+    }
+    plicFuncs::y2x(n, MW, y_cellI_tmp, x_cellI_tmp);
+    for(i=0; i<n; i++)
+    {
+        x1[i].internalField()[cellI] = x_cellI_tmp;
+    }
+
+    for(i=0; i<n; i++)
+    {
+        y_cellI_tmp[i] = Y0[i].internalField()[cellI];
+    }
+    plicFuncs::y2x(n, MW, y_cellI_tmp, x_cellI_tmp);
+    for(i=0; i<n; i++)
+    {
+        x0[i].internalField()[cellI] = x_cellI_tmp;
+    }
+}
 
 Info<< "Done YAdvEqns" << endl;

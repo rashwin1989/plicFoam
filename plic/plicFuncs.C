@@ -5711,7 +5711,7 @@ void calc_2ph_diffFluxes_T
     const surfaceScalarField& lambda1f,
     const surfaceScalarField& lambda0f,
     const surfaceScalarField& gradf_T1,
-    const surfaceScalarField& gradf_T0,
+    const surfaceScalarField& gradf_T0,    
     const scalarField& magSf_ph1_own,
     const scalarField& magSf_ph0_own,
     const scalarField& magSf_ph1_nei,
@@ -5729,7 +5729,7 @@ void calc_2ph_diffFluxes_T
     const volScalarField& T0,
     const scalar& deltaT,
     surfaceScalarField& diffFlux_T1,
-    surfaceScalarField& diffFlux_T0,
+    surfaceScalarField& diffFlux_T0,    
     const int& MAX_ITER_T,
     const double& T_TOL,
     const double& H_TOL,
@@ -6174,6 +6174,97 @@ void calc_2ph_diffFluxes_T
 }
 
 
+void calc_T_from_h
+(
+    double *x,
+    double P,
+    double h,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double& T,
+    const int& MAX_ITER_T,
+    const double& T_TOL,
+    const double& H_TOL
+)
+{
+    int i, iter;
+    double hm, TOld, TNew, F, dF, T_err, F_err, MW_tmp;
+    double v_tmp, Cp_tmp, h_tmp;
+    
+    MW_tmp = 0;
+    for(i=0; i<n; i++)
+    {
+        MW_tmp += x[i]*MW[i];
+    }
+    MW_tmp *= 1e-3;
+
+    hm = h*MW_tmp;
+
+    TOld = T;
+    TNew = T;
+
+    for(iter=0; iter<MAX_ITER_T; iter++)
+    {
+        calc_v_Cp_h_(&P, &TOld, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);    
+
+        F = h_tmp - hm;        
+        dF = Cp_tmp;
+
+        TNew = TOld - F/dF;
+        
+        T_err = mag(TNew - TOld);
+        F_err = mag(F);
+
+        TOld = TNew;
+        
+        if(T_err < T_TOL || F_err < H_TOL) break;
+    }
+
+    T = TNew;
+}
+
+
+void calc_h_from_T
+(
+    double *x,
+    double P,
+    double T,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double& h
+)
+{
+    int i;
+    double MW_tmp;
+    double v_tmp, Cp_tmp, h_tmp;
+    
+    MW_tmp = 0;
+    for(i=0; i<n; i++)
+    {
+        MW_tmp += x[i]*MW[i];
+    }
+    MW_tmp *= 1e-3;
+    
+    calc_v_Cp_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);
+
+    h = h_tmp/MW_tmp;
+}
+
+
 void calc_diffFlux_limiter_T
 (
     const scalar& alphaOwn,
@@ -6232,6 +6323,8 @@ void calc_diffFlux_limiter_T
             MWOwn_tmp += xOwn_tmp[i]*MW[i];
             MWNei_tmp += xNei_tmp[i]*MW[i];
         }
+        MWOwn_tmp *= 1e-3;
+        MWNei_tmp *= 1e-3;
 
         TOld = 0.5*(TOwn + TNei);
 
@@ -6346,6 +6439,7 @@ void calc_diffFlux_limiter2_T
         {
             MWOwn_tmp += xOwn_tmp[i]*MW[i];
         }
+        MWOwn_tmp *= 1e-3;
 
         if(diffFlux > 0)
         {            
@@ -8284,7 +8378,21 @@ void x2y(int n, double *MW, double *x, double *y)
 
     r1_sum = 1.0/sum_MWx;
 
-    for (i=0; i<n; i++) y[i] = MW[i]*x[i] * r1_sum;
+    for (i=0; i<n; i++) y[i] = MW[i]*x[i]*r1_sum;
+}
+
+
+void y2x(int n, double *MW, double *y, double *x)
+{
+    int i;
+    double sum_MWy = 0.0, r1_sum;
+    for (i=0; i<n; i++) sum_MWy += y[i]/MW[i];
+
+    if(sum_MWy < SMALL) sum_MWy += SMALL;
+
+    r1_sum = 1.0/sum_MWy;
+
+    for (i=0; i<n; i++) x[i] = y[i]*r1_sum/MW[i];
 }
 
 
@@ -8315,6 +8423,221 @@ double calc_CvIG_from_CpIG(int n, double *x, double *CpIG)
     }
 
     return sum - 8.3144621;
+}
+
+
+void correct_rho
+(
+    const fvMesh& mesh,    
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double P,
+    const PtrList<volScalarField>& X,
+    const volScalarField& T,
+    volScalarField& rho
+)
+{
+    int i, bKijSet;
+    double T_tmp, rho_tmp;
+    double *x_tmp; double *kij_tmp;
+
+    _NEW_(x_tmp, double, n);
+    _NEW_(kij_tmp, double, n*n);
+
+    bKijSet = 1;
+
+    const scalarField& TCells = T.internalField();
+    scalarField& rhoCells = rho.internalField();
+
+    forAll(TCells, cellI)
+    {
+        T_tmp = TCells[cellI];
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = X[i].internalField()[cellI];
+        }
+
+        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+        density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
+        rhoCells[cellI] = rho_tmp;
+    }
+
+    forAll(T.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        fvPatchScalarField& prho = rho.boundaryField()[patchI];
+        
+        forAll(pT, fcI)
+        {
+            T_tmp = pT[fcI];
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+            }
+
+            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+            density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
+            prho[fcI] = rho_tmp;
+        }
+    }
+
+    _DELETE_(x_tmp);
+    _DELETE_(kij_tmp);
+}
+
+
+void correct_thermo_trans_prop
+(
+    const fvMesh& mesh,    
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
+    double P,
+    const PtrList<volScalarField>& X,
+    const volScalarField& T,
+    volScalarField& v,
+    PtrList<volScalarField>& hpar,
+    volScalarField& lambda,
+    volScalarField& mu,
+    PtrList<volScalarField>& D
+)
+{
+    int i, j, idx, bKijSet, G_only;    
+    double T_tmp, V, MW_tmp; 
+    double Cp, Cv, dVdT, G, am, bm, CvIG;    
+    double cond, vis;
+    double *x_tmp;
+    double *kij_tmp; 
+    double *lnphi; double *Dij; 
+    double *h_tmp; 
+    double *CpIG; double *Hdep; double *Vpar;
+
+    _NEW_(x_tmp, double, n);
+    _NEW_(kij_tmp, double, n*n);
+    _NEW_(lnphi, double, n);    
+    _NEW_(Dij, double, n*n);    
+    _NEW_(h_tmp, double, n);
+    _NEW_(Hdep, double, n);
+    _NEW_(CpIG, double, n);
+    _NEW_(Vpar, double, n);
+
+    bKijSet = 1;
+    G_only = 0;
+
+    const scalarField& TCells = T.internalField();
+    scalarField& vCells = v.internalField();
+    scalarField& lambdaCells = lambda.internalField();
+    scalarField& muCells = mu.internalField();
+
+    forAll(TCells, cellI)
+    {
+        T_tmp = TCells[cellI];
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = X[i].internalField()[cellI];
+        }
+        MW_tmp = 0;
+        for(i=0; i<n; i++)
+        {
+            MW_tmp += x_tmp[i]*MW[i];
+        }
+        MW_tmp *= 1e-3;
+        
+        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+
+        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+
+        CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
+        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+
+        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+        vCells[cellI] = V;
+        lambdaCells[cellI] = cond;
+        muCells[cellI] = vis;
+        for(i=0; i<n; i++)
+        {
+            hpar[i].internalField()[cellI] = h_tmp[i]/MW_tmp;
+            
+            for(j=0; j<n; j++)
+            {
+                idx = i + j*n;
+                D[idx].internalField()[cellI] = Dij[idx];
+            }
+        }
+    }
+
+    forAll(T.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        fvPatchScalarField& pv = v.boundaryField()[patchI];
+        fvPatchScalarField& plambda = lambda.boundaryField()[patchI];
+        fvPatchScalarField& pmu = mu.boundaryField()[patchI];
+
+        forAll(pT, fcI)
+        {
+            T_tmp = pT[fcI];
+
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+            }
+            MW_tmp = 0;
+            for(i=0; i<n; i++)
+            {
+                MW_tmp += x_tmp[i]*MW[i];
+            }
+            MW_tmp *= 1e-3;
+        
+            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+
+            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+
+            CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
+            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+
+            new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+            pv[fcI] = V;
+            plambda[fcI] = cond;
+            pmu[fcI] = vis;
+            for(i=0; i<n; i++)
+            {
+                hpar[i].boundaryField()[patchI][fcI] = h_tmp[i]/MW_tmp;
+            
+                for(j=0; j<n; j++)
+                {
+                    idx = i + j*n;
+                    D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                }
+            }
+        }
+    }
+
+    _DELETE_(x_tmp);
+    _DELETE_(kij_tmp);
+    _DELETE_(lnphi);    
+    _DELETE_(Dij);
+    _DELETE_(h_tmp);
+    _DELETE_(Hdep);
+    _DELETE_(CpIG);
+    _DELETE_(Vpar);
 }
 
 
@@ -8362,6 +8685,7 @@ void calc_intfc_transLLE
 )
 {
     int i, bKijSet, num, G_only;
+    G_only = 0;
     double Ts_tmp, V1, V0; 
     double Cp1, Cp0, Cv, dVdT, G, am, bm, V_tmp, CvIG;
     //double rho1, rho0;
@@ -9015,6 +9339,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     const volVectorField& C_intfc,
     const volScalarField& A_intfc,
     const volVectorField& nHat,
+    double dt,
     PtrList<volScalarField>& Ys1,
     PtrList<volScalarField>& Ys0,
     PtrList<volScalarField>& Xs1,
@@ -9044,7 +9369,7 @@ void calc_Xs_Ys_Js_mS_alphaS
 {
     int n, i, iLLE, iTs;
     label curCell_had_intfc;
-    double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI, dt; 
+    double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
     double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1;
     double limiter_mS1Tot, limiter_min;
@@ -9189,7 +9514,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
 
             //calculate the interfacial enthalpy transfer
-            Qs_cellI = conds1*(Teff1 - Ts_cellI)/dn1;
+            Qs_cellI = -A_intfc_cellI*conds1*(Teff1 - Ts_cellI)/dn1/V_cellI;
             for(i=0; i<n; i++)
             {
                 Qs_cellI += mS1_cellI[i]*hs1[i]/(MW[i]*1e-3);
@@ -10819,6 +11144,300 @@ void calc_mS_He
             << "---------------------------------------------------------------------------------" << nl
             << endl;
     }    
+}
+
+
+void print_advFluxFld
+(
+    const fvMesh& mesh,
+    const surfaceScalarField& advFlux,
+    const volScalarField& alpha,
+    const volScalarField& C,
+    const volScalarField& c,
+    const volScalarField& Y,
+    const word& cName,
+    const word& YName,
+    OFstream& os
+)
+{
+    label faceI, faceOwn, faceNei;
+    word ownYName = "own" + YName;
+    word neiYName = "nei" + YName;
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const scalarField& YCells = Y.internalField();
+
+    print_line(os, 80);
+    print_line(os, 80);
+    os<< "Advective fluxes " << cName << endl;
+    print_line(os, 80);
+    os<< setw(5) << "faceI" << "  " << setw(12) << "advFlux" << "  " << setw(12) << ownYName << "  " << setw(12) << neiYName << endl;
+    print_line(os, 80);
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+
+        os<< setw(5) << faceI << "  " << setw(12) << advFlux[faceI] << "  " << setw(12) << YCells[faceOwn] << "  " << setw(12) << YCells[faceNei] << endl;        
+    }
+    print_line(os, 80);
+    
+    forAll(advFlux.boundaryField(), patchI)
+    {
+        const polyPatch& pp = mesh.boundaryMesh()[patchI];
+        const fvsPatchScalarField& padvFlux = advFlux.boundaryField()[patchI];
+        const fvPatchScalarField& pY = Y.boundaryField()[patchI];
+
+        faceI = pp.start();
+
+        print_line(os, 80);
+        os<< "Patch " << mesh.boundaryMesh().names()[patchI] << endl;
+        print_line(os, 80);
+        os<< setw(5) << "faceI" << "  " << setw(12) << "advFlux" << "  " << setw(12) << ownYName << "  " << setw(12) << neiYName << endl;
+        print_line(os, 80);
+        forAll(padvFlux, fcI)
+        {
+            faceOwn = own[faceI];
+            os<< setw(5) << faceI << "  " << setw(12) << padvFlux[fcI] << "  " << setw(12) << YCells[faceOwn] << "  " << setw(12) << pY[fcI] << endl;            
+            faceI++;
+        }
+    }
+    print_line(os, 80);
+    print_line(os, 80);
+}
+
+
+void print_advFluxIntData
+(
+    const fvMesh& mesh,
+    const surfaceScalarField& advFlux,
+    const scalarField& surfInt_advFlux,
+    const scalar& dt,
+    const volScalarField& alpha,
+    const volScalarField& C,
+    const volScalarField& c,
+    const volScalarField& Y,
+    const scalarField& Af_own,
+    const scalarField& Af_nei,
+    const word& phaseName,
+    const word& alphaName,
+    const word& CName,
+    const word& cName,
+    const word& YName,
+    OFstream& os
+)
+{
+    label curFaceLbl, curOwn, curNei;    
+    word alphaOldName = alphaName + "Old";
+    word advFluxName = "advFlux_" + cName;
+    word AfOwnName = "Af_own_" + phaseName;
+    word AfNeiName = "Af_nei_" + phaseName;
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const cellList& meshCells = mesh.cells();
+    const scalarField& meshV = mesh.V();
+    const scalarField& alphaCells = alpha.internalField();
+    const scalarField& CCells = C.internalField();
+    const scalarField& cCells = c.internalField();
+    const scalarField& YCells = Y.internalField();
+
+    print_line(os, 80);
+    print_line(os, 80);
+    os<< "Advective flux integration in cells " << cName << " " << phaseName << endl;
+    print_line(os, 80);
+
+    forAll(YCells,cellI)
+    {        
+        const cell& curCell = meshCells[cellI];
+        print_line(os, 80);
+        os<< "Cell " << cellI << endl;
+        print_line(os, 80);
+        os<< setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+        os<< setw(10) << CCells[cellI] << "  " << setw(10) << cCells[cellI] << "  " << setw(10) << YCells[cellI] << "  " << setw(10) << alphaCells[cellI] << "  " << setw(10) << alpha.oldTime().internalField()[cellI] << endl;
+        print_line(os, 80);
+
+        forAll(curCell, faceI)
+        {
+            curFaceLbl = curCell[faceI];
+            curOwn = own[curFaceLbl];
+
+            os<< "face " << curFaceLbl << endl; 
+            print_line(os, 80);
+            os<< setw(6) << "Own" << "  " << setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+            os<< setw(6) << curOwn << "  " << setw(10) << CCells[curOwn] << "  " << setw(10) << cCells[curOwn] << "  " << setw(10) << YCells[curOwn] << "  " << setw(10) << alphaCells[curOwn] << "  " << setw(10) << alpha.oldTime().internalField()[curOwn] << endl;
+              
+            if(curFaceLbl < mesh.nInternalFaces())
+            {
+                curNei = nei[curFaceLbl];
+                os<< setw(6) << "Nei" << "  " << setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+                os<< setw(6) << curNei << "  " << setw(10) << CCells[curNei] << "  " << setw(10) << cCells[curNei] << "  " << setw(10) << YCells[curNei] << "  " << setw(10) << alphaCells[curNei] << "  " << setw(10) << alpha.oldTime().internalField()[curNei] << endl;
+                os<< setw(10) << AfOwnName << "  " << setw(10) << AfNeiName << "  " << advFluxName << endl;
+                os<< setw(10) << Af_own[curFaceLbl] << "  " << setw(10) << Af_nei[curFaceLbl] << "  " <<  advFlux[curFaceLbl] << endl;
+            }
+            else
+            {
+                os<< setw(10) << AfOwnName << "  " << setw(10) << AfNeiName << endl;
+                os<< setw(10) << Af_own[curFaceLbl] << "  " << setw(10) << Af_nei[curFaceLbl] << endl;
+            }
+
+            print_line(os, 80);
+        }
+
+        os<< setw(16) << "Cell Vol" << "  " << setw(16) << "div(advFlux)" << "  " << setw(10) << "div(advFlux)*dt" << endl;
+        os<< setw(16) << meshV[cellI] << "  " << setw(16) << surfInt_advFlux[cellI] << "  " << setw(10) << surfInt_advFlux[cellI]*dt << endl;
+        print_line(os, 80);        
+    }
+    print_line(os, 80);
+    print_line(os, 80);
+}
+
+
+void print_diffFluxFld
+(
+    const fvMesh& mesh,
+    const surfaceScalarField& diffFlux,
+    const volScalarField& alpha,
+    const volScalarField& C,
+    const volScalarField& c,
+    const volScalarField& Y,
+    const word& cName,
+    const word& YName,
+    OFstream& os
+)
+{
+    label faceI, faceOwn, faceNei;
+    word ownYName = "own" + YName;
+    word neiYName = "nei" + YName;
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const scalarField& YCells = Y.internalField();
+
+    print_line(os, 80);
+    print_line(os, 80);
+    os<< "Diffusive fluxes " << cName << endl;
+    print_line(os, 80);
+    os<< setw(5) << "faceI" << "  " << setw(12) << "diffFlux" << "  " << setw(12) << ownYName << "  " << setw(12) << neiYName << endl;
+    print_line(os, 80);
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+
+        os<< setw(5) << faceI << "  " << setw(12) << diffFlux[faceI] << "  " << setw(12) << YCells[faceOwn] << "  " << setw(12) << YCells[faceNei] << endl;        
+    }
+    print_line(os, 80);
+    
+    forAll(diffFlux.boundaryField(), patchI)
+    {
+        const polyPatch& pp = mesh.boundaryMesh()[patchI];
+        const fvsPatchScalarField& pdiffFlux = diffFlux.boundaryField()[patchI];
+        const fvPatchScalarField& pY = Y.boundaryField()[patchI];
+
+        faceI = pp.start();
+
+        print_line(os, 80);
+        os<< "Patch " << mesh.boundaryMesh().names()[patchI] << endl;
+        print_line(os, 80);
+        os<< setw(5) << "faceI" << "  " << setw(12) << "diffFlux" << "  " << setw(12) << ownYName << "  " << setw(12) << neiYName << endl;
+        print_line(os, 80);
+        forAll(pdiffFlux, fcI)
+        {
+            faceOwn = own[faceI];
+            os<< setw(5) << faceI << "  " << setw(12) << pdiffFlux[fcI] << "  " << setw(12) << YCells[faceOwn] << "  " << setw(12) << pY[fcI] << endl;            
+            faceI++;
+        }
+    }
+    print_line(os, 80);
+    print_line(os, 80);
+}
+
+
+void print_diffFluxIntData
+(
+    const fvMesh& mesh,
+    const surfaceScalarField& diffFlux,
+    const scalarField& surfInt_diffFlux,
+    const scalar& dt,
+    const volScalarField& alpha,
+    const volScalarField& C,
+    const volScalarField& c,
+    const volScalarField& Y,
+    const scalarField& Af_own,
+    const scalarField& Af_nei,
+    const word& phaseName,
+    const word& alphaName,
+    const word& CName,
+    const word& cName,
+    const word& YName,
+    OFstream& os
+)
+{
+    label curFaceLbl, curOwn, curNei;    
+    word alphaOldName = alphaName + "Old";
+    word diffFluxName = "diffFlux_" + cName;
+    word AfOwnName = "Af_own_" + phaseName;
+    word AfNeiName = "Af_nei_" + phaseName;
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const cellList& meshCells = mesh.cells();
+    const scalarField& meshV = mesh.V();
+    const scalarField& alphaCells = alpha.internalField();
+    const scalarField& CCells = C.internalField();
+    const scalarField& cCells = c.internalField();
+    const scalarField& YCells = Y.internalField();
+
+    print_line(os, 80);
+    print_line(os, 80);
+    os<< "Diffusive flux integration in cells " << cName << " " << phaseName << endl;
+    print_line(os, 80);
+
+    forAll(YCells,cellI)
+    {        
+        const cell& curCell = meshCells[cellI];
+        print_line(os, 80);
+        os<< "Cell " << cellI << endl;
+        print_line(os, 80);
+        os<< setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+        os<< setw(10) << CCells[cellI] << "  " << setw(10) << cCells[cellI] << "  " << setw(10) << YCells[cellI] << "  " << setw(10) << alphaCells[cellI] << "  " << setw(10) << alpha.oldTime().internalField()[cellI] << endl;
+        print_line(os, 80);
+
+        forAll(curCell, faceI)
+        {
+            curFaceLbl = curCell[faceI];
+            curOwn = own[curFaceLbl];
+
+            os<< "face " << curFaceLbl << endl; 
+            print_line(os, 80);
+            os<< setw(6) << "Own" << "  " << setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+            os<< setw(6) << curOwn << "  " << setw(10) << CCells[curOwn] << "  " << setw(10) << cCells[curOwn] << "  " << setw(10) << YCells[curOwn] << "  " << setw(10) << alphaCells[curOwn] << "  " << setw(10) << alpha.oldTime().internalField()[curOwn] << endl;
+              
+            if(curFaceLbl < mesh.nInternalFaces())
+            {
+                curNei = nei[curFaceLbl];
+                os<< setw(6) << "Nei" << "  " << setw(10) << CName << "  " << setw(10) << cName << "  " << setw(10) << YName << "  " << setw(10) << alphaName << "  " << setw(10) << alphaOldName << endl;
+                os<< setw(6) << curNei << "  " << setw(10) << CCells[curNei] << "  " << setw(10) << cCells[curNei] << "  " << setw(10) << YCells[curNei] << "  " << setw(10) << alphaCells[curNei] << "  " << setw(10) << alpha.oldTime().internalField()[curNei] << endl;
+                os<< setw(10) << AfOwnName << "  " << setw(10) << AfNeiName << "  " << diffFluxName << endl;
+                os<< setw(10) << Af_own[curFaceLbl] << "  " << setw(10) << Af_nei[curFaceLbl] << "  " <<  diffFlux[curFaceLbl] << endl;
+            }
+            else
+            {
+                os<< setw(10) << AfOwnName << "  " << setw(10) << AfNeiName << endl;
+                os<< setw(10) << Af_own[curFaceLbl] << "  " << setw(10) << Af_nei[curFaceLbl] << endl;
+            }
+
+            print_line(os, 80);
+        }
+
+        os<< setw(16) << "Cell Vol" << "  " << setw(16) << "div(diffFlux)" << "  " << setw(10) << "div(diffFlux)*dt" << endl;
+        os<< setw(16) << meshV[cellI] << "  " << setw(16) << surfInt_diffFlux[cellI] << "  " << setw(10) << surfInt_diffFlux[cellI]*dt << endl;
+        print_line(os, 80);        
+    }
+    print_line(os, 80);
+    print_line(os, 80);
 }
 
 

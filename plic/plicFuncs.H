@@ -602,6 +602,43 @@ namespace plicFuncs
         OFstream& os
     );
 
+    void calc_T_from_h
+    (
+        double *x,
+        double P,
+        double h,
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double& T,
+        const int& MAX_ITER_T,
+        const double& T_TOL,
+        const double& H_TOL
+    );
+
+    void calc_h_from_T
+    (
+        double *x,
+        double P,
+        double T,
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double& h
+    );
+
     void calc_diffFlux_limiter_T
     (
         const scalar& alphaOwn,
@@ -843,10 +880,55 @@ namespace plicFuncs
     );
 
     void x2y(int n, double *MW, double *x, double *y);
+    
+    void y2x(int n, double *MW, double *y, double *x);
 
     double calc_rho_from_V(int n, double *x, double *MW, double V);
 
     double calc_CvIG_from_CpIG(int n, double *x, double *CpIG);
+
+    void correct_rho
+    (
+        const fvMesh& mesh,    
+        int n,
+        double *Pc,
+        double *Tc,
+        double *Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double P,
+        const PtrList<volScalarField>& X,
+        const volScalarField& T,
+        volScalarField& rho
+    );
+
+    void correct_thermo_trans_prop
+    (
+        const fvMesh& mesh,    
+        int n,
+        double *Pc,
+        double *Tc,
+        double *Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double *k,
+        double *dm,
+        double P,
+        const PtrList<volScalarField>& X,
+        const volScalarField& T,
+        volScalarField& v,
+        PtrList<volScalarField>& hpar,
+        volScalarField& lambda,
+        volScalarField& mu,
+        PtrList<volScalarField>& D
+    );
 
     void calc_intfc_transLLE
     (
@@ -972,6 +1054,7 @@ namespace plicFuncs
         const volVectorField& C_intfc,
         const volScalarField& A_intfc,
         const volVectorField& nHat,
+        double dt,
         PtrList<volScalarField>& Ys1,
         PtrList<volScalarField>& Ys0,
         PtrList<volScalarField>& Xs1,
@@ -1057,6 +1140,72 @@ namespace plicFuncs
         PtrList<volScalarField>& mS1,
         PtrList<volScalarField>& mS0,
         const bool debug,
+        OFstream& os
+    );
+
+    void print_advFluxFld
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& advFlux,
+        const volScalarField& alpha,
+        const volScalarField& C,
+        const volScalarField& c,
+        const volScalarField& Y,
+        const word& cName,
+        const word& YName,
+        OFstream& os
+    );
+
+    void print_advFluxIntData
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& advFlux,
+        const scalarField& surfInt_advFlux,
+        const scalar& dt,
+        const volScalarField& alpha,
+        const volScalarField& C,
+        const volScalarField& c,
+        const volScalarField& Y,
+        const scalarField& Af_own,
+        const scalarField& Af_nei,
+        const word& phaseName,
+        const word& alphaName,
+        const word& CName,
+        const word& cName,
+        const word& YName,
+        OFstream& os
+    );
+
+    void print_diffFluxFld
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& diffFlux,
+        const volScalarField& alpha,
+        const volScalarField& C,
+        const volScalarField& c,
+        const volScalarField& Y,
+        const word& cName,
+        const word& YName,
+        OFstream& os
+    );
+
+    void print_diffFluxIntData
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& diffFlux,
+        const scalarField& surfInt_diffFlux,
+        const scalar& dt,
+        const volScalarField& alpha,
+        const volScalarField& C,
+        const volScalarField& c,
+        const volScalarField& Y,
+        const scalarField& Af_own,
+        const scalarField& Af_nei,
+        const word& phaseName,
+        const word& alphaName,
+        const word& CName,
+        const word& cName,
+        const word& YName,
         OFstream& os
     );
 

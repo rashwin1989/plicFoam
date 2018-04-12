@@ -1199,3 +1199,9 @@ OFstream osIst(mesh.time().path()/outputFile);
 
 outputFile = "diff_dbg";
 OFstream osDiff(mesh.time().path()/outputFile);
+
+int i;
+label faceI;
+scalar C1Tot_cellI, C0Tot_cellI;
+
+const cellList& meshCells = mesh.cells();

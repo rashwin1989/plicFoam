@@ -100,9 +100,11 @@ int main(int argc, char *argv[])
          
         for(iOCorr=0; iOCorr<nOCorr; iOCorr++)
         {
+            deltaT = runTime.deltaTValue();
+
             Info<< "Calculating two-phase advective fluxes" << endl;
-            dt = runTime.deltaTValue();
-            interface.calc_2ph_advFluxes(c1, c0, h1, h0, dt, advFlux_rho1, advFlux_rho0, advFlux_c1, advFlux_c0, advFlux_h1, advFlux_h0);
+            dt = deltaT;
+            interface.calc_2ph_advFluxes(c1, c0, rhoh1, rhoh0, dt, advFlux_rho1, advFlux_rho0, advFlux_Y1, advFlux_Y0, advFlux_h1, advFlux_h0);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -112,8 +114,8 @@ int main(int argc, char *argv[])
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << nl << endl; 
-
+                << " s" << nl << endl;             
+            
                 #include "YAdvEqn.H"
 
             Info<< "ExecutionTime = "
@@ -126,13 +128,25 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-            interface.intfc_correct();                
+            interface.intfc_correct();                            
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "YDiffEqn.H"
+            #include "correct_thermo_trans_prop.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "diff_grad_interp.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+                #include "YDiffEqn.H"            
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -142,7 +156,7 @@ int main(int argc, char *argv[])
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
+                << " s" << nl << endl;            
 
                 #include "ist.H"
 
@@ -151,6 +165,18 @@ int main(int argc, char *argv[])
                 << " s" << nl << endl;
 
             interface.intfc_correct();                
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "correct_thermo_trans_prop.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "diff_grad_interp.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -168,11 +194,12 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
         
-                #include "curvature.H"        
+                #include "curvature.H"
 
-            rho = limitedAlpha1*rho1 + (scalar(1) - limitedAlpha1)*rho0;
+            dt = deltaT;
 
-            rhoPhi = advFlux_rho1 + advFlux_rho0;
+            rho = alpha1*rho1 + (scalar(1) - alpha1)*rho0;
+            rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
 
                 #include "UEqn.H"
 

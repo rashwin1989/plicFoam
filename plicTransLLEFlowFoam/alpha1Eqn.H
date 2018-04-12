@@ -1,19 +1,11 @@
 
 if(alpha_debug)
 {
-    osAlpha<< nl
-           << "Solution Time = " << runTime.timeName()
-           << nl << endl;
+    plicFuncs::print_line(osAlpha, 80);
+    osAlpha<< "Solution Time = " << runTime.timeName() << "  alpha1 advection" << endl;
+    plicFuncs::print_line(osAlpha, 80);
+    osAlpha<< endl;    
 }
-
-/*
-fvScalarMatrix alpha1Eqn
-(
-    fvm::ddt(alpha1) + fvc::div(phiAlpha1)
-);
-
-alpha1Eqn.solve();
-*/
 
 scalarField& alphaCells = alpha1.internalField();
 scalarField& alphaOldCells = alpha1_old.internalField();
