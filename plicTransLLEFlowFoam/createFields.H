@@ -1,3 +1,6 @@
+int iOCorr, nOCorr, i;
+scalar deltaT, dt;
+
 Info<< "Reading field p_rgh\n" << endl;
 volScalarField p_rgh
 (
@@ -63,7 +66,19 @@ IOdictionary transPropDict
     IOobject
     (
         "transportProperties",
-        U.time().constant(),
+        runTime.constant(),
+        U.db(),
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    )
+);
+
+IOdictionary solDict
+(
+    IOobject
+    (
+        "fvSolution",
+        mesh.solutionDict(),
         U.db(),
         IOobject::MUST_READ,
         IOobject::NO_WRITE
@@ -288,18 +303,22 @@ if (p_rgh.needReference())
 
 // Y, C, species initialization
 label nSpecies;
+int n;
 nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
 Info<< "Number of species " << nSpecies << endl;
+n = nSpecies;
 
 PtrList<volScalarField> Y1(nSpecies);
+PtrList<volScalarField> c1(nSpecies);
 PtrList<volScalarField> C1(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
+PtrList<volScalarField> c0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
 
 PtrList<volScalarField> C_phAvg(nSpecies);
 
 word fieldName;
-for(label i=0; i<(nSpecies-1); i++)
+for(i=0; i<(n-1); i++)
 {
     fieldName = "Y1" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
@@ -320,6 +339,26 @@ for(label i=0; i<(nSpecies-1); i++)
         )
     );
     Y1[i].correctBoundaryConditions();
+
+    fieldName = "c1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho1*Y1[i],
+            Y1[i].boundaryField().types()
+        )
+    );
 
     fieldName = "C1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -360,6 +399,26 @@ for(label i=0; i<(nSpecies-1); i++)
         )
     );
     Y0[i].correctBoundaryConditions();
+
+    fieldName = "c0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho0*Y0[i],
+            Y0[i].boundaryField().types()
+        )
+    );
 
     fieldName = "C0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -405,19 +464,19 @@ for(label i=0; i<(nSpecies-1); i++)
 volScalarField Y1t = 0.0*Y1[0];
 volScalarField Y0t = 0.0*Y0[0];
 
-for(label i=0; i<(nSpecies - 1); i++)
+for(i=0; i<(n-1); i++)
 {
     Y1t += Y1[i];
     Y0t += Y0[i];
 }
 
-label endSp = nSpecies - 1;
+int endIndex = n-1;
 
-fieldName = "Y1" + Foam::name(endSp);
+fieldName = "Y1" + Foam::name(endIndex);
 Info<< "Reading field " << fieldName << endl;
 Y1.set
 (
-    endSp,
+    endIndex,
     new volScalarField
     (
         IOobject
@@ -431,14 +490,14 @@ Y1.set
         Y1[0]
     )
 );
-Y1[endSp] = scalar(1.0) - Y1t;
-Y1[endSp].correctBoundaryConditions();
+Y1[endIndex] = scalar(1.0) - Y1t;
+Y1[endIndex].correctBoundaryConditions();
 
-fieldName = "C1" + Foam::name(endSp);
+fieldName = "c1" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
-C1.set
+c1.set
 (
-    endSp,
+    endIndex,
     new volScalarField
     (
         IOobject
@@ -449,16 +508,36 @@ C1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha1*rho1*Y1[endSp],
-        Y1[endSp].boundaryField().types()
+        rho1*Y1[endIndex],
+        Y1[endIndex].boundaryField().types()
     )
 );
 
-fieldName = "Y0" + Foam::name(endSp);
+fieldName = "C1" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+C1.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        alpha1*rho1*Y1[endIndex],
+        Y1[endIndex].boundaryField().types()
+    )
+);
+
+fieldName = "Y0" + Foam::name(endIndex);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
 (
-    endSp,
+    endIndex,
     new volScalarField
     (
         IOobject
@@ -472,14 +551,14 @@ Y0.set
         Y0[0]
     )
 );
-Y0[endSp] = scalar(1.0) - Y0t;
-Y0[endSp].correctBoundaryConditions();
+Y0[endIndex] = scalar(1.0) - Y0t;
+Y0[endIndex].correctBoundaryConditions();
 
-fieldName = "C0" + Foam::name(endSp);
+fieldName = "c0" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
-C0.set
+c0.set
 (
-    endSp,
+    endIndex,
     new volScalarField
     (
         IOobject
@@ -490,16 +569,36 @@ C0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        alpha0*rho0*Y0[endSp],
-        Y0[endSp].boundaryField().types()
+        rho0*Y0[endIndex],
+        Y0[endIndex].boundaryField().types()
     )
 );
 
-fieldName = "C_phAvg" + Foam::name(endSp);
+fieldName = "C0" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+C0.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        alpha0*rho0*Y0[endIndex],
+        Y0[endIndex].boundaryField().types()
+    )
+);
+
+fieldName = "C_phAvg" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
 C_phAvg.set
 (
-    endSp,
+    endIndex,
     new volScalarField
     (
         IOobject
@@ -510,22 +609,37 @@ C_phAvg.set
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
-        C0[endSp] + C1[endSp],
-        Y1[endSp].boundaryField().types()
+        C0[endIndex] + C1[endIndex],
+        Y1[endIndex].boundaryField().types()
     )
 );
 
+// Enthalpy initialization
+Info<< "Reading field T1\n" << endl;
+volScalarField T1
+(
+    IOobject
+    (
+        "T1",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
 
-List<scalar> C1max(nSpecies);
-List<scalar> C0max(nSpecies);
-List<scalar> C1min(nSpecies);
-List<scalar> C0min(nSpecies);
-List<scalar> Y1max(nSpecies);
-List<scalar> Y0max(nSpecies);
-List<scalar> Y1min(nSpecies);
-List<scalar> Y0min(nSpecies);
 
-for(label i=0; i<nSpecies; i++)
+List<scalar> C1max(n);
+List<scalar> C0max(n);
+List<scalar> C1min(n);
+List<scalar> C0min(n);
+List<scalar> Y1max(n);
+List<scalar> Y0max(n);
+List<scalar> Y1min(n);
+List<scalar> Y0min(n);
+
+for(i=0; i<n; i++)
 {
     C1max[i] = max(C1[i]).value();
     C0max[i] = max(C0[i]).value();
@@ -539,10 +653,10 @@ for(label i=0; i<nSpecies; i++)
 }
 
 // Y advection
-PtrList<surfaceScalarField> advFlux_Y1(nSpecies - 1);
-PtrList<surfaceScalarField> advFlux_Y0(nSpecies - 1);
+PtrList<surfaceScalarField> advFlux_Y1(n-1);
+PtrList<surfaceScalarField> advFlux_Y0(n-1);
 
-for(label i=0; i<(nSpecies - 1); i++)
+for(i=0; i<(n-1); i++)
 {
     fieldName = "advFlux_Y1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -585,22 +699,24 @@ for(label i=0; i<(nSpecies - 1); i++)
     );
 }
 
+// Enthalpy advection
+
 scalarField& rho1Cells = rho1.internalField();
 scalarField& rho0Cells = rho0.internalField();
 scalarField& alpha1Cells = alpha1.internalField();
 scalarField& alpha0Cells = alpha0.internalField();
 
 // Interfacial species transfer
-PtrList<dimensionedScalar> Ys1_0(nSpecies);
-PtrList<dimensionedScalar> Ys0_0(nSpecies);
-PtrList<volScalarField> Ys1(nSpecies);
-PtrList<volScalarField> Ys0(nSpecies);
-PtrList<volScalarField> Js1(nSpecies);
-PtrList<volScalarField> Js0(nSpecies);
-PtrList<volScalarField> mS1(nSpecies);
-PtrList<volScalarField> mS0(nSpecies);
+PtrList<dimensionedScalar> Ys1_0(n);
+PtrList<dimensionedScalar> Ys0_0(n);
+PtrList<volScalarField> Ys1(n);
+PtrList<volScalarField> Ys0(n);
+PtrList<volScalarField> Js1(n);
+PtrList<volScalarField> Js0(n);
+PtrList<volScalarField> mS1(n);
+PtrList<volScalarField> mS0(n);
 
-for(label i=0; i<nSpecies; i++)
+for(i=0; i<n; i++)
 {
     fieldName = "Ys1" + Foam::name(i);
     Info<< "Reading interface equilibrium mass fraction " << fieldName << endl;
