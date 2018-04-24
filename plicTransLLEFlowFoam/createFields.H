@@ -311,9 +311,11 @@ n = nSpecies;
 PtrList<volScalarField> Y1(nSpecies);
 PtrList<volScalarField> c1(nSpecies);
 PtrList<volScalarField> C1(nSpecies);
+PtrList<volScalarField> C1_old(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
 PtrList<volScalarField> c0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
+PtrList<volScalarField> C0_old(nSpecies);
 
 PtrList<volScalarField> C_phAvg(nSpecies);
 
@@ -380,6 +382,26 @@ for(i=0; i<(n-1); i++)
         )
     );
 
+    fieldName = "C1_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    C1_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            C1[i],
+            Y1[i].boundaryField().types()
+        )
+    );
+
     fieldName = "Y0" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
     Y0.set
@@ -436,6 +458,26 @@ for(i=0; i<(n-1); i++)
                 IOobject::AUTO_WRITE
             ),
             alpha0*rho0*Y0[i],
+            Y0[i].boundaryField().types()
+        )
+    );
+
+    fieldName = "C0_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    C0_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            C0[i],
             Y0[i].boundaryField().types()
         )
     );
@@ -533,6 +575,26 @@ C1.set
     )
 );
 
+fieldName = "C1_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+C1_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        C1[endIndex],
+        Y1[endIndex].boundaryField().types()
+    )
+);
+
 fieldName = "Y0" + Foam::name(endIndex);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
@@ -594,6 +656,26 @@ C0.set
     )
 );
 
+fieldName = "C0_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+C0_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        C0[endIndex],
+        Y0[endIndex].boundaryField().types()
+    )
+);
+
 fieldName = "C_phAvg" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
 C_phAvg.set
@@ -627,6 +709,138 @@ volScalarField T1
         IOobject::AUTO_WRITE
     ),
     mesh
+);
+
+Info<< "Initializing field h1\n" << endl;
+volScalarField h1
+(
+    IOobject
+    (
+        "h1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("h_0", [0 2 -2 0 0 0 0], 0),
+    T1.boundaryField().types()
+);
+
+Info<< "Initializing field rhoh1\n" << endl;
+volScalarField rhoh1
+(
+    IOobject
+    (
+        "rhoh1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    rho1*h1,
+    T1.boundaryField().types()
+);
+
+Info<< "Initializing field H1\n" << endl;
+volScalarField H1
+(
+    IOobject
+    (
+        "H1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    alpha1*rhoh1,
+    T1.boundaryField().types()
+);
+volScalarField H1_old
+(
+    IOobject
+    (
+        "H1_old",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    H1,
+    T1.boundaryField().types()
+);
+
+Info<< "Reading field T0\n" << endl;
+volScalarField T0
+(
+    IOobject
+    (
+        "T0",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+Info<< "Initializing field h0\n" << endl;
+volScalarField h0
+(
+    IOobject
+    (
+        "h0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("h_0", [0 2 -2 0 0 0 0], 0),
+    T0.boundaryField().types()
+);
+
+Info<< "Initializing field rhoh0\n" << endl;
+volScalarField rhoh0
+(
+    IOobject
+    (
+        "rhoh0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    rho0*h0,
+    T0.boundaryField().types()
+);
+
+Info<< "Initializing field H0\n" << endl;
+volScalarField H0
+(
+    IOobject
+    (
+        "H0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    alpha0*rhoh0,
+    T0.boundaryField().types()
+);
+volScalarField H0_old
+(
+    IOobject
+    (
+        "H0_old",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    H0,
+    T0.boundaryField().types()
 );
 
 
