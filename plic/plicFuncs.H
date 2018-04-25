@@ -787,6 +787,21 @@ namespace plicFuncs
         vectorField& Cf_ph0
     );
 
+    void redistribute_alpha_field
+    (
+        const fvMesh& mesh,
+        scalarField& alphaCells,
+        const labelListList& cellCellsAll,
+        const scalar& ALPHA_MIN_BOUND,
+        const label& ALPHA_BOUND_ITERS_MAX,
+        label& minAlpha1Cell,
+        label& maxALpha1Cell,
+        scalar& minAlpha1,
+        scalar& maxAlpha1,
+        const bool debug,
+        OFstream& os
+    );
+
     void redistribute_Ci_field
     (
         const fvMesh& mesh,

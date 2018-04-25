@@ -105,7 +105,7 @@ forAll(T1Cells,cellI)
     plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
 
     h1Cells[cellI] = h_cellI_tmp;
-    rhoh1Cells[cellI] = rho1Cells[cellI]*h1_cellI_tmp;
+    rhoh1Cells[cellI] = rho1Cells[cellI]*h_cellI_tmp;
     H1Cells[cellI] = alpha1Cells[cellI]*rhoh1Cells[cellI];
 }
 
@@ -205,7 +205,7 @@ forAll(T0Cells,cellI)
     plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
 
     h0Cells[cellI] = h_cellI_tmp;
-    rhoh0Cells[cellI] = rho0Cells[cellI]*h0_cellI_tmp;
+    rhoh0Cells[cellI] = rho0Cells[cellI]*h_cellI_tmp;
     H0Cells[cellI] = alpha0Cells[cellI]*rhoh0Cells[cellI];
 }
 

@@ -1,5 +1,39 @@
-int iOCorr, nOCorr, i;
-scalar deltaT, dt;
+int iOCorr, nOCorr, i, nCells, maxAlpha1Cell, minAlpha1Cell, n;
+label faceI, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX, nSpecies;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2;
+scalar deltaT, dt, maxAlpha1, minAlpha1, ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, div_alpha1, div_phi, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL;
+scalar C1Tot_cellI, C0Tot_cellI;
+vector minAlpha1CellC, maxAlpha1CellC;
+fileName outputFile;
+
+double T_cellI_tmp, h_cellI_tmp;
+double *Pc, *Tc, *w, *MW, *Tb, *SG, *H8;
+double *y_cellI_tmp, *x_cellI_tmp;
+
+_NEW_(Pc, double, n);
+_NEW_(Tc, double, n);
+_NEW_(w, double, n);
+_NEW_(MW, double, n);
+_NEW_(Tb, double, n);
+_NEW_(SG, double, n);
+_NEW_(H8, double, n);
+_NEW_(y_cellI_tmp, double, n);
+_NEW_(x_cellI_tmp, double, n);
+
+outputFile = "alpha_dbg";
+OFstream osAlpha(mesh.time().path()/outputFile);
+outputFile = "adv_dbg";
+OFstream osAdv(mesh.time().path()/outputFile);
+outputFile = "ist_dbg";
+OFstream osIst(mesh.time().path()/outputFile);
+outputFile = "diff_dbg";
+OFstream osDiff(mesh.time().path()/outputFile);
+
+nCells = mesh.nCells();
+
+const vectorField& meshCi = mesh.C().internalField();
+const cellList& meshCells = mesh.cells();
+const scalarField& meshV = mesh.V();
 
 Info<< "Reading field p_rgh\n" << endl;
 volScalarField p_rgh
@@ -28,6 +62,21 @@ volScalarField alpha1
         IOobject::AUTO_WRITE
     ),
     mesh
+);
+
+Info<< "Initializing field alpha1_old\n" << endl;
+volScalarField alpha1_old
+(
+    IOobject
+    (
+        "alpha1_old",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    alpha1,
+    alpha1.boundaryField().types()
 );
 
 Info<< "Calculating field alpha0\n" << endl;
@@ -209,6 +258,9 @@ plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
 
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 
+scalarField& alpha1Cells = alpha1.internalField();
+scalarField& alpha1OldCells = alpha1_old.internalField();
+
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
 //interfaceProperties intfcProp(alpha1, U, transPropDict);
@@ -302,17 +354,17 @@ if (p_rgh.needReference())
 }
 
 // Y, C, species initialization
-label nSpecies;
-int n;
 nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
 Info<< "Number of species " << nSpecies << endl;
 n = nSpecies;
 
 PtrList<volScalarField> Y1(nSpecies);
+PtrList<volScalarField> x1(nSpecies);
 PtrList<volScalarField> c1(nSpecies);
 PtrList<volScalarField> C1(nSpecies);
 PtrList<volScalarField> C1_old(nSpecies);
 PtrList<volScalarField> Y0(nSpecies);
+PtrList<volScalarField> x0(nSpecies);
 PtrList<volScalarField> c0(nSpecies);
 PtrList<volScalarField> C0(nSpecies);
 PtrList<volScalarField> C0_old(nSpecies);
@@ -341,6 +393,25 @@ for(i=0; i<(n-1); i++)
         )
     );
     Y1[i].correctBoundaryConditions();
+
+    fieldName = "x1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    x1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::AUTO_WRITE
+            ),
+            Y1[i]
+        )
+    );
 
     fieldName = "c1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -421,6 +492,25 @@ for(i=0; i<(n-1); i++)
         )
     );
     Y0[i].correctBoundaryConditions();
+
+    fieldName = "x0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    x0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::AUTO_WRITE
+            ),
+            Y0[i]
+        )
+    );
 
     fieldName = "c0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
@@ -535,6 +625,25 @@ Y1.set
 Y1[endIndex] = scalar(1.0) - Y1t;
 Y1[endIndex].correctBoundaryConditions();
 
+fieldName = "x1" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+x1.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Y1[endIndex]
+    )
+);
+
 fieldName = "c1" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
 c1.set
@@ -615,6 +724,25 @@ Y0.set
 );
 Y0[endIndex] = scalar(1.0) - Y0t;
 Y0[endIndex].correctBoundaryConditions();
+
+fieldName = "x0" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+x0.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Y0[endIndex]
+    )
+);
 
 fieldName = "c0" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
@@ -865,6 +993,14 @@ for(i=0; i<n; i++)
     Y1min[i] = min(Y1[i]).value();
     Y0min[i] = min(Y0[i]).value();
 }
+
+double T1min, T1max, H1min, H1max;
+T1min = transPropDict.lookupOrDefault("T1MIN", 300);
+T1max = transPropDict.lookupOrDefault("T1MAX", 800);
+
+double T0min, T0max, H0min, H0max;
+T0min = transPropDict.lookupOrDefault("T0MIN", 300);
+T0max = transPropDict.lookupOrDefault("T0MAX", 800);
 
 // Y advection
 PtrList<surfaceScalarField> advFlux_Y1(n-1);
@@ -1483,8 +1619,8 @@ const vectorField& C_ph0 = interface.C_ph0();
 //------------------------------------------------------------------//
 
 // tolerances and max iters
-label ALPHA_BOUND_ITERS_MAX = 12;
-label Y_BOUND_ITERS_MAX = 12;
+ALPHA_BOUND_ITERS_MAX = 12;
+Y_BOUND_ITERS_MAX = 12;
 scalar ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 scalar SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
@@ -1517,21 +1653,3 @@ diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
 
 bool diff_debug2;
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
-
-fileName outputFile("alpha_dbg");
-OFstream osAlpha(mesh.time().path()/outputFile);
-
-outputFile = "adv_dbg";
-OFstream osAdv(mesh.time().path()/outputFile);
-
-outputFile = "ist_dbg";
-OFstream osIst(mesh.time().path()/outputFile);
-
-outputFile = "diff_dbg";
-OFstream osDiff(mesh.time().path()/outputFile);
-
-int i;
-label faceI;
-scalar C1Tot_cellI, C0Tot_cellI;
-
-const cellList& meshCells = mesh.cells();
