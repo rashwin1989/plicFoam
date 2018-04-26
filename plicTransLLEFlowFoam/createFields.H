@@ -1,4 +1,5 @@
 int iOCorr, nOCorr, i, nCells, maxAlpha1Cell, minAlpha1Cell, n;
+int MAX_ITER_T;
 label faceI, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX, nSpecies;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2;
 scalar deltaT, dt, maxAlpha1, minAlpha1, ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, div_alpha1, div_phi, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL;
@@ -6,7 +7,8 @@ scalar C1Tot_cellI, C0Tot_cellI;
 vector minAlpha1CellC, maxAlpha1CellC;
 fileName outputFile;
 
-double T_cellI_tmp, h_cellI_tmp;
+double T_cellI_tmp, h_cellI_tmp, P_thermo;
+double T_TOL, H_TOL, T1_TMP_VAL, T0_TMP_VAL;
 double *Pc, *Tc, *w, *MW, *Tb, *SG, *H8;
 double *y_cellI_tmp, *x_cellI_tmp;
 
