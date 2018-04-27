@@ -1,27 +1,100 @@
-int iOCorr, nOCorr, i, nCells, maxAlpha1Cell, minAlpha1Cell, n;
-int MAX_ITER_T;
-label faceI, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX, nSpecies;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2;
-scalar deltaT, dt, maxAlpha1, minAlpha1, ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, div_alpha1, div_phi, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL;
+//------------------------------------------------------------------//
+//Define all label, scalar, vector (OpenFOAM format) variables
+//Input parameters, tolerances
+label nSpecies, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL;
+//Temp variables
+label faceI;
+scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 scalar C1Tot_cellI, C0Tot_cellI;
 vector minAlpha1CellC, maxAlpha1CellC;
 fileName outputFile;
+//Done define all label, scalar, vector (OpenFOAM format) variables
+//------------------------------------------------------------------//
 
-double T_cellI_tmp, h_cellI_tmp, P_thermo;
+//------------------------------------------------------------------//
+//Define all int, bool, double (standard C++) variables
+//Input parameters, tolerances
+int MAX_ITER_T;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2;
 double T_TOL, H_TOL, T1_TMP_VAL, T0_TMP_VAL;
-double *Pc, *Tc, *w, *MW, *Tb, *SG, *H8;
-double *y_cellI_tmp, *x_cellI_tmp;
+//Temp variables
+int n, i, nCells, iOCorr, nOCorr, maxAlpha1Cell, minAlpha1Cell;
+double T_cellI_tmp, h_cellI_tmp, P_thermo_tmp;
+//Done define all int, bool, double (standard C++) variables
+//------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Define all int, bool, double (standard C++) arrays/pointers
+//Input and parameter arrays
+int *tk;
+double *Pc, *Tc, *Vc, *w, *MW, *coef_ab, *Tb, *SG, *H8, *k, *dm;
+//Temp variable arrays
+double *y_cellI_tmp, *x_cellI_tmp;
+//Done define all int, bool, double (standard C++) arrays/pointers
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//Define and load the OpenFOAM input dinctionaries
+//to read parameters from
+IOdictionary transPropDict
+(
+    IOobject
+    (
+        "transportProperties",
+        runTime.constant(),
+        U.db(),
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    )
+);
+
+IOdictionary solDict
+(
+    IOobject
+    (
+        "fvSolution",
+        mesh.solutionDict(),
+        U.db(),
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    )
+);
+//Done define and load the OpenFOAM input dinctionaries
+//to read parameters from
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//Read and set no. of species
+//arrays and lists need to be initialized with this size
+nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
+Info<< "Number of species " << nSpecies << endl;
+n = nSpecies;
+//Done read and set no. of species
+//arrays and lists need to be initialized with this size
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//Alloacte memory for arrays
 _NEW_(Pc, double, n);
 _NEW_(Tc, double, n);
+_NEW_(Vc, double, n);
 _NEW_(w, double, n);
 _NEW_(MW, double, n);
+_NEW_(tk, int, n);
+_NEW_(coef_ab, double, n);
 _NEW_(Tb, double, n);
 _NEW_(SG, double, n);
 _NEW_(H8, double, n);
+_NEW_(k, double, n);
+_NEW_(dm, double, n);
 _NEW_(y_cellI_tmp, double, n);
 _NEW_(x_cellI_tmp, double, n);
+//Done alloacte memory for arrays
+//------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Set up output streams linked to output files
 outputFile = "alpha_dbg";
 OFstream osAlpha(mesh.time().path()/outputFile);
 outputFile = "adv_dbg";
@@ -30,13 +103,21 @@ outputFile = "ist_dbg";
 OFstream osIst(mesh.time().path()/outputFile);
 outputFile = "diff_dbg";
 OFstream osDiff(mesh.time().path()/outputFile);
+//Done set up output streams linked to output files
+//------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Set mesh related variables and fields
 nCells = mesh.nCells();
 
 const vectorField& meshCi = mesh.C().internalField();
 const cellList& meshCells = mesh.cells();
 const scalarField& meshV = mesh.V();
+//Done set mesh related variables and fields
+//------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Read and initialize fundamental variable fields
 Info<< "Reading field p_rgh\n" << endl;
 volScalarField p_rgh
 (
@@ -105,43 +186,24 @@ volVectorField U
 );
 
 #include "createPhi.H"
-
 U.correctBoundaryConditions();
-
 phi = linearInterpolate(U) & mesh.Sf();
+//Done read and initialize fundamental variable fields
+//------------------------------------------------------------------//
 
+//------------------------------------------------------------------//
+//Thermo and transport properties fields initialization
 Info<< "Reading transportProperties\n" << endl;
 
-IOdictionary transPropDict
-(
-    IOobject
-    (
-        "transportProperties",
-        runTime.constant(),
-        U.db(),
-        IOobject::MUST_READ,
-        IOobject::NO_WRITE
-    )
-);
-
-IOdictionary solDict
-(
-    IOobject
-    (
-        "fvSolution",
-        mesh.solutionDict(),
-        U.db(),
-        IOobject::MUST_READ,
-        IOobject::NO_WRITE
-    )
-);
-
-// initialization values for phase densities
+//initialization of values for phase densities
 const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
 const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
-
+//initialization of values for phase viscosities
 const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
 const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
+//initialization of values for thermal conductivities
+const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
+const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
 
 volScalarField rho1
 (
@@ -254,112 +316,11 @@ surfaceScalarField rhoPhi
     ),
     fvc::interpolate(rho)*phi
 );
+//Done thermo and transport properties fields initialization
+//------------------------------------------------------------------//
 
-// Construct PLIC interface object from alpha1 distribution, U field etc. 
-plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
-
-surfaceScalarField& phiAlpha1(interface.phiAlpha1());
-
-scalarField& alpha1Cells = alpha1.internalField();
-scalarField& alpha1OldCells = alpha1_old.internalField();
-
-centredCPCCellToCellStencilObject cell_stencil(mesh);
-
-//interfaceProperties intfcProp(alpha1, U, transPropDict);
-
-volScalarField alpha1_smooth
-(
-    IOobject
-    (
-        "alpha1_smooth",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    fvc::average(alpha1),
-    alpha1.boundaryField().types()
-);
-
-dimensionedScalar deltaN
-(
-    "deltaN",
-    1e-8/pow(average(mesh.V()), 1.0/3.0)
-);
-
-surfaceScalarField nHatf
-(
-    IOobject
-    (
-        "nHatf",
-        runTime.timeName(),
-        mesh
-    ),
-    mesh,
-    dimensionedScalar("nHatf", dimArea, 0.0)
-);
-
-dimensionedScalar sigma(transPropDict.lookup("sigma"));
-
-volScalarField K
-(
-    IOobject
-    (
-        "K",
-        runTime.timeName(),
-        mesh
-    ),
-    mesh,
-    dimensionedScalar("K", dimless/dimLength, 0.0)
-);
-
-// gravity and pressure
-#include "readGravitationalAcceleration.H"
-
-Info<< "Calculating field g.h\n" << endl;
-volScalarField gh("gh", g & mesh.C());
-surfaceScalarField ghf("ghf", g & mesh.Cf());
-
-volScalarField p
-(
-    IOobject
-    (
-        "p",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::AUTO_WRITE
-    ),
-    p_rgh + rho*gh
-);
- 
-label pRefCell = 0;
-scalar pRefValue = 0.0;
-setRefCell
-(
-    p,
-    p_rgh,
-    mesh.solutionDict().subDict("PIMPLE"),
-    pRefCell,
-    pRefValue
-);
-
-if (p_rgh.needReference())
-{
-    p += dimensionedScalar
-    (
-        "p",
-        p.dimensions(),
-        pRefValue - getRefCellValue(p, pRefCell)
-    );
-    p_rgh = p - rho*gh;
-}
-
-// Y, C, species initialization
-nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
-Info<< "Number of species " << nSpecies << endl;
-n = nSpecies;
-
+//------------------------------------------------------------------//
+//Species concentrations Y, x, C initialization
 PtrList<volScalarField> Y1(nSpecies);
 PtrList<volScalarField> x1(nSpecies);
 PtrList<volScalarField> c1(nSpecies);
@@ -825,8 +786,11 @@ C_phAvg.set
         Y1[endIndex].boundaryField().types()
     )
 );
+//Done species concentrations Y, x, C initialization
+//------------------------------------------------------------------//
 
-// Enthalpy initialization
+//------------------------------------------------------------------//
+//T, Enthalpy initialization
 Info<< "Reading field T1\n" << endl;
 volScalarField T1
 (
@@ -972,7 +936,109 @@ volScalarField H0_old
     H0,
     T0.boundaryField().types()
 );
+//Done T, Enthalpy initialization
+//------------------------------------------------------------------//
 
+
+// Construct PLIC interface object from alpha1 distribution, U field etc. 
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
+
+surfaceScalarField& phiAlpha1(interface.phiAlpha1());
+
+scalarField& alpha1Cells = alpha1.internalField();
+scalarField& alpha1OldCells = alpha1_old.internalField();
+
+centredCPCCellToCellStencilObject cell_stencil(mesh);
+
+//interfaceProperties intfcProp(alpha1, U, transPropDict);
+
+volScalarField alpha1_smooth
+(
+    IOobject
+    (
+        "alpha1_smooth",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    fvc::average(alpha1),
+    alpha1.boundaryField().types()
+);
+
+dimensionedScalar deltaN
+(
+    "deltaN",
+    1e-8/pow(average(mesh.V()), 1.0/3.0)
+);
+
+surfaceScalarField nHatf
+(
+    IOobject
+    (
+        "nHatf",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("nHatf", dimArea, 0.0)
+);
+
+dimensionedScalar sigma(transPropDict.lookup("sigma"));
+
+volScalarField K
+(
+    IOobject
+    (
+        "K",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("K", dimless/dimLength, 0.0)
+);
+
+// gravity and pressure
+#include "readGravitationalAcceleration.H"
+
+Info<< "Calculating field g.h\n" << endl;
+volScalarField gh("gh", g & mesh.C());
+surfaceScalarField ghf("ghf", g & mesh.Cf());
+
+volScalarField p
+(
+    IOobject
+    (
+        "p",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    p_rgh + rho*gh
+);
+ 
+label pRefCell = 0;
+scalar pRefValue = 0.0;
+setRefCell
+(
+    p,
+    p_rgh,
+    mesh.solutionDict().subDict("PIMPLE"),
+    pRefCell,
+    pRefValue
+);
+
+if (p_rgh.needReference())
+{
+    p += dimensionedScalar
+    (
+        "p",
+        p.dimensions(),
+        pRefValue - getRefCellValue(p, pRefCell)
+    );
+    p_rgh = p - rho*gh;
+}
 
 List<scalar> C1max(n);
 List<scalar> C0max(n);
