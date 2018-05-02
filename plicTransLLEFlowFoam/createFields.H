@@ -19,7 +19,7 @@ int MAX_ITER_T;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2;
 double T_TOL, H_TOL, T1_TMP_VAL, T0_TMP_VAL;
 //Temp variables
-int n, i, nCells, iOCorr, nOCorr, maxAlpha1Cell, minAlpha1Cell;
+int n, i, j, ijIndex, nCells, iOCorr, nOCorr, maxAlpha1Cell, minAlpha1Cell;
 double T_cellI_tmp, h_cellI_tmp, P_thermo_tmp;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -204,6 +204,9 @@ const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
 //initialization of values for thermal conductivities
 const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
 const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
+//initialization of values for mass diffusivities
+const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
+const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
 
 volScalarField rho1
 (
@@ -303,6 +306,34 @@ surfaceScalarField muf
     fvc::interpolate(mu)
 );
 
+volScalarField lambda1
+(
+    IOobject
+    (
+        "lambda1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    lambda1_0
+);
+
+volScalarField lambda0
+(
+    IOobject
+    (
+        "lambda0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    lambda0_0
+);
+
 // Mass flux
 surfaceScalarField rhoPhi
 (
@@ -316,6 +347,97 @@ surfaceScalarField rhoPhi
     ),
     fvc::interpolate(rho)*phi
 );
+
+int Nij = n*n;
+PtrList<volScalarField> D1(Nij);
+PtrList<volScalarField> D0(Nij);
+for(i=0; i<n; i++)
+{
+    for(j=0; j<n; j++)
+    {
+        ijIndex = n*i + j;
+
+        fieldName = "D1" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        D1.set
+        (
+            ijIndex,
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D1_0
+            )
+        );
+
+        fieldName = "D1f" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        D1f.set
+        (
+            ijIndex,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D1_0
+            )
+        );
+        
+        fieldName = "D0" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        D0.set
+        (
+            ijIndex,
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D0_0
+            )
+        );
+
+        fieldName = "D0f" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        D0f.set
+        (
+            ijIndex,
+            new surfaceScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    mesh.time().timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D0_0
+            )
+        );
+    }
+}
 //Done thermo and transport properties fields initialization
 //------------------------------------------------------------------//
 
