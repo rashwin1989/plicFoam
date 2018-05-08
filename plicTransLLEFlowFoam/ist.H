@@ -39,25 +39,6 @@ plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG,
 
 //-----------------------------------------------------------------------------------------------------//
 //Apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
-scalarField& alpha1Cells = alpha1.internalField();
-scalarField& alpha0Cells = alpha0.internalField();
-scalarField& H1Cells = H1.internalField();
-scalarField& H0Cells = H0.internalField();
-scalarField& rhoh1Cells = rhoh1.internalField();
-scalarField& rhoh0Cells = rhoh0.internalField();
-scalarField& h1Cells = h1.internalField();
-scalarField& h0Cells = h0.internalField();
-scalarField& T1Cells = T1.internalField();
-scalarField& T0Cells = T0.internalField();
-scalarField& rho1Cells = rho1.internalField();
-scalarField& rho0Cells = rho0.internalField();
-scalarField& TsCells = Ts.internalField();
-scalarField& mS1TotCells = mS1Tot.internalField();
-scalarField& alphaS1Cells = alphaS1.internalField();
-scalarField& alphaS0Cells = alphaS0.internalField();
-scalarField& QsCells = Qs.internalField();
-scalarField& pSCells = pS.internalField();
-
 forAll(pSCells, cellI)
 {
     pSCoeff = 1.0/rho1Cells[cellI] - 1.0/rho0Cells[cellI];
@@ -164,7 +145,7 @@ forAll(alpha1Cells, cellI)
 
     for(i=0; i<n; i++)
     {
-        x1[i].internalField()[cellI] = x_cellI_tmp;
+        x1[i].internalField()[cellI] = x_cellI_tmp[i];
     }
 
     //enthalpy and temperature
@@ -248,7 +229,7 @@ forAll(alpha1Cells, cellI)
 
     for(i=0; i<n; i++)
     {
-        x0[i].internalField()[cellI] = x_cellI_tmp;
+        x0[i].internalField()[cellI] = x_cellI_tmp[i];
     }
 
     //enthalpy and temperature
@@ -285,14 +266,12 @@ forAll(alpha1Cells, cellI)
 alpha1.correctBoundaryConditions();
 
 for(i=0; i<n; i++)
-{
-    C1[i].correctBoundaryConditions();
-    c1[i].correctBoundaryConditions();
+{    
     Y1[i].correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y1[i], rho1, alpha1, c1[i], C1[i]);
 
-    C0[i].correctBoundaryConditions();
-    c0[i].correctBoundaryConditions();
     Y0[i].correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y0[i], rho0, alpha0, c0[i], C0[i]);
 
     Info<< "Phase-1 C[" << i << "] = "
         << (C1[i]).weightedAverage(mesh.Vsc()).value()
@@ -314,6 +293,12 @@ for(i=0; i<n; i++)
         << "  Max(Y0i) = " << max(Y0[i]).value()
         << endl;        
 }
+
+T1.correctBoundaryConditions();
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x1,T1,rho1,alpha1,h1,rhoh1,H1);
+
+T0.correctBoundaryConditions();
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x0,T0,rho0,alpha0,h0,rhoh0,H0);
 
 forAll(alpha1Cells, cellI)
 {

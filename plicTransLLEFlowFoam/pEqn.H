@@ -34,24 +34,44 @@
         )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
     );
 
-    while (pimple.correctNonOrthogonal())
+    tmp<fvScalarMatrix> p_rghEqnComp1;
+    tmp<fvScalarMatrix> p_rghEqnComp0;
+
+    p_rghEqnComp1 =
+        fvc::ddt(rho1)
+        + fvc::div(phi, rho1) - fvc::Sp(fvc::div(phi), rho1);
+
+    p_rghEqnComp0 =
+        fvc::ddt(rho0)
+        + fvc::div(phi, rho0) - fvc::Sp(fvc::div(phi), rho0);
+
+    for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
-        fvScalarMatrix p_rghEqn
+        fvScalarMatrix p_rghEqnIncomp
         (
-             fvc::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh)
-             - pS
+             fvc::div(phiHbyA) 
+           - fvm::laplacian(rAUf, p_rgh)
+           - pS
         );
 
         p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
 
-        p_rghEqn.solve(mesh.solver(p_rgh.select(pimple.finalInnerIter())));
+        solve
+        (
+            (
+                (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1()
+              + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0()
+            )
+          + p_rghEqnIncomp,
+            mesh.solver("p_rgh"))
+        );
 
-        if (pimple.finalNonOrthogonalIter())
+        if (iNonOrthCorr == (nNonOrthCorr-1))
         {
-            phi = phiHbyA + p_rghEqn.flux();            
+            phi = phiHbyA + p_rghEqnIncomp.flux();
 
-            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqn.flux())/rAUf);            
-            U.correctBoundaryConditions();            
+            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqnIncomp.flux())/rAUf);            
+            U.correctBoundaryConditions();
         }
     }
 
@@ -76,30 +96,5 @@
             pRefValue - getRefCellValue(p, pRefCell)
         );
         p_rgh = p - rho*gh;
-    }
-
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
-    surfaceVectorField U_interp(linearInterpolate(U));
- 
-    if(phi_interp_debug)
-    {
-        Info<< endl;
-        forAll(phi.internalField(), faceI)
-        {
-            scalar curPhi = phi.internalField()[faceI];
-            vector curSf = mesh.Sf()[faceI];
-            scalar curMagSf = mesh.magSf()[faceI];
-            scalar curPhiU = curPhi/curMagSf;         
-            scalar curU_interp = (U_interp.internalField()[faceI] & curSf)/curMagSf;
-
-            if(mag(curPhi) > MIN_PHI_DEBUG && mag((curPhiU - curU_interp)/(curU_interp + VSMALL)) > 0.5)
-            {
-                Info<< "Face " << faceI << nl
-                    << "Flux = " << curPhi << "  Face vel. = " << curPhiU << "  Interp. U = " << curU_interp << nl
-                    << "Own U = " << U.internalField()[own[faceI]] << "  Nei U = " << U.internalField()[nei[faceI]] << endl;
-            }            
-        }
-        Info<< endl;
-    }
+    }    
 }

@@ -187,6 +187,8 @@ Info<< "Phase-1 H after clipping = "
 << "  Max(T1) = " << max(T1).value()        
 << endl;
 
+T1.correctBoundaryConditions();
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x1,T1,rho1,alpha1,h1,rhoh1,H1);
 
 //Phase-0
 volScalarField surfInt_diffFlux_h0(fvc::surfaceIntegrate(diffFlux_h0));
@@ -290,11 +292,9 @@ Info<< "Phase-0 H after clipping = "
 << "  Max(T0) = " << max(T0).value()        
 << endl;
 
-H0.correctBoundaryConditions();
-rhoh0.correctBoundaryConditions();
-h0.correctBoundaryConditions();
-T0.correctBoundaryConditions();
 
+T0.correctBoundaryConditions();
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x0,T0,rho0,alpha0,h0,rhoh0,H0);
 //Done solve enthalpy diffusion equations in both phases
 //------------------------------------------------------------------//
 Info<< "Done HDiffEqns" << endl;

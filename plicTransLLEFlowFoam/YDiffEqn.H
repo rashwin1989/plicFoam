@@ -181,9 +181,8 @@ for(i=0; i<(n-1); i++)
         << "  Max(Y1i) = " << max(Y1i).value()        
         << endl;
 
-    C1i.correctBoundaryConditions();
-    c1i.correctBoundaryConditions();
     Y1i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
     //Done ph1
     //--------------------------------------------------------------//
 
@@ -268,9 +267,8 @@ for(i=0; i<(n-1); i++)
         << "  Max(Y0i) = " << max(Y0i).value()        
         << endl;
 
-    C0i.correctBoundaryConditions();
-    c0i.correctBoundaryConditions();
     Y0i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
     //Done ph0
     //--------------------------------------------------------------//
 
@@ -280,39 +278,23 @@ for(i=0; i<(n-1); i++)
 //Done solve species diffusion equations in both phases
 //------------------------------------------------------------------//
 
-Y1[nSpecies - 1] = scalar(1.0) - Y1t;
-Y1[nSpecies - 1].max(0.0);
-Y1[nSpecies - 1].min(1.0);
-C1[nSpecies - 1] = rho1*alpha1*Y1[nSpecies - 1];
-c1[nSpecies - 1] = rho1*Y1[nSpecies - 1];
+Y1[n-1] = scalar(1.0) - Y1t;
+Y1[n-1].max(0.0);
+Y1[n-1].min(1.0);
+C1[n-1] = rho1*alpha1*Y1[n-1];
+c1[n-1] = rho1*Y1[n-1];
+Y1[n-1].correctBoundaryConditions();
+plicFuncs::correct_boundaryField_C(Y1[n-1], rho1, alpha1, c1[n-1], C1[n-1]);
 
-Y0[nSpecies - 1] = scalar(1.0) - Y0t;
-Y0[nSpecies - 1].max(0.0);
-Y0[nSpecies - 1].min(1.0);
-C0[nSpecies - 1] = rho0*alpha0*Y0[nSpecies - 1];
-c0[nSpecies - 1] = rho0*Y0[nSpecies - 1];
+Y0[n-1] = scalar(1.0) - Y0t;
+Y0[n-1].max(0.0);
+Y0[n-1].min(1.0);
+C0[n-1] = rho0*alpha0*Y0[n-1];
+c0[n-1] = rho0*Y0[n-1];
+Y0[n-1].correctBoundaryConditions();
+plicFuncs::correct_boundaryField_C(Y0[n-1], rho0, alpha0, c0[n-1], C0[n-1]);
 
-forAll(alpha1Cells, cellI)
-{
-    for(i=0; i<n; i++)
-    {
-        y_cellI_tmp[i] = Y1[i].internalField()[cellI];
-    }
-    plicFuncs::y2x(n, MW, y_cellI_tmp, x_cellI_tmp);
-    for(i=0; i<n; i++)
-    {
-        x1[i].internalField()[cellI] = x_cellI_tmp;
-    }
-
-    for(i=0; i<n; i++)
-    {
-        y_cellI_tmp[i] = Y0[i].internalField()[cellI];
-    }
-    plicFuncs::y2x(n, MW, y_cellI_tmp, x_cellI_tmp);
-    for(i=0; i<n; i++)
-    {
-        x0[i].internalField()[cellI] = x_cellI_tmp;
-    }
-}
+plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
+plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 
 Info<< "Done YDiffEqns" << endl;

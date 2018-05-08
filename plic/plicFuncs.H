@@ -904,11 +904,9 @@ namespace plicFuncs
 
     void correct_rho
     (
-        const fvMesh& mesh,    
         int n,
         double *Pc,
         double *Tc,
-        double *Vc,
         double *w,
         double *MW,
         int *tk,
@@ -917,6 +915,61 @@ namespace plicFuncs
         const PtrList<volScalarField>& X,
         const volScalarField& T,
         volScalarField& rho
+    );
+
+    void correct_h
+    (
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double P,
+        const PtrList<volScalarField>& X,
+        const volScalarField& T,
+        volScalarField& h
+    );
+
+    void correct_boundaryField_C
+    (    
+        const volScalarField& Yi,
+        const volScalarField& rho,
+        const volScalarField& alpha,
+        volScalarField& ci,
+        volScalarField& Ci
+    );
+
+    void correct_x_from_Y
+    (
+        int n,
+        double *MW,
+        const PtrList<volScalarField>& Y,
+        PtrList<volScalarField>& x
+    );
+
+    void correct_boundaryField_h_rhoh_H
+    (
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double P,
+        const PtrList<volScalarField>& X,
+        const volScalarField& T,
+        const volScalarField& rho,
+        const volScalarField& alpha,
+        volScalarField& h,
+        volScalarField& rhoh,
+        volScalarField& H,
     );
 
     void correct_thermo_trans_prop

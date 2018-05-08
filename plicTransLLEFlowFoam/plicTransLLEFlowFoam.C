@@ -60,6 +60,9 @@ Description
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+#define    _NEW_(var,type,size)    var = new type[size];
+#define    _DELETE_(var)           delete[] var;
+
 int main(int argc, char *argv[])
 {    
     #include "setRootCase.H"
@@ -223,7 +226,9 @@ int main(int argc, char *argv[])
         Info<< nl << endl; 
 
         runTime.write();        
-    }    
+    }
+
+    #include "CLEAN.H"
 
     Info<< "End\n" << endl;
 

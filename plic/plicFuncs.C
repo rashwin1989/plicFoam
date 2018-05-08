@@ -8606,11 +8606,9 @@ double calc_CvIG_from_CpIG(int n, double *x, double *CpIG)
 
 void correct_rho
 (
-    const fvMesh& mesh,    
     int n,
     double *Pc,
     double *Tc,
-    double *Vc,
     double *w,
     double *MW,
     int *tk,
@@ -8669,6 +8667,198 @@ void correct_rho
     _DELETE_(kij_tmp);
 }
 
+
+void correct_h
+(
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double P,
+    const PtrList<volScalarField>& X,
+    const volScalarField& T,
+    volScalarField& h
+)
+{
+    int i;
+    double T_tmp, h_tmp, v_tmp;
+    double *x_tmp;
+
+    _NEW_(x_tmp, double, n);
+
+    const scalarField& TCells = T.internalField();
+    scalarField& hCells = h.internalField();
+
+    forAll(TCells, cellI)
+    {
+        T_tmp = TCells[cellI];
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = X[i].internalField()[cellI];
+        }
+
+        calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+        hCells[cellI] = h_tmp;
+    }
+
+    forAll(T.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        fvPatchScalarField& ph = h.boundaryField()[patchI];
+        
+        forAll(pT, fcI)
+        {
+            T_tmp = pT[fcI];
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+            }
+
+            calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+            ph[fcI] = h_tmp;
+        }
+    }
+
+    _DELETE_(x_tmp);
+}
+
+
+void correct_boundaryField_C
+(    
+    const volScalarField& Yi,
+    const volScalarField& rho,
+    const volScalarField& alpha,
+    volScalarField& ci,
+    volScalarField& Ci
+)
+{
+    forAll(Yi.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pYi = Yi.boundaryField()[patchI];
+        const fvPatchScalarField& prho = rho.boundaryField()[patchI];
+        const fvPatchScalarField& palpha = alpha.boundaryField()[patchI];
+        fvPatchScalarField& pci = ci.boundaryField()[patchI];
+        fvPatchScalarField& pCi = Ci.boundaryField()[patchI];
+
+        forAll(pYi, fcI)
+        {
+            pci[fcI] = prho[fcI]*pYi[fcI];
+            pCi[fcI] = palpha[fcI]*pci[fcI];
+        }
+    }
+}
+
+
+void correct_x_from_Y
+(
+    int n,
+    double *MW,
+    const PtrList<volScalarField>& Y,
+    PtrList<volScalarField>& x
+)
+{
+    int i;
+    double *y_tmp, *x_tmp;
+
+    _NEW_(y_tmp, double, n);
+    _NEW_(x_tmp, double, n);
+
+    forAll(Y[0].internalField(), cellI)
+    {
+        for(i=0; i<n; i++)
+        {
+            y_tmp[i] = Y[i].internalField()[cellI];
+        }
+
+        plicFuncs::y2x(n, MW, y_tmp, x_tmp);
+
+        for(i=0; i<n; i++)
+        {
+            x[i].internalField()[cellI] = x_tmp[i];
+        }
+    }
+
+    forAll(Y[0].boundaryField(), patchI)
+    {
+        forAll(Y[0].boundaryField()[patchI], fcI)
+        {
+            for(i=0; i<n; i++)
+            {
+                y_tmp[i] = Y[i].boundaryField()[patchI][fcI];
+            }
+
+            plicFuncs::y2x(n, MW, y_tmp, x_tmp);
+
+            for(i=0; i<n; i++)
+            {
+                x[i].boundaryField()[patchI][fcI] = x_tmp[i];
+            }
+        }
+    }
+
+    _DELETE_(y_tmp);
+    _DELETE_(x_tmp);
+}
+
+
+void correct_boundaryField_h_rhoh_H
+(
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double P,
+    const PtrList<volScalarField>& X,
+    const volScalarField& T,
+    const volScalarField& rho,
+    const volScalarField& alpha,
+    volScalarField& h,
+    volScalarField& rhoh,
+    volScalarField& H,
+)
+{
+    int i;
+    double T_tmp, h_tmp, v_tmp;
+    double *x_tmp;
+
+    _NEW_(x_tmp, double, n);
+
+    forAll(T.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        const fvPatchScalarField& prho = rho.boundaryField()[patchI];
+        const fvPatchScalarField& palpha = alpha.boundaryField()[patchI];
+        fvPatchScalarField& ph = h.boundaryField()[patchI];
+        fvPatchScalarField& prhoh = rhoh.boundaryField()[patchI];
+        fvPatchScalarField& pH = H.boundaryField()[patchI];
+        
+        forAll(pT, fcI)
+        {
+            T_tmp = pT[fcI];
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+            }
+            calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+
+            ph[fcI] = h_tmp;
+            prhoh[fcI] = prho[fcI]*h_tmp;
+            pH[fcI] = palpha[fcI]*prho[fcI];
+        }
+    }
+
+    _DELETE_(x_tmp);
+}
 
 void correct_thermo_trans_prop
 (
