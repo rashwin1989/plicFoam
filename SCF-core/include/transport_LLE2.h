@@ -47,6 +47,9 @@ extern "C" {
 
 #endif
 
+void x2y(int n, double *MW, double *x, double *y);
+void y2x(int n, double *MW, double *x, double *y);
+
 ///////////////////////////////////////////////////////////////////
 //  light oil-heavy oil phase equilibrium
 //

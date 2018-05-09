@@ -20,6 +20,7 @@ plicFuncs::correct_thermo_trans_prop
     v1,
     hpar1,
     lambda1,
+    Cp1,
     mu1,
     D1
 );
@@ -47,6 +48,7 @@ plicFuncs::correct_thermo_trans_prop
     v0,
     hpar0,
     lambda0,
+    Cp0,
     mu0,
     D0
 );

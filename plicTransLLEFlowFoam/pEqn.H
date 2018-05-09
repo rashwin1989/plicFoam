@@ -34,43 +34,44 @@
         )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
     );
 
-    tmp<fvScalarMatrix> p_rghEqnComp1;
-    tmp<fvScalarMatrix> p_rghEqnComp0;
-
-    p_rghEqnComp1 =
+    volScalarField p_rghEqnComp1 =
         fvc::ddt(rho1)
         + fvc::div(phi, rho1) - fvc::Sp(fvc::div(phi), rho1);
 
-    p_rghEqnComp0 =
+    volScalarField p_rghEqnComp0 =
         fvc::ddt(rho0)
         + fvc::div(phi, rho0) - fvc::Sp(fvc::div(phi), rho0);
 
+    volScalarField p_rghEqnComp =
+        (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1
+        + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0;
+
     for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
-        fvScalarMatrix p_rghEqnIncomp
+        fvScalarMatrix p_rghEqn
         (
              fvc::div(phiHbyA) 
            - fvm::laplacian(rAUf, p_rgh)
            - pS
+           + p_rghEqnComp
+             
         );
 
         p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
 
-        solve
-        (
-            (
-                (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1()
-              + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0()
-            )
-          + p_rghEqnIncomp,
-            mesh.solver("p_rgh"))
-        );
+        p_rghEqn.solve(mesh.solver("p_rgh"));
 
-        if (iNonOrthCorr == (nNonOrthCorr-1))
+        if (iNonOrthCorr == nNonOrthCorr)
         {
-            phi = phiHbyA + p_rghEqnIncomp.flux();
+            dgdt =
+            (
+                pos(alpha0)*p_rghEqnComp0/rho0
+              - pos(alpha1)*p_rghEqnComp1/rho1
+            );
 
-            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqnIncomp.flux())/rAUf);            
+            phi = phiHbyA + p_rghEqn.flux();
+
+            U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqn.flux())/rAUf);            
             U.correctBoundaryConditions();
         }
     }

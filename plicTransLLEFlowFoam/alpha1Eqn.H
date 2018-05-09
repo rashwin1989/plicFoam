@@ -7,12 +7,62 @@ if(alpha_debug)
     osAlpha<< endl;    
 }
 
+volScalarField divU(fvc::div(fvc::absolute(phi, U)));
+
+volScalarField::DimensionedInternalField Sp
+(
+    IOobject
+    (
+        "Sp",
+        runTime.timeName(),
+        mesh
+    ),
+    mesh,
+    dimensionedScalar("Sp", dgdt.dimensions(), 0.0)
+);
+
+volScalarField::DimensionedInternalField Su
+(
+    IOobject
+    (
+        "Su",
+        runTime.timeName(),
+        mesh
+    ),
+    // Divergence term is handled explicitly to be
+    // consistent with the explicit transport solution
+    divU*min(alpha1, scalar(1))
+);
+
+forAll(dgdt, celli)
+{
+    if (dgdt[celli] > 0.0 && alpha1[celli] > 0.0)
+    {
+        Sp[celli] -= dgdt[celli]*alpha1[celli];
+        Su[celli] += dgdt[celli]*alpha1[celli];
+    }
+    else if (dgdt[celli] < 0.0 && alpha1[celli] < 1.0)
+    {
+        Sp[celli] += dgdt[celli]*(1.0 - alpha1[celli]);
+    }
+
+    if(pSCells[celli] > 0.0)
+    {
+        Sp[celli] -= pSCells[celli];
+    }
+    else
+    {
+        Su[celli] -= alpha1[celli]*pSCells[celli];
+    }
+}
+
 volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
 scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
 
 forAll(alpha1Cells, cellI)
 {
-    alpha1Cells[cellI] = alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
+    alpha1Cells[cellI] = (alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt + Su[cellI]*dt);
+    alpha1Cells[cellI] /= (scalar(1.0) - Sp[cellI]*dt);
 }
 
 Info<< "Phase-1 volume fraction = "
@@ -30,6 +80,7 @@ maxAlpha1Cell = -1;
 minAlpha1Cell = -1;
 
 ALPHA_MIN_BOUND = -ALPHA_BOUND_ERR;
+ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
 
 if(alpha_debug)
 {
@@ -51,17 +102,17 @@ if(alpha_debug)
             div_alpha1 = 0;
             div_phi = 0;
 
-            forAll(owner, faceI)
+            forAll(own, faceI)
             {
-                if(owner[faceI] == cellI)
+                if(own[faceI] == cellI)
                 {
-                    osAlpha<< "Face " << faceI << " owner  phiAlpha1 = " << phiAlpha1[faceI] << "  phi = " << phi[faceI] << endl;
+                    osAlpha<< "Face " << faceI << " own  phiAlpha1 = " << phiAlpha1[faceI] << "  phi = " << phi[faceI] << endl;
                     div_alpha1 += phiAlpha1[faceI];
                     div_phi += phi[faceI];
                 }
-                else if(neighbour[faceI] == cellI)
+                else if(nei[faceI] == cellI)
                 {
-                    osAlpha<< "Face " << faceI << " neighbour  phiAlpha1 = " << -phiAlpha1[faceI] << "  phi = " << -phi[faceI] << endl;
+                    osAlpha<< "Face " << faceI << " nei  phiAlpha1 = " << -phiAlpha1[faceI] << "  phi = " << -phi[faceI] << endl;
                     div_alpha1 -= phiAlpha1[faceI];
                     div_phi -= phi[faceI];
                 }

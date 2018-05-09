@@ -20,7 +20,7 @@
 
     adjustPhi(phi, U, pcorr);
 
-    while (pimple.correctNonOrthogonal())
+    for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
         fvScalarMatrix pcorrEqn
         (
@@ -30,7 +30,7 @@
         pcorrEqn.setReference(pRefCell, pRefValue);
         pcorrEqn.solve();
 
-        if (pimple.finalNonOrthogonalIter())
+        if (iNonOrthCorr == nNonOrthCorr)
         {
             phi -= pcorrEqn.flux();
             U = fvc::reconstruct(phi);
@@ -39,4 +39,6 @@
     }
 
     #include "continuityErrs.H"
+
+    dgdt = scalar(0.0);
 }

@@ -1,5 +1,6 @@
 #include "transport_LLE2.h"
 #include "gsl_optimizations2.h"
+#include "MACROS.H"
 
 /* code adopted from examples of GSL
  * http://www.gnu.org/software/gsl/manual/html_node/Multimin-Examples.html#Multimin-Examples
@@ -314,9 +315,9 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   }
 
   if (gsl_status<0) {
-    MY_PRINTF("\tGSL steps %d\n", gsl_iter);
-    MY_PRINTF("x1: ");for (j=0;j<n;j++) MY_PRINTF("%9.10le ", x_1[j]);MY_PRINTF("\n");
-    MY_PRINTF("x2: ");for (j=0;j<n;j++) MY_PRINTF("%9.10le ", x_2[j]);MY_PRINTF("\n");
+    printf("\tGSL steps %d\n", gsl_iter);
+    printf("x1: ");for (j=0;j<n;j++) printf("%9.10le ", x_1[j]);printf("\n");
+    printf("x2: ");for (j=0;j<n;j++) printf("%9.10le ", x_2[j]);printf("\n");
   }
   //MY_PRINTF("\tGSL returns %d, f0=%le\n", gsl_status, gsl_s->fval);
 

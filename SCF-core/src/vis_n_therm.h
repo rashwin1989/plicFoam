@@ -33,13 +33,13 @@ void thermo_properties_(double *P, double *T,                   // INPUT
     double *am, double *bm,                // OUTPUT vector: PR_EOS parameter a & b
     int *G_only);                          // INPUT: 1-onlyGibbs; 0-everything
 
-void calc_v_Cp_h_(double *P, double *T,                   // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,double *x,// INPUT
+void calc_v_cp_h_(double *P, double *T,                   // INPUT
+    int *n,double *x,double *Pc,double *Tc,double *w,double *MW,// INPUT
     double *Tb,double *SG,double *H8,int *type_k,               // INPUT
 double *V,double *Cp,double *h);                                // OUTPUT scalar
 
 void calc_v_h_(double *P, double *T,                   // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,double *x,// INPUT
+    int *n,double *x,double *Pc,double *Tc,double *w,double *MW,// INPUT
     double *Tb,double *SG,double *H8,int *type_k,               // INPUT
 double *V,double *h);                                // OUTPUT scalar
 

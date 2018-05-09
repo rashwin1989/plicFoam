@@ -1,14 +1,14 @@
 //------------------------------------------------------------------//
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
-label nSpecies, nOCorr, nPCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL, T0_TMP_VAL, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTC_2PH_MIN;
+label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL, T0_TMP_VAL, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN;
 //Temp variables
-label faceI, iOCorr, iPCorr;
+label iOCorr, iPCorr, iNonOrthCorr;
 label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
-scalar C1Tot_cellI, C0Tot_cellI;
 vector minAlpha1CellC, maxAlpha1CellC;
+word fieldName;
 fileName outputFile;
 //Done define all label, scalar, vector (OpenFOAM format) variables
 //------------------------------------------------------------------//
@@ -16,12 +16,12 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-int MAX_ITER_T, n_flux_type, MAX_ITERS_Ts;
-bool alpha_debug, redist_alpha, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, phi_interp_debug;
-double P_thermo, T_TOL, H_TOL, T1_TMP_VAL, T0_TMP_VAL, R_gas, Ts_TOL, MASS_FRAC_TOL;
+int MAX_ITER_T, n_flux_type, MAX_ITER_Ts;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor;
+double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
-int n, i, j, ijIndex, idx, nCells, iOCorr, nOCorr, maxAlpha1Cell, minAlpha1Cell;
-double T_cellI_tmp, h_cellI_tmp, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI;
+int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
+double T_cellI_tmp, h_cellI_tmp, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, rhoh_cellI_tmp;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -35,6 +35,20 @@ double *y_cellI_tmp, *x_cellI_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
 
+Info<< "Reading field p_rgh\n" << endl;
+volScalarField p_rgh
+(
+    IOobject
+    (
+        "p_rgh",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
 //------------------------------------------------------------------//
 //Define and load the OpenFOAM input dinctionaries
 //to read parameters from
@@ -44,23 +58,13 @@ IOdictionary transPropDict
     (
         "transportProperties",
         runTime.constant(),
-        mesh.db(),
+        p_rgh.db(),
         IOobject::MUST_READ,
         IOobject::NO_WRITE
     )
 );
 
-IOdictionary solDict
-(
-    IOobject
-    (
-        "fvSolution",
-        mesh.solutionDict(),
-        mesh.db(),
-        IOobject::MUST_READ,
-        IOobject::NO_WRITE
-    )
-);
+const dictionary& solDict = mesh.solutionDict();
 //Done define and load the OpenFOAM input dinctionaries
 //to read parameters from
 //------------------------------------------------------------------//
@@ -70,6 +74,7 @@ IOdictionary solDict
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
+nNonOrthCorr = solDict.lookupOrDefault("nNonOrthogonalCorrector", 1);
 MAX_ITER_T = transPropDict.lookupOrDefault("MAX_ITER_T", 108);
 MAX_ITER_Ts = transPropDict.lookupOrDefault("MAX_ITER_Ts", 108);
 ALPHA_BOUND_ITERS_MAX = 12;
@@ -83,13 +88,12 @@ Ts_TOL = transPropDict.lookupOrDefault("Ts_TOL", 1E-3);
 MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
-MIN_PHI_DEBUG = transPropDict.lookupOrDefault("MIN_PHI_DEBUG", 1E-12);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 A_INTFC_2PH_MIN = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN", 1E-03);
 // debug and other bool switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
-phi_interp_debug = transPropDict.lookupOrDefault("phi_interp_debug", false);
+adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
@@ -97,6 +101,7 @@ diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 ist_debug = transPropDict.lookupOrDefault("ist_debug", false);
 ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
+momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 // int switches
 n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -115,20 +120,20 @@ R_gas = transPropDict.lookupOrDefault("R_GAS", 8.31412);
 
 //------------------------------------------------------------------//
 //Alloacte memory for arrays
-_NEW_(Pc, double, n);
-_NEW_(Tc, double, n);
-_NEW_(Vc, double, n);
-_NEW_(w, double, n);
-_NEW_(MW, double, n);
-_NEW_(tk, int, n);
-_NEW_(coef_ab, double, n);
-_NEW_(Tb, double, n);
-_NEW_(SG, double, n);
-_NEW_(H8, double, n);
-_NEW_(k, double, n);
-_NEW_(dm, double, n);
-_NEW_(y_cellI_tmp, double, n);
-_NEW_(x_cellI_tmp, double, n);
+_NNEW_(Pc, double, n);
+_NNEW_(Tc, double, n);
+_NNEW_(Vc, double, n);
+_NNEW_(w, double, n);
+_NNEW_(MW, double, n);
+_NNEW_(tk, int, n);
+_NNEW_(coef_ab, double, n);
+_NNEW_(Tb, double, n);
+_NNEW_(SG, double, n);
+_NNEW_(H8, double, n);
+_NNEW_(k, double, n);
+_NNEW_(dm, double, n);
+_NNEW_(y_cellI_tmp, double, n);
+_NNEW_(x_cellI_tmp, double, n);
 //Done alloacte memory for arrays
 //------------------------------------------------------------------//
 
@@ -140,29 +145,29 @@ FILE *f;
 int n_pseudospecies_db, n_purespecies_db;
 int *idx_species, *idx_groups;
 
-_NEW_(idx_species, int, n);
-_NEW_(idx_groups, int, n);
+_NNEW_(idx_species, int, n);
+_NNEW_(idx_groups, int, n);
 
-f = fopen("/constant/species.dat+", "r");
+f = fopen("species.dat+", "r");
 
 iread = fscanf(f, "%d %d", &n_pseudospecies_db, &n_purespecies_db);
 n_species_db = n_pseudospecies_db + n_purespecies_db;
 
 fclose(f);
 
-f = fopen("/constant/input.dat+", "r");
+f = fopen("input.dat+", "r");
 
 iread=fscanf(f, "%s %d", str_tmp, &n);  // num of species
 
-iread=fscanf(f, "%s", c);         // index of species
+iread=fscanf(f, "%s", str_tmp);         // index of species
 for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_species[i]);
 
-iread=fscanf(f, "%s", c);         // index of PPR78 groups
+iread=fscanf(f, "%s", str_tmp);         // index of PPR78 groups
 for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_groups[i]);
 
 fclose(f);
 
-f = fopen("/constant/petro.dat+","r");
+f = fopen("petro.dat+","r");
 
 for (j=0;j<n;j++) 
 {
@@ -181,12 +186,14 @@ for (j=0;j<n;j++)
 
         Pc[j] *= 1e5;  // bar --> Pa
 
-        if (idx_groups[j]>=0) {
+        if (idx_groups[j]>=0) 
+        {
             // the first condition
             // we use PPR78 to calculate BIPs
             tk[j] = -(n_pseudospecies_db*idx_groups[j]+i+1);
         }
-        else {
+        else 
+        {
             // in the following
             // Guang's BIPs are used
             // NOTE that there are only 3 species
@@ -203,100 +210,99 @@ for (j=0;j<n;j++)
         {
             // SPECIAL DATA POINTS BUILT IN THE CODE
             // 1. water
-            if (fabs(Tc[j]-647)<0.5 && fabs(Pc[j]-220.6e5)<0.5e5) {
+            if (fabs(Tc[j]-647)<0.5 && fabs(Pc[j]-220.6e5)<0.5e5) 
+            {
                 Vc[j] = 57.1; // cm^3/mol
                 dm[j] = 1.85; // Debye
                 k [j] = 0.076;
 
-            }
-        
-            if (H8[j]<0)
-                // 2. toluene
-                if (fabs(Tc[j]-591.8)<0.5 && fabs(Pc[j]-41.1e5)<0.5e5) {
+            }                                
+            // 2. toluene
+            else if (fabs(Tc[j]-591.8)<0.5 && fabs(Pc[j]-41.1e5)<0.5e5)
+            {
                     Vc[j] = 316.0;
                     dm[j] = 0.36; // Debye
 
-                    // 3. n-decane
-                }else if (fabs(Tc[j]-617.7)<0.5 && fabs(Pc[j]-21.1e5)<0.5e5) {
-                    Vc[j] = 600.0;
+            }// 3. n-decane
+            else if (fabs(Tc[j]-617.7)<0.5 && fabs(Pc[j]-21.1e5)<0.5e5)
+            {
+                Vc[j] = 600.0;
+            }// 4. n-C30
+            else if (fabs(Tc[j]-844.0)<0.5 && fabs(Pc[j]- 8.0e5)<0.5e5) {
+                Vc[j] = 1805.0;
 
-                    // 4. n-C30
-                }else if (fabs(Tc[j]-844.0)<0.5 && fabs(Pc[j]- 8.0e5)<0.5e5) {
-                    Vc[j] = 1805.0;
+                // 5. n-C50
+            }else if (fabs(Tc[j]-1073.6)<0.5&& fabs(Pc[j]-3.51e5)<0.5e5) {
+                Vc[j] = 2999;
 
-                    // 5. n-C50
-                }else if (fabs(Tc[j]-1073.6)<0.5&& fabs(Pc[j]-3.51e5)<0.5e5) {
-                    Vc[j] = 2999;
+                // 6. Benzene-C10
+            }else if (fabs(Tc[j]-753.0)<0.5 && fabs(Pc[j]-17.7e5)<0.5e5) {
+                Vc[j] = 813;
 
-                    // 6. Benzene-C10
-                }else if (fabs(Tc[j]-753.0)<0.5 && fabs(Pc[j]-17.7e5)<0.5e5) {
-                    Vc[j] = 813;
+                // 7. Benzene-C30
+            }else if (fabs(Tc[j]-965.6)<0.5 && fabs(Pc[j]- 5.3e5)<0.5e5) {
+                Vc[j] = 1943.5;
 
-                    // 7. Benzene-C30
-                }else if (fabs(Tc[j]-965.6)<0.5 && fabs(Pc[j]- 5.3e5)<0.5e5) {
-                    Vc[j] = 1943.5;
+                // 8. Naphthalene-C10
+            }else if (fabs(Tc[j]-859.0)<0.5 && fabs(Pc[j]-15.8e5)<0.5e5) {
+                Vc[j] = 1070;
 
-                    // 8. Naphthalene-C10
-                }else if (fabs(Tc[j]-859.0)<0.5 && fabs(Pc[j]-15.8e5)<0.5e5) {
-                    Vc[j] = 1070;
+                // 9. Naphthalene-C12
+            }else if (fabs(Tc[j]-854.6)<0.5 && fabs(Pc[j]-13.0e5)<0.5e5) {
+                Vc[j] = 1081.5;
 
-                    // 9. Naphthalene-C12
-                }else if (fabs(Tc[j]-854.6)<0.5 && fabs(Pc[j]-13.0e5)<0.5e5) {
-                    Vc[j] = 1081.5;
+                // 10. Benzene
+            }else if (fabs(Tc[j]-562.0)<0.5 && fabs(Pc[j]-49.0e5)<0.5e5) {
+                Vc[j] = 256.0;
 
-                    // 10. Benzene
-                }else if (fabs(Tc[j]-562.0)<0.5 && fabs(Pc[j]-49.0e5)<0.5e5) {
-                    Vc[j] = 256.0;
+                // 11. o-xylene
+            }else if (fabs(Tc[j]-630.3)<0.5 && fabs(Pc[j]-37.3e5)<0.5e5) {
+                Vc[j] = 370.0;
 
-                    // 11. o-xylene
-                }else if (fabs(Tc[j]-630.3)<0.5 && fabs(Pc[j]-37.3e5)<0.5e5) {
-                    Vc[j] = 370.0;
+                // 12. p-xylene
+            }else if (fabs(Tc[j]-616.2)<0.5 && fabs(Pc[j]-35.1e5)<0.5e5) {
+                Vc[j] = 378.0;
 
-                    // 12. p-xylene
-                }else if (fabs(Tc[j]-616.2)<0.5 && fabs(Pc[j]-35.1e5)<0.5e5) {
-                    Vc[j] = 378.0;
+                // 13. 1,3,5-trimethylbenzene
+            }else if (fabs(Tc[j]-637.3)<0.5 && fabs(Pc[j]-31.3e5)<0.5e5) {
+                Vc[j] = 433.0;
 
-                    // 13. 1,3,5-trimethylbenzene
-                }else if (fabs(Tc[j]-637.3)<0.5 && fabs(Pc[j]-31.3e5)<0.5e5) {
-                    Vc[j] = 433.0;
+                // 14. naphthalene
+            }else if (fabs(Tc[j]-748.4)<0.5 && fabs(Pc[j]-40.5e5)<0.5e5) {
+                Vc[j] = 407.0;
 
-                    // 14. naphthalene
-                }else if (fabs(Tc[j]-748.4)<0.5 && fabs(Pc[j]-40.5e5)<0.5e5) {
-                    Vc[j] = 407.0;
+                // 15. 1-methylnaphthalene
+            }else if (fabs(Tc[j]-772.0)<0.5 && fabs(Pc[j]-36.0e5)<0.5e5) {
+                Vc[j] = 465;
 
-                    // 15. 1-methylnaphthalene
-                }else if (fabs(Tc[j]-772.0)<0.5 && fabs(Pc[j]-36.0e5)<0.5e5) {
-                    Vc[j] = 465;
+                // 16. anthracene
+            }else if (fabs(Tc[j]-873.0)<0.5 && fabs(Pc[j]-29.0e5)<0.5e5) {
+                Vc[j] = 554;
 
-                    // 16. anthracene
-                }else if (fabs(Tc[j]-873.0)<0.5 && fabs(Pc[j]-29.0e5)<0.5e5) {
-                    Vc[j] = 554;
+                // 17. 1,2-diphenylethane
+            }else if (fabs(Tc[j]-780.0)<0.5 && fabs(Pc[j]-26.5e5)<0.5e5) {
+                Vc[j] = 616;
 
-                    // 17. 1,2-diphenylethane
-                }else if (fabs(Tc[j]-780.0)<0.5 && fabs(Pc[j]-26.5e5)<0.5e5) {
-                    Vc[j] = 616;
+                // 18. pyrene
+            }else if (fabs(Tc[j]-936.0)<0.5 && fabs(Pc[j]-26.1e5)<0.5e5) {
+                Vc[j] = 660;
 
-                    // 18. pyrene
-                }else if (fabs(Tc[j]-936.0)<0.5 && fabs(Pc[j]-26.1e5)<0.5e5) {
-                    Vc[j] = 660;
+                // 19. n-C16
+            }else if (fabs(Tc[j]-723.0)<0.5 && fabs(Pc[j]-14.0e5)<0.5e5) {
+                Vc[j] = 969.2;
 
-                    // 19. n-C16
-                }else if (fabs(Tc[j]-723.0)<0.5 && fabs(Pc[j]-14.0e5)<0.5e5) {
-                    Vc[j] = 969.2;
+                // 20. trans-decalin
+            }else if (fabs(Tc[j]-687.0)<0.5 && fabs(Pc[j]-32.0e5)<0.5e5) {
+                Vc[j] = 480.0;
 
-                    // 20. trans-decalin
-                }else if (fabs(Tc[j]-687.0)<0.5 && fabs(Pc[j]-32.0e5)<0.5e5) {
-                    Vc[j] = 480.0;
+                // 21. butylbenzene
+            }else if (fabs(Tc[j]-660.5)<0.5 && fabs(Pc[j]-28.9e5)<0.5e5) {
+                Vc[j] = 497.0;
 
-                    // 21. butylbenzene
-                }else if (fabs(Tc[j]-660.5)<0.5 && fabs(Pc[j]-28.9e5)<0.5e5) {
-                    Vc[j] = 497.0;
-
-                    // 22. hexylbenzene
-                }else if (fabs(Tc[j]-698.0)<0.5 && fabs(Pc[j]-23.8e5)<0.5e5) {
-                    Vc[j] = 593.0;
-                }
-
+                // 22. hexylbenzene
+            }else if (fabs(Tc[j]-698.0)<0.5 && fabs(Pc[j]-23.8e5)<0.5e5) {
+                Vc[j] = 593.0;
+            }
             // WHEN EQUALS, WE FOUND THE DATA 
             // SO QUIT THE READING FOR SPECIES I
             break;
@@ -343,30 +349,43 @@ nFaces = mesh.nFaces();
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
 const vectorField& meshCi = mesh.C().internalField();
-const cellList& meshCells = mesh.cells();
 const scalarField& meshV = mesh.V();
-const vectorField& meshSf = mesh.Sf();
-const scalarField& meshMagSf = mesh.magSf();
 //Done set mesh related variables and fields
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Read and initialize fundamental variable fields
-Info<< "Reading field p_rgh\n" << endl;
-volScalarField p_rgh
+P_thermo_tmp = transPropDict.lookupOrDefault("P_thermo", 30.0E+06);
+
+Info<< "Initializing field P_thermo\n" << endl;
+volScalarField P_thermo
 (
     IOobject
     (
-        "p_rgh",
+        "P_thermo",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
     ),
-    mesh
+    mesh,
+    P_thermo_tmp
 );
 
-P_thermo = transPropDict.lookupOrDefault("P_thermo", 30.0E+06);
+Info<< "Initializing field Pf_thermo\n" << endl;
+surfaceScalarField Pf_thermo
+(
+    IOobject
+    (
+        "Pf_thermo",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    P_thermo_tmp
+);
 
 Info<< "Reading field alpha1\n" << endl;
 volScalarField alpha1
@@ -439,9 +458,15 @@ const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
 //initialization of values for thermal conductivities
 const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
 const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
+//initialization of values for specific heats
+const dimensionedScalar& Cp1_0 = transPropDict.lookup("Cp1");
+const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
 //initialization of values for mass diffusivities
-const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
-const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
+//const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
+//const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
+//initialization of values for molecular weights
+const dimensionedScalar& MW1_0 = transPropDict.lookup("MW1");
+const dimensionedScalar& MW0_0 = transPropDict.lookup("MW0");
 
 volScalarField rho1
 (
@@ -541,6 +566,9 @@ volScalarField mu0
     mu0_0
 );
 
+surfaceScalarField mu1f = fvc::interpolate(mu1);
+surfaceScalarField mu0f = fvc::interpolate(mu0);
+
 volScalarField mu
 (
     IOobject
@@ -597,6 +625,37 @@ volScalarField lambda0
     lambda0_0
 );
 
+volScalarField Cp1
+(
+    IOobject
+    (
+        "Cp1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    Cp1_0
+);
+
+volScalarField Cp0
+(
+    IOobject
+    (
+        "Cp0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    Cp0_0
+);
+
+volScalarField Dh1 = lambda1/rho1/Cp1;
+volScalarField Dh0 = lambda0/rho0/Cp0;
+
 // Mass flux
 surfaceScalarField rhoPhi
 (
@@ -609,6 +668,11 @@ surfaceScalarField rhoPhi
         IOobject::NO_WRITE
     ),
     fvc::interpolate(rho)*phi
+);
+
+volScalarField dgdt
+(
+    pos(alpha0)*fvc::div(phi)/max(alpha0, scalar(0.0001))
 );
 
 int Nij = n*n;
@@ -749,7 +813,6 @@ PtrList<volScalarField> C0_old(n);
 
 PtrList<volScalarField> C_phAvg(n);
 
-word fieldName;
 for(i=0; i<(n-1); i++)
 {
     fieldName = "Y1" + Foam::name(i);
@@ -1233,8 +1296,7 @@ volScalarField h1
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("h_0", [0 2 -2 0 0 0 0], 0),
-    T1.boundaryField().types()
+    dimensionSet(0, 2, -2, 0, 0, 0, 0)
 );
 
 Info<< "Initializing field rhoh1\n" << endl;
@@ -1307,8 +1369,7 @@ volScalarField h0
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar("h_0", [0 2 -2 0 0 0 0], 0),
-    T0.boundaryField().types()
+    dimensionSet(0, 2, -2, 0, 0, 0, 0)
 );
 
 Info<< "Initializing field rhoh0\n" << endl;
@@ -1375,7 +1436,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("hpar_0", [0 2 -2 0 0 0 0], 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
         )
     );
 
@@ -1395,7 +1456,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("hpar_0", [0 2 -2 0 0 0 0], 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
         )
     );
 }
@@ -1420,10 +1481,10 @@ for(i=0; i<n; i++)
     C1min[i] = min(C1[i]).value();
     C0min[i] = min(C0[i]).value();
 
-    Y1max[i] = max(Y1[i]).value();
-    Y0max[i] = max(Y0[i]).value();
-    Y1min[i] = min(Y1[i]).value();
-    Y0min[i] = min(Y0[i]).value();
+    Y1max[i] = 1;
+    Y0max[i] = 1;
+    Y1min[i] = 0;
+    Y0min[i] = 0;
 }
 
 double T1min, T1max, H1min, H1max;
@@ -1738,10 +1799,10 @@ surfaceScalarField w_ph0
 );
 
 // fields interpolated to faces
-surfaceScalarField T1f(fvc::linearInterpolate(T1));
-surfaceScalarField T0f(fvc::linearInterpolate(T0));
-surfaceScalarField v1f(fvc::linearInterpolate(v1));
-surfaceScalarField v0f(fvc::linearInterpolate(v0));
+surfaceScalarField T1f(linearInterpolate(T1));
+surfaceScalarField T0f(linearInterpolate(T0));
+surfaceScalarField v1f(linearInterpolate(v1));
+surfaceScalarField v0f(linearInterpolate(v0));
 
 PtrList<surfaceScalarField> x1f(n);
 PtrList<surfaceScalarField> x0f(n);
@@ -1803,7 +1864,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("hparf_0", [0 2 -2 0 0 0 0], 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
         )
     );    
 
@@ -1823,7 +1884,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("hparf_0", [0 2 -2 0 0 0 0], 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
         )
     );
 }
@@ -2065,7 +2126,17 @@ surfaceScalarField diffFlux_Jh0
     mesh,
     dimensionedScalar("diffFlux_Jh0", dimVol*dimPressure/dimTime, 0)
 );
-//Done species diffusion
+
+volScalarField surfInt_diffFlux_h1(fvc::surfaceIntegrate(diffFlux_h1));
+volScalarField surfInt_diffFlux_h0(fvc::surfaceIntegrate(diffFlux_h0));
+volScalarField surfInt_diffFlux_Jh1(fvc::surfaceIntegrate(diffFlux_Jh1));
+volScalarField surfInt_diffFlux_Jh0(fvc::surfaceIntegrate(diffFlux_Jh0));
+
+scalarField& surfInt_diffFlux_h1Cells = surfInt_diffFlux_h1.internalField();
+scalarField& surfInt_diffFlux_h0Cells = surfInt_diffFlux_h0.internalField();
+scalarField& surfInt_diffFlux_Jh1Cells = surfInt_diffFlux_Jh1.internalField();
+scalarField& surfInt_diffFlux_Jh0Cells = surfInt_diffFlux_Jh0.internalField();
+//Done species, enthalpy diffusion
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
@@ -2427,6 +2498,12 @@ scalarField& alphaS1Cells = alphaS1.internalField();
 scalarField& alphaS0Cells = alphaS0.internalField();
 scalarField& QsCells = Qs.internalField();
 scalarField& pSCells = pS.internalField();
+scalarField& lambda1Cells = lambda1.internalField();
+scalarField& lambda0Cells = lambda0.internalField();
+scalarField& Cp1Cells = Cp1.internalField();
+scalarField& Cp0Cells = Cp0.internalField();
+scalarField& Dh1Cells = Dh1.internalField();
+scalarField& Dh0Cells = Dh0.internalField();
 //Done reference to internal fields for easy access
 //------------------------------------------------------------------//
 
@@ -2435,8 +2512,8 @@ scalarField& pSCells = pS.internalField();
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo, x1, T1, rho1);
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo, x0, T0, rho0);
+plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
+plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);
 
 for(i=0; i<n; i++)
 {
@@ -2458,14 +2535,24 @@ for(i=0; i<n; i++)
     C0Oldi = C0i;
 }
 
-plicFuncs::correct_h(n, Pc, Tc, w, MW, tk, Tb, SG, H8, P_thermo, x1, T1, h1);
+plicFuncs::correct_h(n, Pc, Tc, w, MW, tk, Tb, SG, H8, P_thermo_tmp, x1, T1, h1);
 rhoh1 = rho1*h1;
 H1 = alpha1*rhoh1;
 H1_old = H1;
 
-plicFuncs::correct_h(n, Pc, Tc, w, MW, tk, Tb, SG, H8, P_thermo, x0, T0, h0);
+plicFuncs::correct_h(n, Pc, Tc, w, MW, tk, Tb, SG, H8, P_thermo_tmp, x0, T0, h0);
 rhoh0 = rho0*h0;
 H0 = alpha0*rhoh0;
 H0_old = H0;
+
+#include "correct_thermo_trans_prop.H"
 //Done initialize dependent variable fields correctly
 //------------------------------------------------------------------//
+
+for(i=0; i<n; i++)
+{
+    C1max[i] = max(alpha1*rho1*Y1max[i]).value();
+    C0max[i] = max(alpha0*rho0*Y0max[i]).value();
+    C1min[i] = min(alpha1*rho1*Y1max[i]).value();
+    C0min[i] = min(alpha0*rho0*Y0max[i]).value();
+}

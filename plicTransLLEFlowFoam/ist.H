@@ -17,7 +17,7 @@ plicFuncs::makeFlatFld(interface.C_ph0(), istMap, C_ph0_flatFld_ist);
 plicFuncs::makeFlatFld(T1, istMap, T1_flatFld_ist);
 plicFuncs::makeFlatFld(T0, istMap, T0_flatFld_ist);
 
-for(label i=0; i<nSpecies; i++)
+for(i=0; i<n; i++)
 {
     const volScalarField& x1i = x1[i];
     const volScalarField& x0i = x0[i];
@@ -32,7 +32,7 @@ for(label i=0; i<nSpecies; i++)
 //-----------------------------------------------------------------------------------------------------//
 //Calculate interfacial species concentrations and mass fluxes
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, x1_flatFld_ist, x0_flatFld_ist, T1_flatFld_ist, T0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, x1, x0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, dt, Ys1, Ys0, xs1, xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, Qs, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
+plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, x1_flatFld_ist, x0_flatFld_ist, T1_flatFld_ist, T0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, x1, x0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, dt, Ys1, Ys0, xs1, xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, Qs, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITER_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
 //Done calculate interfacial species concentrations and mass fluxes
 //Done calculate interfacial species transfer source terms and alpha source terms
 //-----------------------------------------------------------------------------------------------------//
@@ -160,7 +160,7 @@ forAll(alpha1Cells, cellI)
         rhoh_cellI_tmp = H1Cells[cellI]/alpha1Cells[cellI];
         h_cellI_tmp = rhoh_cellI_tmp/rho1Cells[cellI];
         T_cellI_tmp = T1Cells[cellI];        
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
         if(T_cellI_tmp < T1min)
         {
             T_cellI_tmp = T1min;                
@@ -171,11 +171,11 @@ forAll(alpha1Cells, cellI)
             T_cellI_tmp = T1max;        
         }        
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
     
     T1Cells[cellI] = T_cellI_tmp;
     h1Cells[cellI] = h_cellI_tmp;
-    rhoh1Cells[cellI] = rho1Cells[cellI]*h1_cellI_tmp;
+    rhoh1Cells[cellI] = rho1Cells[cellI]*h_cellI_tmp;
     H1Cells[cellI] = alpha1Cells[cellI]*rhoh1Cells[cellI];
 
     //ph-0
@@ -244,7 +244,7 @@ forAll(alpha1Cells, cellI)
         rhoh_cellI_tmp = H0Cells[cellI]/alpha0Cells[cellI];
         h_cellI_tmp = rhoh_cellI_tmp/rho0Cells[cellI];
         T_cellI_tmp = T0Cells[cellI];        
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
         if(T_cellI_tmp < T0min)
         {
             T_cellI_tmp = T0min;                
@@ -255,7 +255,7 @@ forAll(alpha1Cells, cellI)
             T_cellI_tmp = T0max;        
         }        
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
     
     T0Cells[cellI] = T_cellI_tmp;
     h0Cells[cellI] = h_cellI_tmp;
@@ -295,10 +295,10 @@ for(i=0; i<n; i++)
 }
 
 T1.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x1,T1,rho1,alpha1,h1,rhoh1,H1);
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x1,T1,rho1,alpha1,h1,rhoh1,H1);
 
 T0.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x0,T0,rho0,alpha0,h0,rhoh0,H0);
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x0,T0,rho0,alpha0,h0,rhoh0,H0);
 
 forAll(alpha1Cells, cellI)
 {

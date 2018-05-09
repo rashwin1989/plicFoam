@@ -76,21 +76,9 @@ for(i=0; i<n; i++)
 //------------------------------------------------------------------//
 //Solve enthalpy diffusion equations in both phases
 
-scalarField& T1Cells = T1.internalField();
-scalarField& T0Cells = T0.internalField();
-scalarField& H1Cells = H1.internalField();
-scalarField& H0Cells = H0.internalField();
-scalarField& rhoh1Cells = rhoh1.internalField();
-scalarField& rhoh0Cells = rhoh0.internalField();
-scalarField& h1Cells = h1.internalField();
-scalarField& h0Cells = h0.internalField();
-
 //Phase-1
-volScalarField surfInt_diffFlux_h1(fvc::surfaceIntegrate(diffFlux_h1));
-scalarField& surfInt_diffFlux_h1Cells = surfInt_diffFlux_h1.internalField();
-
-volScalarField surfInt_diffFlux_Jh1(fvc::surfaceIntegrate(diffFlux_Jh1));
-scalarField& surfInt_diffFlux_Jh1Cells = surfInt_diffFlux_Jh1.internalField();
+surfInt_diffFlux_h1 = fvc::surfaceIntegrate(diffFlux_h1);
+surfInt_diffFlux_Jh1 = fvc::surfaceIntegrate(diffFlux_Jh1);
 
 if(diff_debug2)
 {
@@ -121,7 +109,7 @@ forAll(H1Cells,cellI)
         {
             x_cellI_tmp[i] = x1[i].internalField()[cellI];
         }
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
         T1Cells[cellI] = T_cellI_tmp;
     }
 
@@ -170,7 +158,7 @@ forAll(T1Cells,cellI)
     {
         x_cellI_tmp[i] = x1[i].internalField()[cellI];
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
 
     h1Cells[cellI] = h_cellI_tmp;
     rhoh1Cells[cellI] = rho1Cells[cellI]*h_cellI_tmp;
@@ -188,14 +176,11 @@ Info<< "Phase-1 H after clipping = "
 << endl;
 
 T1.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x1,T1,rho1,alpha1,h1,rhoh1,H1);
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x1,T1,rho1,alpha1,h1,rhoh1,H1);
 
 //Phase-0
-volScalarField surfInt_diffFlux_h0(fvc::surfaceIntegrate(diffFlux_h0));
-scalarField& surfInt_diffFlux_h0Cells = surfInt_diffFlux_h0.internalField();
-
-volScalarField surfInt_diffFlux_Jh0(fvc::surfaceIntegrate(diffFlux_Jh0));
-scalarField& surfInt_diffFlux_Jh0Cells = surfInt_diffFlux_Jh0.internalField();
+surfInt_diffFlux_h0 = fvc::surfaceIntegrate(diffFlux_h0);
+surfInt_diffFlux_Jh0 = fvc::surfaceIntegrate(diffFlux_Jh0);
 
 if(diff_debug2)
 {
@@ -226,7 +211,7 @@ forAll(H0Cells,cellI)
         {
             x_cellI_tmp[i] = x0[i].internalField()[cellI];
         }
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
         T0Cells[cellI] = T_cellI_tmp;
     }
 
@@ -275,7 +260,7 @@ forAll(T0Cells,cellI)
     {
         x_cellI_tmp[i] = x0[i].internalField()[cellI];
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
 
     h0Cells[cellI] = h_cellI_tmp;
     rhoh0Cells[cellI] = rho0Cells[cellI]*h_cellI_tmp;
@@ -294,7 +279,7 @@ Info<< "Phase-0 H after clipping = "
 
 
 T0.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo,x0,T0,rho0,alpha0,h0,rhoh0,H0);
+plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x0,T0,rho0,alpha0,h0,rhoh0,H0);
 //Done solve enthalpy diffusion equations in both phases
 //------------------------------------------------------------------//
 Info<< "Done HDiffEqns" << endl;

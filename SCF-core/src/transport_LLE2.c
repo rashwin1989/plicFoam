@@ -7,6 +7,25 @@
 #include "transport_LLE2.h"
 #include "Maxwell_Stefan_flux.h"
 
+void x2y(int n, double *MW, double *x, double *y){
+    int i;
+    double sum_MWx = 0.0, r1_sum;
+    for (i=0; i<n; i++) sum_MWx += MW[i]*x[i];
+
+    r1_sum = 1.0/sum_MWx;
+
+    for (i=0; i<n; i++) y[i] = MW[i]*x[i] * r1_sum;    
+}
+
+void y2x(int n, double *MW, double *x, double *y){
+    int i;
+    double sum_y_MW = 0.0;
+    for (i=0; i<n; i++) sum_y_MW += y[i]/MW[i];
+
+    sum_y_MW = 1.0/sum_y_MW;
+
+    for (i=0; i<n; i++) x[i] = y[i]/MW[i] * sum_y_MW;
+}
 
 void transport_LLE2_core(
     double P,   // system pressure (Pa)

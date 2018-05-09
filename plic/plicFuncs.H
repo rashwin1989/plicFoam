@@ -64,7 +64,7 @@ SourceFiles
 #include <stdio.h>
 #include <stdlib.h>
 
-//#include "MACROS.H"
+#include "MACROS.H"
 #include "PR_EoS.h"
 #include "myUmfpack.h"
 #include "vis_n_therm.h"
@@ -84,8 +84,8 @@ namespace Foam
 namespace plicFuncs
 {
 
-#define    _NEW_(var,type,size)    var = new type[size];
-#define    _DELETE_(var)           delete[] var;
+#define    _NNEW_(var,type,size)    var = new type[size];
+#define    _DDELETE_(var)           delete[] var;
     
     template <class Type>
     void display_field
@@ -462,7 +462,7 @@ namespace plicFuncs
 
     void init_MS_flux
     (
-        const label& faceI,
+        label faceI,
         const PtrList<surfaceScalarField>& xf,
         const PtrList<surfaceScalarField>& gradf_x,    
         const PtrList<surfaceScalarField>& Dijf,
@@ -474,8 +474,8 @@ namespace plicFuncs
 
     void init_MS_flux
     (
-        const label& patchI,
-        const label& faceI,
+        label patchI,
+        label faceI,
         const PtrList<surfaceScalarField>& xf,
         const PtrList<surfaceScalarField>& gradf_x,    
         const PtrList<surfaceScalarField>& Dijf,
@@ -795,7 +795,7 @@ namespace plicFuncs
         const scalar& ALPHA_MIN_BOUND,
         const label& ALPHA_BOUND_ITERS_MAX,
         label& minAlpha1Cell,
-        label& maxALpha1Cell,
+        label& maxAlpha1Cell,
         scalar& minAlpha1,
         scalar& maxAlpha1,
         const bool debug,
@@ -969,7 +969,7 @@ namespace plicFuncs
         const volScalarField& alpha,
         volScalarField& h,
         volScalarField& rhoh,
-        volScalarField& H,
+        volScalarField& H
     );
 
     void correct_thermo_trans_prop
@@ -994,6 +994,7 @@ namespace plicFuncs
         volScalarField& v,
         PtrList<volScalarField>& hpar,
         volScalarField& lambda,
+        volScalarField& Cp,
         volScalarField& mu,
         PtrList<volScalarField>& D
     );

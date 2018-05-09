@@ -22,14 +22,16 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    plicAdvDiffIstFlowFoam
+    plicTransLLEFlowFoam
 
 Description
-    Solver for 2 incompressible, immiscible fluids using a VOF
-    (volume of fluid) phase-fraction based interface capturing with 
+    Solver for 2 compressible (density varying with T, x), 
+    partially miscible fluids using a VOF (volume of fluid) 
+    phase-fraction based interface capturing with 
     piecewise linear interface reconstruction. 
     Advection and diffusion of species within each bulk phase.
-    Interfacial species mass transfer calculation.
+    Interfacial species mass transfer calculation consistent 
+    with phase equilibrium and transport constraints at interface.
 
 \*---------------------------------------------------------------------------*/
 
@@ -40,7 +42,7 @@ Description
 #include "IOdictionary.H"
 #include "centredCPCCellToCellStencilObject.H"
 #include "centredCFCCellToCellStencilObject.H"
-#include "pimpleControl.H"
+//#include "pimpleControl.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
 
 
@@ -49,7 +51,7 @@ Description
 #include <stdio.h>
 #include <stdlib.h>
 
-//#include "MACROS.H"
+#include "MACROS.H"
 #include "PR_EoS.h"
 #include "myUmfpack.h"
 #include "vis_n_therm.h"
@@ -60,16 +62,14 @@ Description
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#define    _NEW_(var,type,size)    var = new type[size];
-#define    _DELETE_(var)           delete[] var;
+#define    _NNEW_(var,type,size)    var = new type[size];
+#define    _DDELETE_(var)           delete[] var;
 
 int main(int argc, char *argv[])
 {    
     #include "setRootCase.H"
     #include "createTime.H"
-    #include "createMesh.H"        
-   
-    pimpleControl pimple(mesh);
+    #include "createMesh.H"       
  
     #include "readTimeControls.H"
     #include "initContinuityErrs.H"
@@ -100,32 +100,32 @@ int main(int argc, char *argv[])
         runTime++;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
-         
+        
+        deltaT = runTime.deltaTValue();
+
         for(iOCorr=0; iOCorr<nOCorr; iOCorr++)
         {
-            deltaT = runTime.deltaTValue();
-
             Info<< "Calculating two-phase advective fluxes" << endl;
             dt = deltaT;
-            interface.calc_2ph_advFluxes(c1, c0, rhoh1, rhoh0, dt, advFlux_rho1, advFlux_rho0, advFlux_Y1, advFlux_Y0, advFlux_h1, advFlux_h0);
+            interface.calc_2ph_advFluxes(c1, c0, rhoh1, rhoh0, dt, advFlux_rho1, advFlux_rho0, advFlux_Y1, advFlux_Y0, advFlux_h1, advFlux_h0, adv_debug, adv_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << endl; 
 
-                #include "alpha1Eqn.H"        
+            #include "alpha1Eqn.H"        
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;             
             
-                #include "YAdvEqn.H"
+            #include "YAdvEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "hAdvEqn.H"
+            #include "HAdvEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -149,19 +149,19 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "YDiffEqn.H"            
+            #include "YDiffEqn.H"            
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "hDiffEqn.H"
+            #include "HDiffEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;            
 
-                #include "ist.H"
+            #include "ist.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -185,30 +185,32 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "YDiffEqn.H"
+            #include "YDiffEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-                #include "hDiffEqn.H"
+            #include "HDiffEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
         
-                #include "curvature.H"
+            #include "curvature.H"
 
             dt = deltaT;
+
+            #include "correctRho.H"
 
             rho = alpha1*rho1 + (scalar(1) - alpha1)*rho0;
             rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
 
-                #include "UEqn.H"
+            #include "UEqn.H"
 
             for(iPCorr=0; iPCorr<nPCorr; iPCorr++)
             {
-                    #include "pEqn.H"
+                #include "pEqn.H"
                 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
@@ -216,7 +218,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        for(label i=0; i<nSpecies; i++)
+        for(i=0; i<n; i++)
         {
             C_phAvg[i] = C0[i] + C1[i];
         }

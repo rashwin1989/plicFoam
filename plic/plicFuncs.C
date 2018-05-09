@@ -4574,10 +4574,10 @@ void calc_2ph_diffFluxes_Yi_Fick
 
 void init_MS_flux
 (
-    const label& faceI,
-    PtrList<surfaceScalarField>& xf,
-    PtrList<surfaceScalarField>& gradf_x,    
-    PtrList<surfaceScalarField>& Dijf,
+    label faceI,
+    const PtrList<surfaceScalarField>& xf,
+    const PtrList<surfaceScalarField>& gradf_x,    
+    const PtrList<surfaceScalarField>& Dijf,
     int n,
     double *x,
     double *grad_x,
@@ -4602,11 +4602,11 @@ void init_MS_flux
 
 void init_MS_flux
 (
-    const label& patchI,
-    const label& faceI,
-    PtrList<surfaceScalarField>& xf,
-    PtrList<surfaceScalarField>& gradf_x,    
-    PtrList<surfaceScalarField>& Dijf,
+    label patchI,
+    label faceI,
+    const PtrList<surfaceScalarField>& xf,
+    const PtrList<surfaceScalarField>& gradf_x,    
+    const PtrList<surfaceScalarField>& Dijf,
     int n,
     double *x,
     double *grad_x,
@@ -4737,14 +4737,14 @@ void calc_2ph_diffFluxes_Y_MS
     double *rhs_flux_tmp; double *flux_m_ph1; double *flux_m_ph0;
     double *lnphi_tmp; double *dlnphi_dxj_tmp;
 
-    _NEW_(x_tmp, double, n);
-    _NEW_(grad_x_tmp, double, n);
-    _NEW_(Dij_tmp, double, n*n);
-    _NEW_(rhs_flux_tmp, double, n);
-    _NEW_(flux_m_ph1, double, n);
-    _NEW_(flux_m_ph0, double, n);
-    _NEW_(lnphi_tmp, double, n);
-    _NEW_(dlnphi_dxj_tmp, double, n*n);
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(grad_x_tmp, double, n);
+    _NNEW_(Dij_tmp, double, n*n);
+    _NNEW_(rhs_flux_tmp, double, n);
+    _NNEW_(flux_m_ph1, double, n);
+    _NNEW_(flux_m_ph0, double, n);
+    _NNEW_(lnphi_tmp, double, n);
+    _NNEW_(dlnphi_dxj_tmp, double, n*n);
 
     scalar curMagSf_ph1;
     scalar curMagSf_ph0;
@@ -5683,14 +5683,14 @@ void calc_2ph_diffFluxes_Y_MS
             << endl;
     }
 
-    _DELETE_(x_tmp);
-    _DELETE_(grad_x_tmp);
-    _DELETE_(Dij_tmp);
-    _DELETE_(rhs_flux_tmp);
-    _DELETE_(flux_m_ph1);
-    _DELETE_(flux_m_ph0);
-    _DELETE_(lnphi_tmp);
-    _DELETE_(dlnphi_dxj_tmp);
+    _DDELETE_(x_tmp);
+    _DDELETE_(grad_x_tmp);
+    _DDELETE_(Dij_tmp);
+    _DDELETE_(rhs_flux_tmp);
+    _DDELETE_(flux_m_ph1);
+    _DDELETE_(flux_m_ph0);
+    _DDELETE_(lnphi_tmp);
+    _DDELETE_(dlnphi_dxj_tmp);
 }
 
 
@@ -6212,7 +6212,7 @@ void calc_T_from_h
 
     for(iter=0; iter<MAX_ITER_T; iter++)
     {
-        calc_v_Cp_h_(&P, &TOld, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);    
+        calc_v_cp_h_(&P, &TOld, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);    
 
         F = h_tmp - hm;        
         dF = Cp_tmp;
@@ -6259,7 +6259,7 @@ void calc_h_from_T
     }
     MW_tmp *= 1e-3;
     
-    calc_v_Cp_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);
+    calc_v_cp_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &Cp_tmp, &h_tmp);
 
     h = h_tmp/MW_tmp;
 }
@@ -6306,8 +6306,8 @@ void calc_diffFlux_limiter_T
     double diffFlux_max, diffFlux_max_1, diffFlux_max_2, diffFlux_max_3;
     double *xOwn_tmp, *xNei_tmp;
 
-    _NEW_(xOwn_tmp, double, n);
-    _NEW_(xNei_tmp, double, n);
+    _NNEW_(xOwn_tmp, double, n);
+    _NNEW_(xNei_tmp, double, n);
 
     for(i=0; i<n; i++)
     {
@@ -6330,9 +6330,9 @@ void calc_diffFlux_limiter_T
 
         for(iter=0; iter<MAX_ITER_T; iter++)
         {
-            calc_v_Cp_h_(&P, &TOld, &n, xOwn_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
+            calc_v_cp_h_(&P, &TOld, &n, xOwn_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
 
-            calc_v_Cp_h_(&P, &TOld, &n, xNei_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &vNei_tmp, &CpNei_tmp, &hNei_tmp);
+            calc_v_cp_h_(&P, &TOld, &n, xNei_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &vNei_tmp, &CpNei_tmp, &hNei_tmp);
 
             F = VOwn*alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp + VNei*alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HOwn - HNei;
             dFOwn = VOwn*alphaOwn*rhoOwn*CpOwn_tmp/MWOwn_tmp;
@@ -6390,8 +6390,8 @@ void calc_diffFlux_limiter_T
         diffFlux_limiter = 0.0;
     }
 
-    _DELETE_(xOwn_tmp);
-    _DELETE_(xNei_tmp);
+    _DDELETE_(xOwn_tmp);
+    _DDELETE_(xNei_tmp);
 }
 
 
@@ -6425,7 +6425,7 @@ void calc_diffFlux_limiter2_T
     double diffFlux_max;
     double *xOwn_tmp;
 
-    _NEW_(xOwn_tmp, double, n);
+    _NNEW_(xOwn_tmp, double, n);
 
     for(i=0; i<n; i++)
     {
@@ -6459,7 +6459,7 @@ void calc_diffFlux_limiter2_T
         diffFlux_limiter = 0.0;
     }
 
-    _DELETE_(xOwn_tmp);
+    _DDELETE_(xOwn_tmp);
 }
 
 
@@ -6964,7 +6964,7 @@ void redistribute_alpha_field
     const scalar& ALPHA_MIN_BOUND,
     const label& ALPHA_BOUND_ITERS_MAX,
     label& minAlpha1Cell,
-    label& maxALpha1Cell,
+    label& maxAlpha1Cell,
     scalar& minAlpha1,
     scalar& maxAlpha1,
     const bool debug,
@@ -8623,8 +8623,8 @@ void correct_rho
     double T_tmp, rho_tmp;
     double *x_tmp; double *kij_tmp;
 
-    _NEW_(x_tmp, double, n);
-    _NEW_(kij_tmp, double, n*n);
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(kij_tmp, double, n*n);
 
     bKijSet = 1;
 
@@ -8663,8 +8663,8 @@ void correct_rho
         }
     }
 
-    _DELETE_(x_tmp);
-    _DELETE_(kij_tmp);
+    _DDELETE_(x_tmp);
+    _DDELETE_(kij_tmp);
 }
 
 
@@ -8689,7 +8689,7 @@ void correct_h
     double T_tmp, h_tmp, v_tmp;
     double *x_tmp;
 
-    _NEW_(x_tmp, double, n);
+    _NNEW_(x_tmp, double, n);
 
     const scalarField& TCells = T.internalField();
     scalarField& hCells = h.internalField();
@@ -8702,7 +8702,7 @@ void correct_h
             x_tmp[i] = X[i].internalField()[cellI];
         }
 
-        calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+        calc_v_h_(&P, &T_tmp, &n, x_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
         hCells[cellI] = h_tmp;
     }
 
@@ -8719,12 +8719,12 @@ void correct_h
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
 
-            calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+            calc_v_h_(&P, &T_tmp, &n, x_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
             ph[fcI] = h_tmp;
         }
     }
 
-    _DELETE_(x_tmp);
+    _DDELETE_(x_tmp);
 }
 
 
@@ -8765,8 +8765,8 @@ void correct_x_from_Y
     int i;
     double *y_tmp, *x_tmp;
 
-    _NEW_(y_tmp, double, n);
-    _NEW_(x_tmp, double, n);
+    _NNEW_(y_tmp, double, n);
+    _NNEW_(x_tmp, double, n);
 
     forAll(Y[0].internalField(), cellI)
     {
@@ -8801,8 +8801,8 @@ void correct_x_from_Y
         }
     }
 
-    _DELETE_(y_tmp);
-    _DELETE_(x_tmp);
+    _DDELETE_(y_tmp);
+    _DDELETE_(x_tmp);
 }
 
 
@@ -8824,14 +8824,14 @@ void correct_boundaryField_h_rhoh_H
     const volScalarField& alpha,
     volScalarField& h,
     volScalarField& rhoh,
-    volScalarField& H,
+    volScalarField& H
 )
 {
     int i;
     double T_tmp, h_tmp, v_tmp;
     double *x_tmp;
 
-    _NEW_(x_tmp, double, n);
+    _NNEW_(x_tmp, double, n);
 
     forAll(T.boundaryField(), patchI)
     {
@@ -8849,7 +8849,7 @@ void correct_boundaryField_h_rhoh_H
             {
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
-            calc_v_h_(&P, &T, &n, x, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+            calc_v_h_(&P, &T_tmp, &n, x_tmp, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
 
             ph[fcI] = h_tmp;
             prhoh[fcI] = prho[fcI]*h_tmp;
@@ -8857,7 +8857,7 @@ void correct_boundaryField_h_rhoh_H
         }
     }
 
-    _DELETE_(x_tmp);
+    _DDELETE_(x_tmp);
 }
 
 void correct_thermo_trans_prop
@@ -8882,13 +8882,14 @@ void correct_thermo_trans_prop
     volScalarField& v,
     PtrList<volScalarField>& hpar,
     volScalarField& lambda,
+    volScalarField& Cp,
     volScalarField& mu,
     PtrList<volScalarField>& D
 )
 {
     int i, j, idx, bKijSet, G_only;    
     double T_tmp, V, MW_tmp; 
-    double Cp, Cv, dVdT, G, am, bm, CvIG;    
+    double Cp_tmp, Cv, dVdT, G, am, bm, CvIG;    
     double cond, vis;
     double *x_tmp;
     double *kij_tmp; 
@@ -8896,14 +8897,14 @@ void correct_thermo_trans_prop
     double *h_tmp; 
     double *CpIG; double *Hdep; double *Vpar;
 
-    _NEW_(x_tmp, double, n);
-    _NEW_(kij_tmp, double, n*n);
-    _NEW_(lnphi, double, n);    
-    _NEW_(Dij, double, n*n);    
-    _NEW_(h_tmp, double, n);
-    _NEW_(Hdep, double, n);
-    _NEW_(CpIG, double, n);
-    _NEW_(Vpar, double, n);
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(lnphi, double, n);    
+    _NNEW_(Dij, double, n*n);    
+    _NNEW_(h_tmp, double, n);
+    _NNEW_(Hdep, double, n);
+    _NNEW_(CpIG, double, n);
+    _NNEW_(Vpar, double, n);
 
     bKijSet = 1;
     G_only = 0;
@@ -8911,6 +8912,7 @@ void correct_thermo_trans_prop
     const scalarField& TCells = T.internalField();
     scalarField& vCells = v.internalField();
     scalarField& lambdaCells = lambda.internalField();
+    scalarField& CpCells = Cp.internalField();
     scalarField& muCells = mu.internalField();
 
     forAll(TCells, cellI)
@@ -8929,7 +8931,7 @@ void correct_thermo_trans_prop
         
         calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
 
-        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
 
         CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
         vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
@@ -8938,6 +8940,7 @@ void correct_thermo_trans_prop
 
         vCells[cellI] = V;
         lambdaCells[cellI] = cond;
+        CpCells[cellI] = Cp_tmp;
         muCells[cellI] = vis;
         for(i=0; i<n; i++)
         {
@@ -8956,6 +8959,7 @@ void correct_thermo_trans_prop
         const fvPatchScalarField& pT = T.boundaryField()[patchI];
         fvPatchScalarField& pv = v.boundaryField()[patchI];
         fvPatchScalarField& plambda = lambda.boundaryField()[patchI];
+        fvPatchScalarField& pCp = Cp.boundaryField()[patchI];
         fvPatchScalarField& pmu = mu.boundaryField()[patchI];
 
         forAll(pT, fcI)
@@ -8975,7 +8979,7 @@ void correct_thermo_trans_prop
         
             calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
 
-            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
 
             CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
             vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
@@ -8984,6 +8988,7 @@ void correct_thermo_trans_prop
 
             pv[fcI] = V;
             plambda[fcI] = cond;
+            pCp[fcI] = Cp_tmp;
             pmu[fcI] = vis;
             for(i=0; i<n; i++)
             {
@@ -8998,14 +9003,14 @@ void correct_thermo_trans_prop
         }
     }
 
-    _DELETE_(x_tmp);
-    _DELETE_(kij_tmp);
-    _DELETE_(lnphi);    
-    _DELETE_(Dij);
-    _DELETE_(h_tmp);
-    _DELETE_(Hdep);
-    _DELETE_(CpIG);
-    _DELETE_(Vpar);
+    _DDELETE_(x_tmp);
+    _DDELETE_(kij_tmp);
+    _DDELETE_(lnphi);    
+    _DDELETE_(Dij);
+    _DDELETE_(h_tmp);
+    _DDELETE_(Hdep);
+    _DDELETE_(CpIG);
+    _DDELETE_(Vpar);
 }
 
 
@@ -9064,20 +9069,20 @@ void calc_intfc_transLLE
     double *h0; 
     double *H1; double *H0; double *CpIG; double *Hdep1; double *Hdep0; double *Vpar;
 
-    _NEW_(kij_tmp, double, n*n);
-    _NEW_(lnphi1, double, n);
-    _NEW_(lnphi0, double, n);
-    _NEW_(dlnphi1, double, n*n);
-    _NEW_(dlnphi0, double, n*n);
-    _NEW_(Dij1, double, n*n);
-    _NEW_(Dij0, double, n*n);    
-    _NEW_(h0, double, n);
-    _NEW_(H1, double, n);
-    _NEW_(H0, double, n);
-    _NEW_(Hdep1, double, n);
-    _NEW_(Hdep0, double, n);
-    _NEW_(CpIG, double, n);
-    _NEW_(Vpar, double, n);
+    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(lnphi1, double, n);
+    _NNEW_(lnphi0, double, n);
+    _NNEW_(dlnphi1, double, n*n);
+    _NNEW_(dlnphi0, double, n*n);
+    _NNEW_(Dij1, double, n*n);
+    _NNEW_(Dij0, double, n*n);    
+    _NNEW_(h0, double, n);
+    _NNEW_(H1, double, n);
+    _NNEW_(H0, double, n);
+    _NNEW_(Hdep1, double, n);
+    _NNEW_(Hdep0, double, n);
+    _NNEW_(CpIG, double, n);
+    _NNEW_(Vpar, double, n);
 
     Ts_tmp = Ts;
 
@@ -9177,20 +9182,20 @@ void calc_intfc_transLLE
         Ts = Ts_tmp;
     }    
 
-    _DELETE_(kij_tmp);
-    _DELETE_(lnphi1);
-    _DELETE_(lnphi0);
-    _DELETE_(dlnphi1);
-    _DELETE_(dlnphi0);
-    _DELETE_(Dij1);
-    _DELETE_(Dij0);    
-    _DELETE_(h0);
-    _DELETE_(H1);
-    _DELETE_(H0);
-    _DELETE_(Hdep1);
-    _DELETE_(Hdep0);
-    _DELETE_(CpIG);
-    _DELETE_(Vpar);
+    _DDELETE_(kij_tmp);
+    _DDELETE_(lnphi1);
+    _DDELETE_(lnphi0);
+    _DDELETE_(dlnphi1);
+    _DDELETE_(dlnphi0);
+    _DDELETE_(Dij1);
+    _DDELETE_(Dij0);    
+    _DDELETE_(h0);
+    _DDELETE_(H1);
+    _DDELETE_(H0);
+    _DDELETE_(Hdep1);
+    _DDELETE_(Hdep0);
+    _DDELETE_(CpIG);
+    _DDELETE_(Vpar);
 }
 
 
@@ -9750,26 +9755,26 @@ void calc_Xs_Ys_Js_mS_alphaS
 
     n = nSpecies;
 
-    _NEW_(xeff1, double, n);
-    _NEW_(xeff0, double, n);
-    _NEW_(C1_cellI, double, n);
-    _NEW_(C0_cellI, double, n);
-    _NEW_(x1_cellI, double, n);
-    _NEW_(x0_cellI, double, n);
-    _NEW_(y1_cellI, double, n);
-    _NEW_(y0_cellI, double, n);
-    _NEW_(xs1, double, n);
-    _NEW_(xs0, double, n);
-    _NEW_(ys1, double, n);
-    _NEW_(ys0, double, n);
-    _NEW_(xs1, double, n);
-    _NEW_(flux_m_1, double, n);
-    _NEW_(flux_m_0, double, n);
-    _NEW_(Js1_cellI, double, n);
-    _NEW_(Js0_cellI, double, n);
-    _NEW_(mS1_cellI, double, n);
-    _NEW_(limiter_mS1, double, n);
-    _NEW_(hs1, double, n);
+    _NNEW_(xeff1, double, n);
+    _NNEW_(xeff0, double, n);
+    _NNEW_(C1_cellI, double, n);
+    _NNEW_(C0_cellI, double, n);
+    _NNEW_(x1_cellI, double, n);
+    _NNEW_(x0_cellI, double, n);
+    _NNEW_(y1_cellI, double, n);
+    _NNEW_(y0_cellI, double, n);
+    _NNEW_(xs1, double, n);
+    _NNEW_(xs0, double, n);
+    _NNEW_(ys1, double, n);
+    _NNEW_(ys0, double, n);
+    _NNEW_(xs1, double, n);
+    _NNEW_(flux_m_1, double, n);
+    _NNEW_(flux_m_0, double, n);
+    _NNEW_(Js1_cellI, double, n);
+    _NNEW_(Js0_cellI, double, n);
+    _NNEW_(mS1_cellI, double, n);
+    _NNEW_(limiter_mS1, double, n);
+    _NNEW_(hs1, double, n);
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
@@ -9976,26 +9981,26 @@ void calc_Xs_Ys_Js_mS_alphaS
         }        
     }
 
-    _DELETE_(xeff1);
-    _DELETE_(xeff0);
-    _DELETE_(C1_cellI);
-    _DELETE_(C0_cellI);
-    _DELETE_(x1_cellI);
-    _DELETE_(x0_cellI);
-    _DELETE_(y1_cellI);
-    _DELETE_(y0_cellI);
-    _DELETE_(xs1);
-    _DELETE_(xs0);
-    _DELETE_(ys1);
-    _DELETE_(ys0);
-    _DELETE_(xs1);
-    _DELETE_(flux_m_1);
-    _DELETE_(flux_m_0);
-    _DELETE_(Js1_cellI);
-    _DELETE_(Js0_cellI);
-    _DELETE_(mS1_cellI);
-    _DELETE_(limiter_mS1);
-    _DELETE_(hs1);
+    _DDELETE_(xeff1);
+    _DDELETE_(xeff0);
+    _DDELETE_(C1_cellI);
+    _DDELETE_(C0_cellI);
+    _DDELETE_(x1_cellI);
+    _DDELETE_(x0_cellI);
+    _DDELETE_(y1_cellI);
+    _DDELETE_(y0_cellI);
+    _DDELETE_(xs1);
+    _DDELETE_(xs0);
+    _DDELETE_(ys1);
+    _DDELETE_(ys0);
+    _DDELETE_(xs1);
+    _DDELETE_(flux_m_1);
+    _DDELETE_(flux_m_0);
+    _DDELETE_(Js1_cellI);
+    _DDELETE_(Js0_cellI);
+    _DDELETE_(mS1_cellI);
+    _DDELETE_(limiter_mS1);
+    _DDELETE_(hs1);
 
     if(debug)
     {

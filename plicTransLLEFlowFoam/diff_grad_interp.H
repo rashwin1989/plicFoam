@@ -86,6 +86,8 @@ plicFuncs::calc_2ph_gradf
     diffCellStencil,
     x1,
     x0,
+    T1,
+    T0,
     x1_flatFld_diff,
     x0_flatFld_diff,
     T1_flatFld_diff,
