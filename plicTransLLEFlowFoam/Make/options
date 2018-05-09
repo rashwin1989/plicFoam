@@ -1,4 +1,4 @@
-EXE_INC = \
+EXE_INC = -ggdb3 -DFULLDEBUG \
 	-I../SCF-core/include \
         -I/home/r_ashwin/Ashwin/UMFPACK/Include \
         -I/home/r_ashwin/Ashwin/AMD/Include \

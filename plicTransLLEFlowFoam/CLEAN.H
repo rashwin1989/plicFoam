@@ -1,19 +1,19 @@
 
-_DDELETE_(idx_species);
-_DDELETE_(idx_groups);
+_DDELETE2_(idx_species);
+_DDELETE2_(idx_groups);
 
-_DDELETE_(tk);
-_DDELETE_(coef_ab);
-_DDELETE_(Pc);
-_DDELETE_(Tc);
-_DDELETE_(Vc);
-_DDELETE_(w);
-_DDELETE_(MW);
-_DDELETE_(dm);
-_DDELETE_(k);
-_DDELETE_(H8);
-_DDELETE_(Tb);
-_DDELETE_(SG);
+_DDELETE2_(tk);
+_DDELETE2_(coef_ab);
+_DDELETE2_(Pc);
+_DDELETE2_(Tc);
+_DDELETE2_(Vc);
+_DDELETE2_(w);
+_DDELETE2_(MW);
+_DDELETE2_(dm);
+_DDELETE2_(k);
+_DDELETE2_(H8);
+_DDELETE2_(Tb);
+_DDELETE2_(SG);
 
-_DDELETE_(x_cellI_tmp);
-_DDELETE_(y_cellI_tmp);
+_DDELETE2_(x_cellI_tmp);
+_DDELETE2_(y_cellI_tmp);

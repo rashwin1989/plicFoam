@@ -59,11 +59,9 @@ Description
 #include "gsl_optimizations2.h"
 #include "Maxwell_Stefan_flux.h"
 
+#include "MACROS2.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#define    _NNEW_(var,type,size)    var = new type[size];
-#define    _DDELETE_(var)           delete[] var;
 
 int main(int argc, char *argv[])
 {    

@@ -129,20 +129,20 @@ R_gas = transPropDict.lookupOrDefault("R_GAS", 8.31412);
 
 //------------------------------------------------------------------//
 //Allocate memory for arrays
-_NNEW_(Pc, double, n);
-_NNEW_(Tc, double, n);
-_NNEW_(Vc, double, n);
-_NNEW_(w, double, n);
-_NNEW_(MW, double, n);
-_NNEW_(tk, int, n);
-_NNEW_(coef_ab, double, n);
-_NNEW_(Tb, double, n);
-_NNEW_(SG, double, n);
-_NNEW_(H8, double, n);
-_NNEW_(k, double, n);
-_NNEW_(dm, double, n);
-_NNEW_(y_cellI_tmp, double, n);
-_NNEW_(x_cellI_tmp, double, n);
+_NNEW2_(Pc, double, n);
+_NNEW2_(Tc, double, n);
+_NNEW2_(Vc, double, n);
+_NNEW2_(w, double, n);
+_NNEW2_(MW, double, n);
+_NNEW2_(tk, int, n);
+_NNEW2_(coef_ab, double, n);
+_NNEW2_(Tb, double, n);
+_NNEW2_(SG, double, n);
+_NNEW2_(H8, double, n);
+_NNEW2_(k, double, n);
+_NNEW2_(dm, double, n);
+_NNEW2_(y_cellI_tmp, double, n);
+_NNEW2_(x_cellI_tmp, double, n);
 //Done allocate memory for arrays
 //------------------------------------------------------------------//
 
@@ -154,8 +154,8 @@ FILE *f;
 int n_pseudospecies_db, n_purespecies_db;
 int *idx_species, *idx_groups;
 
-_NNEW_(idx_species, int, n);
-_NNEW_(idx_groups, int, n);
+_NNEW2_(idx_species, int, n);
+_NNEW2_(idx_groups, int, n);
 
 f = fopen("species.dat+", "r");
 

@@ -676,8 +676,13 @@ plicFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/extendedCellToCellSte
 plicFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/extendedCellToCellStencilTemplates.C
 plicFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CPCCellToCellStencil.H
 plicFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/cellToCellStencil.H
-plicFoam.dep: plic/lnInclude/plicI.H
 plicFoam.dep: plic/lnInclude/plicFuncs.H
+plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncTools.H
+plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/syncToolsTemplates.C
+plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/OFstream.H
+plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/IOmanip.H
+plicFoam.dep: plic/lnInclude/plicFuncs.C
+plicFoam.dep: plic/lnInclude/plicI.H
 plicFoam.dep: $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/centredCPCCellToCellStencilObject.H
 plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/setRootCase.H
 plicFoam.dep: $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/createTime.H

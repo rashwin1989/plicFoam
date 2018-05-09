@@ -2864,7 +2864,13 @@ void Foam::plic::intfc_normal_correct()
 {
     const polyBoundaryMesh& patches = mesh().boundaryMesh();
     
-    alpha_ph1_pts_ = ptInterp_.interpolate(alpha_ph1_);
+    if(debug_)
+    {
+        Info<< "Begin alpha1 interpolation to mesh points..." << endl;
+    }
+
+    //alpha_ph1_pts_ = ptInterp_.interpolate(alpha_ph1_);
+    ptInterp_.interpolate(alpha_ph1_, alpha_ph1_pts_);
 
     if(debug_)
     {
@@ -3028,7 +3034,17 @@ void Foam::plic::intfc_correct()
     brent_max_cellC_ = vector::zero;
     bool WARN_LOW_GRAD = 0;
 
+    if(debug_)
+    {
+        Info<< "Correcting interface normal" << endl;
+    }
+
     intfc_normal_correct();
+
+    if(debug_)
+    {
+        Info<< "Done correcting interface normal" << endl;
+    }
 
     const labelList& own = mesh().owner();
     const labelList& nei = mesh().neighbour();
@@ -3783,7 +3799,9 @@ void Foam::plic::calc_face_phaseFluxes()
             << "\\====================================================================//" << nl << endl;
     }
 
-    U_pts_ = ptInterp_.interpolate(U_);
+    //U_pts_ = ptInterp_.interpolate(U_);
+    ptInterp_.interpolate(U_, U_pts_);
+
     if(debugF_)
     {
         Foam::plicFuncs::write_point_field(U_pts_, mesh());
@@ -4310,7 +4328,8 @@ void Foam::plic::calc_2ph_advFluxes
             << "\\====================================================================//" << nl << endl;
     }
 
-    U_pts_ = ptInterp_.interpolate(U_);
+    //U_pts_ = ptInterp_.interpolate(U_);
+    ptInterp_.interpolate(U_, U_pts_);
 
     if(debugF2_)
     {
@@ -5202,7 +5221,8 @@ void Foam::plic::calc_2ph_advFluxes
             << "\\====================================================================//" << nl << endl;
     }
 
-    U_pts_ = ptInterp_.interpolate(U_);
+    //U_pts_ = ptInterp_.interpolate(U_);
+    ptInterp_.interpolate(U_, U_pts_);
 
     if(debug2)
     {
