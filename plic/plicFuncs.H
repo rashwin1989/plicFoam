@@ -999,6 +999,30 @@ namespace plicFuncs
         PtrList<volScalarField>& D
     );
 
+    void correct_thermo_trans_prop
+    (
+        const fvMesh& mesh,    
+        int n,
+        double *Pc,
+        double *Tc,
+        double *Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double *k,
+        double *dm,
+        double P,
+        const PtrList<volScalarField>& X,
+        const volScalarField& T,
+        volScalarField& v,
+        volScalarField& mu,
+        PtrList<volScalarField>& D
+    );
+
     void calc_intfc_transLLE
     (
         double P,

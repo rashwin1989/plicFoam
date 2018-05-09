@@ -9022,6 +9022,145 @@ void correct_thermo_trans_prop
 }
 
 
+void correct_thermo_trans_prop
+(
+    const fvMesh& mesh,    
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
+    double P,
+    const PtrList<volScalarField>& X,
+    const volScalarField& T,
+    volScalarField& v,
+    volScalarField& mu,
+    PtrList<volScalarField>& D
+)
+{
+    int i, j, idx, bKijSet, G_only;    
+    double T_tmp, V, MW_tmp; 
+    double Cp_tmp, Cv, dVdT, G, am, bm, CvIG;    
+    double cond, vis;
+    double *x_tmp;
+    double *kij_tmp; 
+    double *lnphi; double *Dij; 
+    double *h_tmp; 
+    double *CpIG; double *Hdep; double *Vpar;
+
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(lnphi, double, n);    
+    _NNEW_(Dij, double, n*n);    
+    _NNEW_(h_tmp, double, n);
+    _NNEW_(Hdep, double, n);
+    _NNEW_(CpIG, double, n);
+    _NNEW_(Vpar, double, n);
+
+    bKijSet = 1;
+    G_only = 0;
+
+    const scalarField& TCells = T.internalField();
+    scalarField& vCells = v.internalField();    
+    scalarField& muCells = mu.internalField();
+
+    forAll(TCells, cellI)
+    {
+        T_tmp = TCells[cellI];
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = X[i].internalField()[cellI];
+        }
+        MW_tmp = 0;
+        for(i=0; i<n; i++)
+        {
+            MW_tmp += x_tmp[i]*MW[i];
+        }
+        MW_tmp *= 1e-3;
+        
+        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+
+        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+
+        CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
+        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+
+        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+        vCells[cellI] = V;
+        muCells[cellI] = vis;
+        for(i=0; i<n; i++)
+        {            
+            for(j=0; j<n; j++)
+            {
+                idx = i + j*n;
+                D[idx].internalField()[cellI] = Dij[idx];
+            }
+        }
+    }
+
+    forAll(T.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        fvPatchScalarField& pv = v.boundaryField()[patchI];        
+        fvPatchScalarField& pmu = mu.boundaryField()[patchI];
+
+        forAll(pT, fcI)
+        {
+            T_tmp = pT[fcI];
+
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+            }
+            MW_tmp = 0;
+            for(i=0; i<n; i++)
+            {
+                MW_tmp += x_tmp[i]*MW[i];
+            }
+            MW_tmp *= 1e-3;
+        
+            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+
+            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+
+            CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
+            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+
+            new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+            pv[fcI] = V;            
+            pmu[fcI] = vis;
+            for(i=0; i<n; i++)
+            {
+                for(j=0; j<n; j++)
+                {
+                    idx = i + j*n;
+                    D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                }
+            }
+        }
+    }
+
+    _DDELETE_(x_tmp);
+    _DDELETE_(kij_tmp);
+    _DDELETE_(lnphi);    
+    _DDELETE_(Dij);
+    _DDELETE_(h_tmp);
+    _DDELETE_(Hdep);
+    _DDELETE_(CpIG);
+    _DDELETE_(Vpar);
+}
+
+
 void calc_intfc_transLLE
 (
     double P,
