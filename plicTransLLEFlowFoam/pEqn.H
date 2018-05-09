@@ -36,11 +36,11 @@
 
     volScalarField p_rghEqnComp1 =
         fvc::ddt(rho1)
-        + fvc::div(phi, rho1) - fvc::Sp(fvc::div(phi), rho1);
+        + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
 
     volScalarField p_rghEqnComp0 =
         fvc::ddt(rho0)
-        + fvc::div(phi, rho0) - fvc::Sp(fvc::div(phi), rho0);
+        + fvc::div(phi, rho0, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho0);
 
     volScalarField p_rghEqnComp =
         (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1

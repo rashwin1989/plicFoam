@@ -2979,6 +2979,14 @@ void calc_2ph_gradf
         Yp_ph0_bnd[i].setSize(nBnd);
         Ym_ph1_bnd[i].setSize(nBnd);
         Ym_ph0_bnd[i].setSize(nBnd);
+        Y1p_ph1_bnd[i].setSize(nBnd);
+        Y1p_ph0_bnd[i].setSize(nBnd);
+        Y1m_ph1_bnd[i].setSize(nBnd);
+        Y1m_ph0_bnd[i].setSize(nBnd);
+        Y2p_ph1_bnd[i].setSize(nBnd);
+        Y2p_ph0_bnd[i].setSize(nBnd);
+        Y2m_ph1_bnd[i].setSize(nBnd);
+        Y2m_ph0_bnd[i].setSize(nBnd);
     }    
 
     const labelList& own = mesh.owner();
@@ -8730,7 +8738,7 @@ void correct_h
 
 void correct_boundaryField_C
 (    
-    const volScalarField& Yi,
+    volScalarField& Yi,
     const volScalarField& rho,
     const volScalarField& alpha,
     volScalarField& ci,
@@ -8739,7 +8747,7 @@ void correct_boundaryField_C
 {
     forAll(Yi.boundaryField(), patchI)
     {
-        const fvPatchScalarField& pYi = Yi.boundaryField()[patchI];
+        fvPatchScalarField& pYi = Yi.boundaryField()[patchI];
         const fvPatchScalarField& prho = rho.boundaryField()[patchI];
         const fvPatchScalarField& palpha = alpha.boundaryField()[patchI];
         fvPatchScalarField& pci = ci.boundaryField()[patchI];

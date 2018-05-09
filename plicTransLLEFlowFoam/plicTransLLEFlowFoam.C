@@ -125,11 +125,14 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-            #include "HAdvEqn.H"
+            if(!isothermal)
+            {
+                #include "HAdvEqn.H"
 
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+            }            
 
             interface.intfc_correct();                            
 
@@ -155,11 +158,14 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-            #include "HDiffEqn.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;            
+            if(!isothermal)
+            {
+                #include "HDiffEqn.H"
+                
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+            }            
 
             #include "ist.H"
 
@@ -191,12 +197,15 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-            #include "HDiffEqn.H"
+            if(!isothermal)
+            {
+                #include "HDiffEqn.H"
 
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-        
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+            }
+
             #include "curvature.H"
 
             dt = deltaT;

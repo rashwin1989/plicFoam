@@ -38,7 +38,7 @@
         }
     }
 
-    #include "continuityErrs.H"
+    #include "continuityErrs0.H"
 
-    dgdt = scalar(0.0);
+    dgdt = scalar(0.0)*fvc::div(phi);
 }

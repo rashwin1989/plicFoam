@@ -936,7 +936,7 @@ namespace plicFuncs
 
     void correct_boundaryField_C
     (    
-        const volScalarField& Yi,
+        volScalarField& Yi,
         const volScalarField& rho,
         const volScalarField& alpha,
         volScalarField& ci,

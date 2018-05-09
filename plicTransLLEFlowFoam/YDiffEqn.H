@@ -50,7 +50,7 @@ plicFuncs::calc_2ph_diffFluxes_Y_MS
     Y0,
     diffFlux_Y1,
     diffFlux_Y0,
-    flux_umf,
+    &flux_umf,
     n_flux_type,
     dt,
     Y1min,

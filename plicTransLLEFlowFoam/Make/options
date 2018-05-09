@@ -11,7 +11,8 @@ EXE_LIBS = \
 	-L../SCF-core/lib \
         -lscfcore \
         -lm -lgfortran \
-        -lgsl -lgslcblas \
+        /usr/lib/libgsl.a \
+	/usr/lib/libgslcblas.a \
         /home/r_ashwin/Ashwin/UMFPACK/Lib/libumfpack.a \
         /home/r_ashwin/Ashwin/AMD/Lib/libamd.a \
         /home/r_ashwin/Ashwin/UFconfig/xerbla/libcerbla.a  \

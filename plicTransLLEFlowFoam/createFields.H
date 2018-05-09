@@ -17,7 +17,7 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int MAX_ITER_T, n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, isothermal;
 double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
@@ -71,12 +71,22 @@ const dictionary& solDict = mesh.solutionDict();
 
 //------------------------------------------------------------------//
 //Reading tolerances, max iters and switches
+isothermal = solDict.lookupOrDefault("isothermal", true);
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
 nNonOrthCorr = solDict.lookupOrDefault("nNonOrthogonalCorrector", 1);
 MAX_ITER_T = transPropDict.lookupOrDefault("MAX_ITER_T", 108);
-MAX_ITER_Ts = transPropDict.lookupOrDefault("MAX_ITER_Ts", 108);
+if(isothermal)
+{
+    MAX_ITER_Ts = 1;
+    Ts_TOL = 1000;
+}
+else
+{
+    MAX_ITER_Ts = transPropDict.lookupOrDefault("MAX_ITER_Ts", 108);
+    Ts_TOL = transPropDict.lookupOrDefault("Ts_TOL", 1E-3);
+}
 ALPHA_BOUND_ITERS_MAX = 12;
 Y_BOUND_ITERS_MAX = 12;
 // tolerances
@@ -84,7 +94,6 @@ ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 T_TOL = transPropDict.lookupOrDefault("T_TOL", 1E-3);
 H_TOL = transPropDict.lookupOrDefault("H_TOL", 0.1);
-Ts_TOL = transPropDict.lookupOrDefault("Ts_TOL", 1E-3);
 MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
@@ -119,7 +128,7 @@ R_gas = transPropDict.lookupOrDefault("R_GAS", 8.31412);
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
-//Alloacte memory for arrays
+//Allocate memory for arrays
 _NNEW_(Pc, double, n);
 _NNEW_(Tc, double, n);
 _NNEW_(Vc, double, n);
@@ -134,7 +143,7 @@ _NNEW_(k, double, n);
 _NNEW_(dm, double, n);
 _NNEW_(y_cellI_tmp, double, n);
 _NNEW_(x_cellI_tmp, double, n);
-//Done alloacte memory for arrays
+//Done allocate memory for arrays
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
@@ -151,19 +160,33 @@ _NNEW_(idx_groups, int, n);
 f = fopen("species.dat+", "r");
 
 iread = fscanf(f, "%d %d", &n_pseudospecies_db, &n_purespecies_db);
+if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
 n_species_db = n_pseudospecies_db + n_purespecies_db;
+
+Info<< "n_pseudoSpecies_db = " << n_pseudospecies_db << "  n_purespecies_db = " << n_purespecies_db << endl;
 
 fclose(f);
 
 f = fopen("input.dat+", "r");
 
 iread=fscanf(f, "%s %d", str_tmp, &n);  // num of species
+if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
 
 iread=fscanf(f, "%s", str_tmp);         // index of species
 for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_species[i]);
+if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
 
 iread=fscanf(f, "%s", str_tmp);         // index of PPR78 groups
 for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_groups[i]);
+if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
+
+Info<< "Species indices in database:  ";
+for(i=0; i<n; i++) Info<< idx_species[i] << "  ";
+Info<< endl;
+
+Info<< "Species group indices in database:  ";
+for(i=0; i<n; i++) Info<< idx_groups[i] << "  ";
+Info<< endl;
 
 fclose(f);
 
@@ -180,6 +203,8 @@ for (j=0;j<n;j++)
         iread=fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
         &tmp, &tmp, &Tb[j], &Tc[j], &Pc[j], &w[j], &MW[j], &Vc[j], 
         &SG[j], &H8[j], &xPNA[0], &xPNA[1], &xPNA[2]);
+
+        if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
 
         //tmp = 5.811+4.919*w[j];
         //Vc[j] = 83.14*Tc[j]/Pc[j]/(3.72+.26*(tmp-7)); // cm^3/mol
@@ -319,13 +344,13 @@ for (j=0;j<n;j++) coef_ab[j]=-1;
 
 //------------------------------------------------------------------//
 //Initialize UMFPACK
-LPT_UMFPACK flux_umf;
-initialUmfpack(flux_umf);
-flux_memoryMatVec(flux_umf, n);
-flux_compRow_setRowCol(flux_umf, n);
+T_UMFPACK flux_umf;
+initialUmfpack(&flux_umf);
+flux_memoryMatVec(&flux_umf, n);
+flux_compRow_setRowCol(&flux_umf, n);
 //Done initialize UMFPACK
 //------------------------------------------------------------------//
-
+Info<< "Done initialize UMFPACK" << endl;
 //------------------------------------------------------------------//
 //Set up output streams linked to output files
 outputFile = "alpha_dbg";
@@ -409,8 +434,8 @@ volScalarField alpha1_old
         "alpha1_old",
         runTime.timeName(),
         mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
     ),
     alpha1,
     alpha1.boundaryField().types()
@@ -847,8 +872,8 @@ for(i=0; i<(n-1); i++)
                 fieldName,
                 runTime.timeName(),
                 mesh,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
             ),
             Y1[i]
         )
@@ -907,7 +932,7 @@ for(i=0; i<(n-1); i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
             C1[i],
             Y1[i].boundaryField().types()
@@ -946,8 +971,8 @@ for(i=0; i<(n-1); i++)
                 fieldName,
                 runTime.timeName(),
                 mesh,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
             ),
             Y0[i]
         )
@@ -1006,7 +1031,7 @@ for(i=0; i<(n-1); i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::AUTO_WRITE
+                IOobject::NO_WRITE
             ),
             C0[i],
             Y0[i].boundaryField().types()
@@ -1269,7 +1294,7 @@ C_phAvg.set
 
 //------------------------------------------------------------------//
 //T, Enthalpy initialization
-Info<< "Reading field T1\n" << endl;
+Info<< "Reading field T1" << endl;
 volScalarField T1
 (
     IOobject
@@ -1284,7 +1309,7 @@ volScalarField T1
 );
 T1.correctBoundaryConditions();
 
-Info<< "Initializing field h1\n" << endl;
+Info<< "Initializing field h1" << endl;
 volScalarField h1
 (
     IOobject
@@ -1299,7 +1324,7 @@ volScalarField h1
     dimensionSet(0, 2, -2, 0, 0, 0, 0)
 );
 
-Info<< "Initializing field rhoh1\n" << endl;
+Info<< "Initializing field rhoh1" << endl;
 volScalarField rhoh1
 (
     IOobject
@@ -1314,7 +1339,7 @@ volScalarField rhoh1
     T1.boundaryField().types()
 );
 
-Info<< "Initializing field H1\n" << endl;
+Info<< "Initializing field H1" << endl;
 volScalarField H1
 (
     IOobject
@@ -1342,7 +1367,7 @@ volScalarField H1_old
     T1.boundaryField().types()
 );
 
-Info<< "Reading field T0\n" << endl;
+Info<< "Reading field T0" << endl;
 volScalarField T0
 (
     IOobject
@@ -1357,7 +1382,7 @@ volScalarField T0
 );
 T0.correctBoundaryConditions();
 
-Info<< "Initializing field h0\n" << endl;
+Info<< "Initializing field h0" << endl;
 volScalarField h0
 (
     IOobject
@@ -1372,7 +1397,7 @@ volScalarField h0
     dimensionSet(0, 2, -2, 0, 0, 0, 0)
 );
 
-Info<< "Initializing field rhoh0\n" << endl;
+Info<< "Initializing field rhoh0" << endl;
 volScalarField rhoh0
 (
     IOobject
@@ -1387,7 +1412,7 @@ volScalarField rhoh0
     T0.boundaryField().types()
 );
 
-Info<< "Initializing field H0\n" << endl;
+Info<< "Initializing field H0" << endl;
 volScalarField H0
 (
     IOobject
@@ -1602,7 +1627,7 @@ setRefCell
 (
     p,
     p_rgh,
-    mesh.solutionDict().subDict("PIMPLE"),
+    mesh.solutionDict(),
     pRefCell,
     pRefValue
 );
