@@ -408,6 +408,18 @@ class plic
         OFstream& os
     );
 
+    void calc_2ph_advFluxes
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0,    
+        const scalar& deltaT,    
+        PtrList<surfaceScalarField>& advFlux_c1,
+        PtrList<surfaceScalarField>& advFlux_c0,
+        const bool debug,
+        const bool debug2,
+        OFstream& os
+    );
+
     void plic_correct();
 
     inline const fvMesh& mesh() const;

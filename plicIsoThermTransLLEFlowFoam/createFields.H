@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL, T0_TMP_VAL, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr;
 label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
@@ -16,12 +16,12 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-int MAX_ITER_T, n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, isothermal;
-double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
+int n_flux_type, MAX_ITER_Ts;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor;
+double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
-double T_cellI_tmp, h_cellI_tmp, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, rhoh_cellI_tmp;
+double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -71,29 +71,17 @@ const dictionary& solDict = mesh.solutionDict();
 
 //------------------------------------------------------------------//
 //Reading tolerances, max iters and switches
-isothermal = solDict.lookupOrDefault("isothermal", true);
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
 nNonOrthCorr = solDict.lookupOrDefault("nNonOrthogonalCorrector", 1);
-MAX_ITER_T = transPropDict.lookupOrDefault("MAX_ITER_T", 108);
-if(isothermal)
-{
-    MAX_ITER_Ts = 1;
-    Ts_TOL = 1000;
-}
-else
-{
-    MAX_ITER_Ts = transPropDict.lookupOrDefault("MAX_ITER_Ts", 108);
-    Ts_TOL = transPropDict.lookupOrDefault("Ts_TOL", 1E-3);
-}
+MAX_ITER_Ts = 1;
+Ts_TOL = 1000;
 ALPHA_BOUND_ITERS_MAX = 12;
 Y_BOUND_ITERS_MAX = 12;
 // tolerances
 ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
-T_TOL = transPropDict.lookupOrDefault("T_TOL", 1E-3);
-H_TOL = transPropDict.lookupOrDefault("H_TOL", 0.1);
 MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
@@ -1320,6 +1308,8 @@ volScalarField T0
     mesh
 );
 T0.correctBoundaryConditions();
+
+T_0 = T1.internalField()[0];
 //Done T, Enthalpy initialization
 //------------------------------------------------------------------//
 
@@ -1545,8 +1535,8 @@ for(i=0; i<n; i++)
     x1_flatFld_diff[i] = x_flatFld_diff;    
     x0_flatFld_diff[i] = x_flatFld_diff;        
 }
-List<scalar> T1_flatFld_diff(n_flatFld_diff, T1min);
-List<scalar> T0_flatFld_diff(n_flatFld_diff, T0min);
+List<scalar> T1_flatFld_diff(n_flatFld_diff, T_0);
+List<scalar> T0_flatFld_diff(n_flatFld_diff, T_0);
 
 // labelList to indicate phase state of each mesh face
 labelList face_phaseState_diff(nFaces);
@@ -1801,8 +1791,8 @@ for(i=0; i<n; i++)
     x1_flatFld_ist[i] = x_flatFld_ist;    
     x0_flatFld_ist[i] = x_flatFld_ist;        
 }
-List<scalar> T1_flatFld_ist(n_flatFld_ist, T1min);
-List<scalar> T0_flatFld_ist(n_flatFld_ist, T0min);
+List<scalar> T1_flatFld_ist(n_flatFld_ist, T_0);
+List<scalar> T0_flatFld_ist(n_flatFld_ist, T_0);
 
 PtrList<dimensionedScalar> xs1_0(n);
 PtrList<dimensionedScalar> xs0_0(n);

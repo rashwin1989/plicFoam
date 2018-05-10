@@ -54,9 +54,9 @@ forAll(alpha1Cells, cellI)
         plicFuncs::print_line(osIst, 80);
         osIst<< "Before interfacial species transfer" << endl;
         plicFuncs::print_line(osIst, 80);
-        osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << "  " << setw(12) << "T1" << "  " << setw(12) << "T0" << endl;
+        osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
         plicFuncs::print_line(osIst, 80);
-        osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << "  " << setw(12) << T1Cells[cellI] << "  " << setw(12) << T0Cells[cellI] << endl;
+        osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
         plicFuncs::print_line(osIst, 80);
         osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
         plicFuncs::print_line(osIst, 80);
@@ -251,9 +251,9 @@ forAll(alpha1Cells, cellI)
         plicFuncs::print_line(osIst, 80);
         osIst<< "After interfacial species transfer" << endl;
         plicFuncs::print_line(osIst, 80);
-        osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << "  " << setw(12) << "T1" << "  " << setw(12) << "T0" << endl;
+        osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
         plicFuncs::print_line(osIst, 80);
-        osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << "  " << setw(12) << T1Cells[cellI] << "  " << setw(12) << T0Cells[cellI] << endl;
+        osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
         plicFuncs::print_line(osIst, 80);
         osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
         plicFuncs::print_line(osIst, 80);
