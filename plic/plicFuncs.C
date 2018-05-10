@@ -9914,7 +9914,6 @@ void calc_Xs_Ys_Js_mS_alphaS
     _NNEW_(xs0, double, n);
     _NNEW_(ys1, double, n);
     _NNEW_(ys0, double, n);
-    _NNEW_(xs1, double, n);
     _NNEW_(flux_m_1, double, n);
     _NNEW_(flux_m_0, double, n);
     _NNEW_(Js1_cellI, double, n);
@@ -10140,7 +10139,6 @@ void calc_Xs_Ys_Js_mS_alphaS
     _DDELETE_(xs0);
     _DDELETE_(ys1);
     _DDELETE_(ys0);
-    _DDELETE_(xs1);
     _DDELETE_(flux_m_1);
     _DDELETE_(flux_m_0);
     _DDELETE_(Js1_cellI);
