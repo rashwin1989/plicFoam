@@ -4661,11 +4661,16 @@ void calc_MS_flux
     double *flux_m
 )
 {
-    int idx;
+    int idx, bKijSet;
     double Z; double V_tmp;
+    double *kij_tmp;
+
+    _NNEW_(kij_tmp, double, n*n);
 
     Z = P*V/(R_gas*T);
 
+    bKijSet = 1;
+    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
     fugacities_n_its_derivatives_(&P,&T,&n,Pc,Tc,w,x,tk,coef_ab,lnphi,dlnphi_dxj,&V_tmp);
 
     // rhs of Maxwell-Stefan equation
@@ -4688,6 +4693,8 @@ void calc_MS_flux
     }
 
     Maxwell_Stefan_mass_flux(Z,n,MW,x,Dij,rhs_flux,flux_m,flux_umf);
+
+    _DDELETE_(kij_tmp);
 }
 
 
@@ -8647,7 +8654,7 @@ void correct_rho
             x_tmp[i] = X[i].internalField()[cellI];
         }
 
-        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
         density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
         rhoCells[cellI] = rho_tmp;
     }
@@ -8665,7 +8672,7 @@ void correct_rho
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
 
-            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
             density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
             prho[fcI] = rho_tmp;
         }
@@ -8895,27 +8902,16 @@ void correct_thermo_trans_prop
     PtrList<volScalarField>& D
 )
 {
-    int i, j, idx, bKijSet, G_only;    
-    double T_tmp, V, MW_tmp; 
-    double Cp_tmp, Cv, dVdT, G, am, bm, CvIG;    
-    double cond, vis;
-    double *x_tmp;
-    double *kij_tmp; 
-    double *lnphi; double *Dij; 
-    double *h_tmp; 
-    double *CpIG; double *Hdep; double *Vpar;
+    int i, j, idx, bKijSet;
+    double T_tmp, V, MW_tmp, CvIG, Cp_tmp, cond, vis;     
+    double *x_tmp, *kij_tmp, *Dij, *h_tmp;
 
     _NNEW_(x_tmp, double, n);
     _NNEW_(kij_tmp, double, n*n);
-    _NNEW_(lnphi, double, n);    
-    _NNEW_(Dij, double, n*n);    
+    _NNEW_(Dij, double, n*n);
     _NNEW_(h_tmp, double, n);
-    _NNEW_(Hdep, double, n);
-    _NNEW_(CpIG, double, n);
-    _NNEW_(Vpar, double, n);
 
     bKijSet = 1;
-    G_only = 0;
 
     const scalarField& TCells = T.internalField();
     scalarField& vCells = v.internalField();
@@ -8936,19 +8932,18 @@ void correct_thermo_trans_prop
             MW_tmp += x_tmp[i]*MW[i];
         }
         MW_tmp *= 1e-3;
-        
-        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+       
+        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
 
-        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+        calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,&V,&CvIG,&Cp_tmp,h_tmp);
 
-        CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
-        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
 
         new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
 
         vCells[cellI] = V;
         lambdaCells[cellI] = cond;
-        CpCells[cellI] = Cp_tmp;
+        CpCells[cellI] = Cp_tmp/MW_tmp;
         muCells[cellI] = vis;
         for(i=0; i<n; i++)
         {
@@ -8985,18 +8980,17 @@ void correct_thermo_trans_prop
             }
             MW_tmp *= 1e-3;
         
-            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
 
-            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+            calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,&V,&CvIG,&Cp_tmp,h_tmp);
 
-            CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
-            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
 
             new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
 
             pv[fcI] = V;
             plambda[fcI] = cond;
-            pCp[fcI] = Cp_tmp;
+            pCp[fcI] = Cp_tmp/MW_tmp;
             pmu[fcI] = vis;
             for(i=0; i<n; i++)
             {
@@ -9013,12 +9007,8 @@ void correct_thermo_trans_prop
 
     _DDELETE_(x_tmp);
     _DDELETE_(kij_tmp);
-    _DDELETE_(lnphi);    
     _DDELETE_(Dij);
     _DDELETE_(h_tmp);
-    _DDELETE_(Hdep);
-    _DDELETE_(CpIG);
-    _DDELETE_(Vpar);
 }
 
 
@@ -9046,27 +9036,19 @@ void correct_thermo_trans_prop
     PtrList<volScalarField>& D
 )
 {
-    int i, j, idx, bKijSet, G_only;    
+    int i, j, idx, bKijSet;    
     double T_tmp, V, MW_tmp; 
-    double Cp_tmp, Cv, dVdT, G, am, bm, CvIG;    
+    double CvIG;    
     double cond, vis;
     double *x_tmp;
     double *kij_tmp; 
-    double *lnphi; double *Dij; 
-    double *h_tmp; 
-    double *CpIG; double *Hdep; double *Vpar;
+    double *Dij;    
 
     _NNEW_(x_tmp, double, n);
     _NNEW_(kij_tmp, double, n*n);
-    _NNEW_(lnphi, double, n);    
-    _NNEW_(Dij, double, n*n);    
-    _NNEW_(h_tmp, double, n);
-    _NNEW_(Hdep, double, n);
-    _NNEW_(CpIG, double, n);
-    _NNEW_(Vpar, double, n);
+    _NNEW_(Dij, double, n*n);
 
     bKijSet = 1;
-    G_only = 0;
 
     const scalarField& TCells = T.internalField();
     scalarField& vCells = v.internalField();    
@@ -9086,12 +9068,11 @@ void correct_thermo_trans_prop
         }
         MW_tmp *= 1e-3;
         
-        calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
 
-        thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+        calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,&V,&CvIG);
 
-        CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
-        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
 
         new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
 
@@ -9128,12 +9109,11 @@ void correct_thermo_trans_prop
             }
             MW_tmp *= 1e-3;
         
-            calculate_kij_(&bKijSet,&T_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
 
-            thermo_properties_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,Tb,SG,H8,tk,&V,&Cp_tmp,&Cv,CpIG,h_tmp,Hdep,Vpar,&dVdT,&G,lnphi,&am,&bm,&G_only);
+            calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,&V,&CvIG);
 
-            CvIG = calc_CvIG_from_CpIG(n,x_tmp,CpIG);
-            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);        
+            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
 
             new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
 
@@ -9152,12 +9132,7 @@ void correct_thermo_trans_prop
 
     _DDELETE_(x_tmp);
     _DDELETE_(kij_tmp);
-    _DDELETE_(lnphi);    
-    _DDELETE_(Dij);
-    _DDELETE_(h_tmp);
-    _DDELETE_(Hdep);
-    _DDELETE_(CpIG);
-    _DDELETE_(Vpar);
+    _DDELETE_(Dij);    
 }
 
 
@@ -9204,32 +9179,21 @@ void calc_intfc_transLLE
     OFstream& os
 )
 {
-    int i, bKijSet, num, G_only;
-    G_only = 0;
+    int i, bKijSet, num;    
     double Ts_tmp, V1, V0; 
-    double Cp1, Cp0, Cv, dVdT, G, am, bm, V_tmp, CvIG;
-    //double rho1, rho0;
-    double cond0, vis1, vis0;
+    double CvIG;
+    double cond0;
     double J1, J0, qs, TNum, TDen, Ts_err;
     double *kij_tmp; 
-    double *lnphi1; double *lnphi0; double *dlnphi1; double *dlnphi0; double *Dij1; double *Dij0; 
-    double *h0; 
-    double *H1; double *H0; double *CpIG; double *Hdep1; double *Hdep0; double *Vpar;
+    double *lnphi1; double *lnphi0; double *Dij1; double *Dij0; 
+    double *h0;
 
     _NNEW_(kij_tmp, double, n*n);
     _NNEW_(lnphi1, double, n);
-    _NNEW_(lnphi0, double, n);
-    _NNEW_(dlnphi1, double, n*n);
-    _NNEW_(dlnphi0, double, n*n);
+    _NNEW_(lnphi0, double, n);    
     _NNEW_(Dij1, double, n*n);
     _NNEW_(Dij0, double, n*n);    
-    _NNEW_(h0, double, n);
-    _NNEW_(H1, double, n);
-    _NNEW_(H0, double, n);
-    _NNEW_(Hdep1, double, n);
-    _NNEW_(Hdep0, double, n);
-    _NNEW_(CpIG, double, n);
-    _NNEW_(Vpar, double, n);
+    _NNEW_(h0, double, n);    
 
     Ts_tmp = Ts;
 
@@ -9237,40 +9201,22 @@ void calc_intfc_transLLE
     {
         //calculate BIPs for current iteration interface temperature Ts_tmp
         bKijSet = 1;
-        calculate_kij_(&bKijSet,&Ts_tmp,&n,Pc,Tc,w,tk,kij_tmp);
+        calculate_kij_from_table_(&bKijSet,&Ts_tmp,&n,kij_tmp);
 
-        iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,tk,Tb,SG,H8,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,H1,H0,flux_m_1,flux_m_0,flux_umf);
+        iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,tk,Tb,SG,H8,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,h1,h0,flux_m_1,flux_m_0,flux_umf);
 
         //calculate fluid properties on both sides of interface
         //convert the mole fractions to mass fractions
         x2y(n,MW,xs1,ys1);
         x2y(n,MW,xs0,ys0);
 
-        //phase 1
-        thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs1,Tb,SG,H8,tk,&V1,&Cp1,&Cv,CpIG,h1,Hdep1,Vpar,&dVdT,&G,lnphi1,&am,&bm,&G_only);
+        //phase 1 thermal conductivity
+        calc_v_cvig_(&P,&Ts_tmp,xs1,&n,Pc,Tc,w,MW,&V1,&CvIG);
+        cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs1,&CvIG,&V1,&cond1);
 
-        fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs1,tk,coef_ab,lnphi1,dlnphi1,&V_tmp);
-
-        CvIG = calc_CvIG_from_CpIG(n,xs1,CpIG);
-
-        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs1,&CvIG,&V1,&cond1,&vis1);
-
-        //rho1 = calc_rho_from_V(n,xs1,MW,V1);
-
-        new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs1,Dij1);
-
-        //phase 0
-        thermo_properties_(&P,&Ts_tmp,&n,Pc,Tc,w,MW,xs0,Tb,SG,H8,tk,&V0,&Cp0,&Cv,CpIG,h0,Hdep0,Vpar,&dVdT,&G,lnphi0,&am,&bm,&G_only);
-
-        fugacities_n_its_derivatives_(&P,&Ts_tmp,&n,Pc,Tc,w,xs0,tk,coef_ab,lnphi0,dlnphi0,&V_tmp);
-
-        CvIG = calc_CvIG_from_CpIG(n,xs0,CpIG);
-
-        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs0,&CvIG,&V0,&cond0,&vis0);
-
-        //rho0 = calc_rho_from_V(n,xs0,MW,V0);
-
-        new_tlsm_diffusion_krishna_model_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,xs0,Dij0);
+        //phase 0 thermal conductivity
+        calc_v_cvig_(&P,&Ts_tmp,xs0,&n,Pc,Tc,w,MW,&V0,&CvIG);
+        cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs0,&CvIG,&V0,&cond0);
 
         //calculate the total ph-1 to ph-0 phase change mass flux 
         //from ph-1 and ph-0 diffusive fluxes
@@ -9332,17 +9278,9 @@ void calc_intfc_transLLE
     _DDELETE_(kij_tmp);
     _DDELETE_(lnphi1);
     _DDELETE_(lnphi0);
-    _DDELETE_(dlnphi1);
-    _DDELETE_(dlnphi0);
     _DDELETE_(Dij1);
     _DDELETE_(Dij0);    
     _DDELETE_(h0);
-    _DDELETE_(H1);
-    _DDELETE_(H0);
-    _DDELETE_(Hdep1);
-    _DDELETE_(Hdep0);
-    _DDELETE_(CpIG);
-    _DDELETE_(Vpar);
 }
 
 

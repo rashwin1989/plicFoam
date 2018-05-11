@@ -270,7 +270,8 @@ subroutine thermo_properties(P,T,n,Pc,Tc,w,MW,x,Tb,SG,H_8,type_k, &
   !}
   enddo
 
-  call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(0,T,n,delta)
 
   ! PR coefficients of the mixture and its derivatives
 
@@ -418,12 +419,12 @@ END subroutine thermo_properties
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_Cp_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
-                             V, Cp, h)
+subroutine calc_v_Cp_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8, &
+                       V,Cp,h)
 !{
   implicit none
 
-  integer :: n, type_k(n)
+  integer :: n
   integer :: i,j
   real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
   real(8) :: V, Cp, h
@@ -455,7 +456,8 @@ subroutine calc_v_Cp_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
   !}
   enddo
 
-  call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(1,T,n,delta)
 
   ! PR coefficients of the mixture and its derivatives
 
@@ -524,12 +526,12 @@ END subroutine calc_v_Cp_h
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
+subroutine calc_v_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8, &
                              V, h)
 !{
   implicit none
 
-  integer :: n, type_k(n)
+  integer :: n
   integer :: i,j
   real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
   real(8) :: V, Cp, h
@@ -560,7 +562,8 @@ subroutine calc_v_h(P,T,n,x,Pc,Tc,w,MW,Tb,SG,H_8,type_k, &
   !}
   enddo
 
-  call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(1,T,n,delta)
 
   ! PR coefficients of the mixture and its derivatives
 

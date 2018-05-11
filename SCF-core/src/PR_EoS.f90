@@ -111,7 +111,8 @@ subroutine fugacities_general( &
   ! PR coefficients of pure components
 
   call calculate_a_b(T,n,Pc,Tc,w,coef_ab,a,b)
-  call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(0,T,n,delta)
 
   ! PR coefficients of the mixture
   bm = 0d0
@@ -245,7 +246,8 @@ subroutine density_PR_EoS( &
 
   ! PR coefficients of pure components
   call calculate_a_b(T,n,Pc,Tc,w,coef_ab,a,b)
-  call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(0,T,n,delta)
 
   rho = 0.0d0
   do i=1,n
@@ -1223,6 +1225,97 @@ subroutine calculate_kij_and_dkijdT( &
 !}
 end subroutine calculate_kij_and_dkijdT
 !************************************************************************
+!************************************************************************
+subroutine calculate_kij_from_table( &
+  bSet, & ! >=1 then set every thing, <=0 then just get values restored
+  T, &    ! temperature (Unit: K)
+  n, &    ! number of species  
+  kij, &  ! matrix of binary interation parameters
+  )
+!{
+  implicit none
+  integer :: n, bSet
+  real(8) :: T, kij(n,n)
+
+  integer :: nT, i, j, k, idT
+  real(8) :: Ta, Tb, dT, T1
+  logical :: first_time=.true.
+  real(8) :: kij_stored(n,n)
+
+  real(8), allocatable, dimension(:,:,:) :: kij_T
+  
+  save first_time,kij_T,Ta,Tb,nT,kij_stored
+
+  ! FIRST TIME PROCESSING FIRST TIME PROCESSING FIRST TIME PROCESSING
+  ! BEGIN BEGIN BEGIN BEGIN BEGIN BEGIN BEGIN BEGIN BEGIN BEGIN
+  !{
+  if ( first_time ) then
+    first_time = .false.
+
+    open(unit = 111, file = 'constant/BIP_nT.dat+', &
+         access = 'sequential', status = 'unknown')
+    read(111,*) Ta, Tb, nT
+    close(111)
+
+    ! read kij vs T data
+    allocate( kij_T(nT,n,n) )
+    open(unit = 111, file = 'constant/kij_T.dat+', &
+         access = 'sequential', status = 'unknown')
+    do k=1,nT
+       do i=1,n
+          do j=1,n
+             read(111,*) kij_T(k,i,j)
+          enddo
+       enddo
+    enddo    
+    close(111)
+    !}
+    !endif
+  endif
+  !}
+  ! END END END END END END END END END END END END END END END END
+  ! FIRST TIME PROCESSING FIRST TIME PROCESSING FIRST TIME PROCESSING
+
+  if (bSet<=0) then
+    do i=1,n
+      do j=1,n
+        kij(i,j) = kij_stored(i,j)
+      end do
+    end do
+
+    return
+  end if
+
+  if (T .GT. Ta .AND. T .LT. Tb) then
+     dT = (Tb - Ta)/(nT - 1)
+     idT = floor((T - Ta)/dT)
+     T1 = Ta + idT*dT
+     idT = idT + 1  
+
+     do i=1,n
+        do j=1,n
+           kij(i,j) = kij_T(idT,i,j) + (kij_T(idT+1,i,j) - kij_T(idT,i,j))*(T - T1)/dT 
+        end do
+     end do
+  else
+     if (T .LE. Ta) then
+        do i=1,n
+           do j=1,n
+              kij(i,j) = kij_T(1,i,j) 
+           end do
+        end do
+     else
+        do i=1,n
+           do j=1,n
+              kij(i,j) = kij_T(nT,i,j) 
+           end do
+        end do
+     endif
+  endif
+  
+!}
+end subroutine calculate_kij_from_table
+!************************************************************************
 !***************************************************************************
 subroutine fugacities_n_its_derivatives( &
     P, & ! pressure (Unit: Pa)
@@ -1285,7 +1378,8 @@ subroutine fugacities_n_its_derivatives_general( &
 
   ! PR coefficients of pure components
   call calculate_a_b(T,n,Pc,Tc,w,coef_ab,a,b)
-  call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  !call calculate_kij(0,T,n,Pc,Tc,w,type_k,delta)
+  call calculate_kij_from_table(0,T,n,delta)
 
   ! PR coefficients of the mixture
   am = 0d0
