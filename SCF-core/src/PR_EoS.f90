@@ -1230,7 +1230,7 @@ subroutine calculate_kij_from_table( &
   bSet, & ! >=1 then set every thing, <=0 then just get values restored
   T, &    ! temperature (Unit: K)
   n, &    ! number of species  
-  kij, &  ! matrix of binary interation parameters
+  kij &   ! matrix of binary interation parameters
   )
 !{
   implicit none
@@ -1240,9 +1240,9 @@ subroutine calculate_kij_from_table( &
   integer :: nT, i, j, k, idT
   real(8) :: Ta, Tb, dT, T1
   logical :: first_time=.true.
-  real(8) :: kij_stored(n,n)
 
   real(8), allocatable, dimension(:,:,:) :: kij_T
+  real(8), allocatable, dimension(:,:) :: kij_stored
   
   save first_time,kij_T,Ta,Tb,nT,kij_stored
 
@@ -1259,6 +1259,7 @@ subroutine calculate_kij_from_table( &
 
     ! read kij vs T data
     allocate( kij_T(nT,n,n) )
+    allocate( kij_stored(n,n) )
     open(unit = 111, file = 'constant/kij_T.dat+', &
          access = 'sequential', status = 'unknown')
     do k=1,nT

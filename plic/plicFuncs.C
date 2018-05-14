@@ -8873,7 +8873,7 @@ void correct_boundaryField_h_rhoh_H
                 MW_tmp += x_tmp[i]*MW[i];
             }
 
-            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, tk, &v_tmp, &h_tmp);
+            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
             h_tmp /= MW_tmp;
 
             ph[fcI] = h_tmp;
