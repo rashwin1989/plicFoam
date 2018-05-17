@@ -3,7 +3,7 @@ scalar diffCoNum = 0.0;
 scalar meanDiffCoNum = 0.0;
 
 dimensionedScalar DMax = gMax(D1[0]);
-forAll(D1,i)
+for(i=0; i<D1.size(); i++)
 {
     dimensionedScalar DMaxI = gMax(D1[i]);
     if(DMaxI.value() > DMax.value())
@@ -11,7 +11,7 @@ forAll(D1,i)
         DMax = DMaxI;
     }
 }
-forAll(D0,i)
+for(i=0; i<D0.size(); i++)
 {
     dimensionedScalar DMaxI = gMax(D0[i]);
     if(DMaxI.value() > DMax.value())

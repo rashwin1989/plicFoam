@@ -1,8 +1,9 @@
 
-surfaceScalarField alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
-surfaceScalarField alpha0f = scalar(1) - alpha1f;
-surfaceScalarField mu1f = fvc::interpolate(mu1);
-surfaceScalarField mu0f = fvc::interpolate(mu0);
+alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
+alpha0f = scalar(1) - alpha1f;
+mu1f = fvc::interpolate(mu1);
+mu0f = fvc::interpolate(mu0);
+muf = alpha1f*mu1f + alpha0f*mu0f;
 
 /*
 surfaceScalarField gammaf = mag(interface.nHatf())/mesh.magSf();
@@ -11,8 +12,6 @@ surfaceScalarField muf_a = alpha1f*mu1f + alpha0f*mu0f;
 surfaceScalarField muf_h = mu1f*mu0f/muf_a;
 muf = gammaf*muf_h + (1 - gammaf)*muf_a;
 */
-
-muf = alpha1f*mu1f + alpha0f*mu0f;
 
 Info<< "Min(rho) = " << min(rho).value()
     << "  Max(rho) = " << max(rho).value()
@@ -34,7 +33,7 @@ fvVectorMatrix UEqn
 
 UEqn.relax();
 
-if (pimple.momentumPredictor())
+if (momentumPredictor)
 {
     solve
     (

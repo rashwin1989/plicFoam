@@ -3911,7 +3911,8 @@ void calc_2ph_diffFluxes_Yi_Fick
     const scalar& Y1MAX,
     const scalar& Y0MIN,
     const scalar& Y0MAX,
-    const label& i,    
+    const label& i,
+    const scalar& dt,
     const bool debug,
     OFstream& os
 )
@@ -3975,7 +3976,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 alpha0Cells[faceNei],
                 Y0iCells[faceNei],
                 meshV[faceNei],
-                mesh.time().deltaTValue(),
+                dt,
                 diffFlux_Y0i[faceI],
                 diffFlux_limiter,
                 Y0MIN,
@@ -3999,7 +4000,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 alpha1Cells[faceNei],
                 Y1iCells[faceNei],
                 meshV[faceNei],
-                mesh.time().deltaTValue(),
+                dt,
                 diffFlux_Y1i[faceI],
                 diffFlux_limiter,
                 Y1MIN,
@@ -4048,7 +4049,7 @@ void calc_2ph_diffFluxes_Yi_Fick
             alpha1Cells[faceNei],
             Y1iCells[faceNei],
             meshV[faceNei],
-            mesh.time().deltaTValue(),
+            dt,
             diffFlux_Y1i[faceI],
             diffFlux_limiter,
             Y1MIN,
@@ -4065,9 +4066,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     << nl
                     << "diffFlux_Y1" << i << ": " << diffFlux_Y1i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
                     << nl 
-                    << "rho1Own: " << rho1Cells[faceOwn] << "  alpha1Own: " << alpha1Cells[faceOwn] << "  Y1iOwn: " <<  Y1iCells[faceOwn] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                    << "rho1Own: " << rho1Cells[faceOwn] << "  alpha1Own: " << alpha1Cells[faceOwn] << "  Y1iOwn: " <<  Y1iCells[faceOwn] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                     << nl 
-                    << "rho1Nei: " << rho1Cells[faceNei] << "  alpha1Nei: " << alpha1Cells[faceNei] << "  Y1iNei: " <<  Y1iCells[faceNei] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  meshV[faceNei]
+                    << "rho1Nei: " << rho1Cells[faceNei] << "  alpha1Nei: " << alpha1Cells[faceNei] << "  Y1iNei: " <<  Y1iCells[faceNei] << "  dt: " << dt << "  VNei: " <<  meshV[faceNei]
                     << nl
                     << endl;
             }            
@@ -4088,7 +4089,7 @@ void calc_2ph_diffFluxes_Yi_Fick
             alpha0Cells[faceNei],
             Y0iCells[faceNei],
             meshV[faceNei],
-            mesh.time().deltaTValue(),
+            dt,
             diffFlux_Y0i[faceI],
             diffFlux_limiter,
             Y0MIN,
@@ -4105,9 +4106,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                     << nl
                     << "diffFlux_Y0" << i << ": " << diffFlux_Y0i[faceI] << "  diffFlux_limter: " << diffFlux_limiter 
                     << nl 
-                    << "rho0Own: " << rho0Cells[faceOwn] << "  alpha0Own: " << alpha0Cells[faceOwn] << "  Y0iOwn: " <<  Y0iCells[faceOwn] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                    << "rho0Own: " << rho0Cells[faceOwn] << "  alpha0Own: " << alpha0Cells[faceOwn] << "  Y0iOwn: " <<  Y0iCells[faceOwn] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                     << nl 
-                    << "rho0Nei: " << rho0Cells[faceNei] << "  alpha0Nei: " << alpha0Cells[faceNei] << "  Y0iNei: " <<  Y0iCells[faceNei] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  meshV[faceNei]
+                    << "rho0Nei: " << rho0Cells[faceNei] << "  alpha0Nei: " << alpha0Cells[faceNei] << "  Y0iNei: " <<  Y0iCells[faceNei] << "  dt: " << dt << "  VNei: " <<  meshV[faceNei]
                     << nl
                     << endl;
             }
@@ -4222,7 +4223,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         alpha0Nei[fcI],
                         Y0iNei[fcI],
                         VNei[bndFaceI],
-                        mesh.time().deltaTValue(),
+                        dt,
                         pdiffFlux_Y0i[fcI],
                         diffFlux_limiter,
                         Y0MIN,
@@ -4244,7 +4245,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         alpha1Nei[fcI],
                         Y1iNei[fcI],
                         VNei[bndFaceI],
-                        mesh.time().deltaTValue(),
+                        dt,
                         pdiffFlux_Y1i[fcI],
                         diffFlux_limiter,
                         Y1MIN,
@@ -4296,7 +4297,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     alpha1Nei[fcI],
                     Y1iNei[fcI],
                     VNei[bndFaceI],
-                    mesh.time().deltaTValue(),
+                    dt,
                     pdiffFlux_Y1i[fcI],
                     diffFlux_limiter,
                     Y1MIN,
@@ -4313,9 +4314,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                             << nl 
-                            << "rho1Nei: " << rho1Nei[fcI] << "  alpha1Nei: " << alpha1Nei[fcI] << "  Y1iNei: " <<  Y1iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << "rho1Nei: " << rho1Nei[fcI] << "  alpha1Nei: " << alpha1Nei[fcI] << "  Y1iNei: " <<  Y1iNei[fcI] << "  dt: " << dt << "  VNei: " <<  VNei[fcI] 
                             << nl
                             << endl;
                     }            
@@ -4336,7 +4337,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     alpha0Nei[fcI],
                     Y0iNei[fcI],
                     VNei[bndFaceI],
-                    mesh.time().deltaTValue(),
+                    dt,
                     pdiffFlux_Y0i[fcI],
                     diffFlux_limiter,
                     Y0MIN,
@@ -4353,9 +4354,9 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                             << nl 
-                            << "rho0Nei: " << rho0Nei[fcI] << "  alpha0Nei: " << alpha0Nei[fcI] << "  Y0iNei: " <<  Y0iNei[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VNei: " <<  VNei[fcI] 
+                            << "rho0Nei: " << rho0Nei[fcI] << "  alpha0Nei: " << alpha0Nei[fcI] << "  Y0iNei: " <<  Y0iNei[fcI] << "  dt: " << dt << "  VNei: " <<  VNei[fcI] 
                             << nl
                             << endl;
                     }            
@@ -4404,7 +4405,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         alpha0Own[fcI],
                         Y0iOwn[fcI],
                         meshV[faceOwn],
-                        mesh.time().deltaTValue(),
+                        dt,
                         pdiffFlux_Y0i[fcI],
                         diffFlux_limiter,
                         Y0MIN,
@@ -4426,7 +4427,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         alpha1Own[fcI],
                         Y1iOwn[fcI],
                         meshV[faceOwn],
-                        mesh.time().deltaTValue(),
+                        dt,
                         pdiffFlux_Y1i[fcI],
                         diffFlux_limiter,
                         Y1MIN,
@@ -4478,7 +4479,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     alpha1Own[fcI],
                     Y1iOwn[fcI],
                     meshV[faceOwn],
-                    mesh.time().deltaTValue(),
+                    dt,
                     pdiffFlux_Y1i[fcI],
                     diffFlux_limiter,
                     Y1MIN,
@@ -4495,7 +4496,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y1" << i << ": " << pdiffFlux_Y1i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << "rho1Own: " << rho1Own[fcI] << "  alpha1Own: " << alpha1Own[fcI] << "  Y1iOwn: " <<  Y1iOwn[fcI] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                             << nl                             
                             << endl;
                     }            
@@ -4516,7 +4517,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     alpha0Own[fcI],
                     Y0iOwn[fcI],
                     meshV[faceOwn],
-                    mesh.time().deltaTValue(),
+                    dt,
                     pdiffFlux_Y0i[fcI],
                     diffFlux_limiter,
                     Y0MIN,
@@ -4533,7 +4534,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                             << nl
                             << "diffFlux_Y0" << i << ": " << pdiffFlux_Y0i[fcI] << "  diffFlux_limter: " << diffFlux_limiter 
                             << nl 
-                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << mesh.time().deltaTValue() << "  VOwn: " <<  meshV[faceOwn] 
+                            << "rho0Own: " << rho0Own[fcI] << "  alpha0Own: " << alpha0Own[fcI] << "  Y0iOwn: " <<  Y0iOwn[fcI] << "  dt: " << dt << "  VOwn: " <<  meshV[faceOwn] 
                             << nl                            
                             << endl;
                     }            
@@ -7310,7 +7311,7 @@ void redistribute_Ci_field
 
 label findCellInIntfcDir
 (
-    const fvMesh& mesh,    
+    const fvMesh& mesh,   
     const List<scalar>& alpha1,
     const labelList& cells,
     const List<vector>& C,
@@ -10127,12 +10128,12 @@ void calc_mS_alphaS
     volScalarField& mS0Tot,
     volScalarField& alphaS1,
     volScalarField& alphaS0,
+    const scalar& dt,
     const bool debug,
     OFstream& os
 )
 {
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
-    scalar dt = mesh.time().deltaTValue();
     const scalarField& V = mesh.V();
 
     const labelList& own = mesh.owner();

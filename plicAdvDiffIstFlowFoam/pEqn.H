@@ -34,7 +34,15 @@
         )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
     );
 
-    while (pimple.correctNonOrthogonal())
+    if(!phaseVolChange)
+    {
+        forAll(pSCells, cellI)
+        {
+            pSCells[cellI] = 0;
+        }
+    }
+
+    for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
         fvScalarMatrix p_rghEqn
         (
@@ -43,10 +51,11 @@
         );
 
         p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
+        Info<< "Non-orthogonal pressure corrector " << iNonOrthCorr+1 << endl;
 
-        p_rghEqn.solve(mesh.solver(p_rgh.select(pimple.finalInnerIter())));
+        p_rghEqn.solve(mesh.solver("p_rgh"));
 
-        if (pimple.finalNonOrthogonalIter())
+        if (iNonOrthCorr == nNonOrthCorr-1)
         {
             phi = phiHbyA + p_rghEqn.flux();            
 
@@ -76,30 +85,5 @@
             pRefValue - getRefCellValue(p, pRefCell)
         );
         p_rgh = p - rho*gh;
-    }
-
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
-    surfaceVectorField U_interp(linearInterpolate(U));
- 
-    if(phi_interp_debug)
-    {
-        Info<< endl;
-        forAll(phi.internalField(), faceI)
-        {
-            scalar curPhi = phi.internalField()[faceI];
-            vector curSf = mesh.Sf()[faceI];
-            scalar curMagSf = mesh.magSf()[faceI];
-            scalar curPhiU = curPhi/curMagSf;         
-            scalar curU_interp = (U_interp.internalField()[faceI] & curSf)/curMagSf;
-
-            if(mag(curPhi) > MIN_PHI_DEBUG && mag((curPhiU - curU_interp)/(curU_interp + VSMALL)) > 0.5)
-            {
-                Info<< "Face " << faceI << nl
-                    << "Flux = " << curPhi << "  Face vel. = " << curPhiU << "  Interp. U = " << curU_interp << nl
-                    << "Own U = " << U.internalField()[own[faceI]] << "  Nei U = " << U.internalField()[nei[faceI]] << endl;
-            }            
-        }
-        Info<< endl;
-    }
+    }    
 }

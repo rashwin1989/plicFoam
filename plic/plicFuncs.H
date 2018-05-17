@@ -455,7 +455,8 @@ namespace plicFuncs
         const scalar& Y1MAX,
         const scalar& Y0MIN,
         const scalar& Y0MAX,
-        const label& i,    
+        const label& i,
+        const scalar& dt,
         const bool debug, 
         OFstream& os
     );
@@ -1191,6 +1192,7 @@ namespace plicFuncs
         volScalarField& mS0Tot,
         volScalarField& alphaS1,
         volScalarField& alphaS0,
+        const scalar& dt,
         const bool debug,
         OFstream& os
     );

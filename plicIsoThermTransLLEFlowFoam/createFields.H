@@ -455,6 +455,9 @@ volVectorField U
 #include "createPhi.H"
 U.correctBoundaryConditions();
 phi = linearInterpolate(U) & mesh.Sf();
+
+surfaceScalarField alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
+surfaceScalarField alpha0f = scalar(1) - alpha1f;
 //Done read and initialize fundamental variable fields
 //------------------------------------------------------------------//
 
@@ -579,8 +582,8 @@ volScalarField mu0
     mu0_0
 );
 
-surfaceScalarField mu1f = fvc::interpolate(mu1);
-surfaceScalarField mu0f = fvc::interpolate(mu0);
+surfaceScalarField mu1f(linearInterpolate(mu1));
+surfaceScalarField mu0f(linearInterpolate(mu0));
 
 volScalarField mu
 (
@@ -597,18 +600,7 @@ volScalarField mu
 );
 
 // Mixture viscosity at cell faces
-surfaceScalarField muf
-(
-    IOobject
-    (
-        "muf",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    fvc::interpolate(mu)
-);
+surfaceScalarField muf(alpha1f*mu1f + alpha0f*mu0f);
 
 volScalarField lambda1
 (
@@ -1575,6 +1567,8 @@ surfaceScalarField T1f(linearInterpolate(T1));
 surfaceScalarField T0f(linearInterpolate(T0));
 surfaceScalarField v1f(linearInterpolate(v1));
 surfaceScalarField v0f(linearInterpolate(v0));
+surfaceScalarField rho1f(linearInterpolate(rho1));
+surfaceScalarField rho0f(linearInterpolate(rho0));
 
 PtrList<surfaceScalarField> x1f(n);
 PtrList<surfaceScalarField> x0f(n);
@@ -1619,32 +1613,6 @@ for(i=0; i<n; i++)
         )
     );    
 }
-
-surfaceScalarField rho1f
-(
-    IOobject
-    (
-        "rho1f",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    linearInterpolate(rho1)
-);
-
-surfaceScalarField rho0f
-(
-    IOobject
-    (
-        "rho0f",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    linearInterpolate(rho0)
-);
 
 // gradient fields and diffusive flux fields
 PtrList<surfaceScalarField> gradf_x1(n);

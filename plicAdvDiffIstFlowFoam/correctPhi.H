@@ -1,6 +1,4 @@
-{
-    //#include "continuityErrs.H"
-
+{    
     volScalarField pcorr
     (
         IOobject
@@ -20,7 +18,7 @@
 
     adjustPhi(phi, U, pcorr);
 
-    while (pimple.correctNonOrthogonal())
+    for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
         fvScalarMatrix pcorrEqn
         (
@@ -28,9 +26,10 @@
         );
 
         pcorrEqn.setReference(pRefCell, pRefValue);
+        Info<< "Non-orthogonal pressure corrector " << iNonOrthCorr+1 << endl;
         pcorrEqn.solve();
 
-        if (pimple.finalNonOrthogonalIter())
+        if (iNonOrthCorr == nNonOrthCorr-1)
         {
             phi -= pcorrEqn.flux();
             U = fvc::reconstruct(phi);

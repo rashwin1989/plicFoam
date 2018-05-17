@@ -1,92 +1,21 @@
 
 if(diff_debug)
 {
-    osDiff<< nl
-          << "Solution Time = " << runTime.timeName()
-          << nl << endl;
+    plicFuncs::print_line(osDiff, 80);
+    osDiff<< "Solution Time = " << runTime.timeName() << "  Y Diff" << endl;
+    plicFuncs::print_line(osDiff, 80);
+    osDiff<< endl;
 }
+
+//set fractional time-step for diffusion
+dt = 0.5*deltaT;
 
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
 //------------------------------------------------------------------//
-//Make flat fields for alpha1 and phase centroids required for gradient calculation
-plicFuncs::makeFlatFld(alpha1, diffMap, alpha1_flatFld_diff);
-plicFuncs::makeFlatFld(interface.C_ph1(), diffMap, C_ph1_flatFld_diff);
-plicFuncs::makeFlatFld(interface.C_ph0(), diffMap, C_ph0_flatFld_diff);
-//Done make flat fields for alpha1 and phase centroids required for gradient calculation
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
-//Determine phase state at faces for diffusion flux calculation
-plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, MIN_ALPHA_DIFF, face_phaseState_diff, diff_debug, osDiff);
-//Done determine phase state at faces for diffusion flux calculation
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
-//Linear interpolate density and diffusivity to faces in both phases
-plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, Cf_ph1, Cf_ph0);
-
-plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
-plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
-
-plicFuncs::linearInterpolate_2ph(rho1, mesh, w_ph1, rho1f);
-plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
-
-for(label i=0; i<nSpecies; i++)
-{
-    const volScalarField& D1i = D1[i];
-    surfaceScalarField& D1fi = D1f[i];
-    plicFuncs::linearInterpolate_2ph(D1i, mesh, w_ph1, D1fi);
-
-    const volScalarField& D0i = D0[i];
-    surfaceScalarField& D0fi = D0f[i];
-    plicFuncs::linearInterpolate_2ph(D0i, mesh, w_ph0, D0fi);
-}
-//Done linear interpolate density and diffusivity to faces in both phases
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
-//Calculate species mass fraction gradients for both phases
-for(label i=0; i<nSpecies; i++)
-{
-    const volScalarField& Y1i = Y1[i];
-    const volScalarField& Y0i = Y0[i];
-
-    List<scalar>& Y1i_flatFld_diff = Y1_flatFld_diff[i];
-    List<scalar>& Y0i_flatFld_diff = Y0_flatFld_diff[i];
-    plicFuncs::makeFlatFld(Y1i, diffMap, Y1i_flatFld_diff);
-    plicFuncs::makeFlatFld(Y0i, diffMap, Y0i_flatFld_diff);
-
-    surfaceScalarField& gradf_Y1i = gradf_Y1[i];
-    surfaceScalarField& gradf_Y0i = gradf_Y0[i];
-
-    plicFuncs::calc_2ph_gradf
-    (
-        mesh,
-        diffCellStencil,
-        Y1i,
-        Y0i,
-        Y1i_flatFld_diff,
-        Y0i_flatFld_diff,
-        alpha1_flatFld_diff,
-        C_ph1_flatFld_diff,
-        C_ph0_flatFld_diff,
-        face_phaseState_diff,
-        gradf_Y1i,
-        gradf_Y0i,
-        i,
-        MIN_ALPHA_DIFF,
-        diff_debug2,
-        osDiff
-    );
-}
-//Done calculate species mass fraction gradients for both phases
-//------------------------------------------------------------------//
-
-//------------------------------------------------------------------//
 //Calculate species diffusive fluxes for both phases
-for(label i=0; i<nSpecies; i++)
+for(i=0; i<n; i++)
 {
     const volScalarField& Y1i = Y1[i];
     const volScalarField& Y0i = Y0[i];
@@ -125,6 +54,7 @@ for(label i=0; i<nSpecies; i++)
         Y0min[i],
         Y0max[i],
         i,
+        dt,
         diff_debug2,
         osDiff
     );
@@ -134,25 +64,37 @@ for(label i=0; i<nSpecies; i++)
 
 //------------------------------------------------------------------//
 //Solve species diffusion equations in both phases
-for(label i=0; i<(nSpecies - 1); i++)
+for(i=0; i<(n-1); i++)
 {
+    word YiName = "Y["+name(i)+"]";
     if(diff_debug)
     {
-        osDiff<< "-----------------------------------" << nl
-            << "              Field Y[" << i << "]" << nl
-            << "-----------------------------------" << nl
-            << endl;
+        plicFuncs::print_line(osDiff, 80);
+        osDiff<< setw(40) << YiName << endl;
+        plicFuncs::print_line(osDiff, 80);
+        osDiff<< endl;
     }
 
     volScalarField& Y1i = Y1[i];
     volScalarField& Y0i = Y0[i];
+    volScalarField& c1i = c1[i];
+    volScalarField& c0i = c0[i];
     volScalarField& C1i = C1[i];
-    volScalarField& C0i = C0[i];
+    volScalarField& C0i = C0[i];    
 
     scalarField& Y1iCells = Y1i.internalField();
     scalarField& Y0iCells = Y0i.internalField();
+    scalarField& c1iCells = c1i.internalField();
+    scalarField& c0iCells = c0i.internalField();
     scalarField& C1iCells = C1i.internalField();
-    scalarField& C0iCells = C0i.internalField();
+    scalarField& C0iCells = C0i.internalField();    
+
+    word C1iName = "C1["+name(i)+"]";
+    word c1iName = "c1["+name(i)+"]";
+    word Y1iName = "Y1["+name(i)+"]";
+    word C0iName = "C0["+name(i)+"]";
+    word c0iName = "c0["+name(i)+"]";
+    word Y0iName = "Y0["+name(i)+"]";
 
     const surfaceScalarField& diffFlux_Y1i = diffFlux_Y1[i];
     const surfaceScalarField& diffFlux_Y0i = diffFlux_Y0[i];
@@ -162,47 +104,19 @@ for(label i=0; i<(nSpecies - 1); i++)
     volScalarField surfInt_diffFlux_Y1i(fvc::surfaceIntegrate(diffFlux_Y1i));    
     scalarField& surfInt_diffFlux_Y1iCells = surfInt_diffFlux_Y1i.internalField();
 
-    forAll(C1iCells,cellI)
+    if(diff_debug)
     {
-        if(diff_debug)
-        {
-            const cell& curCell = meshCells[cellI];
+        plicFuncs::print_diffFluxFld(mesh, diffFlux_Y1i, alpha1, C1i, c1i, Y1i, c1iName, Y1iName, osDiff);
+        plicFuncs::print_diffFluxIntData(mesh, diffFlux_Y1i, surfInt_diffFlux_Y1iCells, dt, alpha1, C1i, c1i, Y1i, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", C1iName, c1iName, Y1iName, osDiff);
 
-            osDiff<< "Solving Y1[" << i << "] diff eqn in cell " << cellI << nl
-                << "C1i = " << C1iCells[cellI] << "  Y1i = " << Y1iCells[cellI] << "  alpha1 = " << alpha1Cells[cellI] << "  alpha1 oldTime = " << alpha1.oldTime().internalField()[cellI] << endl;
+        plicFuncs::print_line(osDiff, 80);
+        osDiff<< setw(6) << "cellI" << "  " << setw(12) << C1iName << "  " << setw(12) << Y1iName << endl;
+        plicFuncs::print_line(osDiff, 80);
+    }
 
-            forAll(curCell, faceI)
-            {
-                label curFaceLbl = curCell[faceI];
-                label curOwn = own[curFaceLbl];
-
-                osDiff<< "cell face label: " << curFaceLbl 
-                    << nl
-                    <<"face own: " << curOwn << "  alpha1: " << alpha1Cells[curOwn] << "  C1i: " << C1iCells[curOwn] << "  Y1i: " << Y1iCells[curOwn] 
-                    << endl;
-                if(curFaceLbl < mesh.nInternalFaces())
-                {
-                    label curNei = nei[curFaceLbl];
-                    osDiff<< "face nei: " << curNei << "  alpha1: " << alpha1Cells[curNei] << "  C1i: " << C1iCells[curNei] << "  Y1i: " << Y1iCells[curNei]
-                        << nl
-                        << "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl] << "  gradf_Y1i: " << gradf_Y1[i][curFaceLbl] << "  diffFlux_Y1i: " << diffFlux_Y1i[curFaceLbl] 
-                        << endl;
-                }        
-                else
-                {
-                    osDiff<< "Af_ph1_own: " << Af_ph1_own[curFaceLbl] << "  Af_ph1_nei: " << Af_ph1_nei[curFaceLbl]
-                        << endl;
-                }    
-                
-            }
-
-            osDiff<< "cell V: " << meshV[cellI] << endl;
-
-            osDiff<< "div(diffFlux) = " << surfInt_diffFlux_Y1iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue()
-                << endl;
-        }
-                
-        C1iCells[cellI] += -surfInt_diffFlux_Y1iCells[cellI]*runTime.deltaTValue();
+    forAll(C1iCells,cellI)
+    {                
+        C1iCells[cellI] += -surfInt_diffFlux_Y1iCells[cellI]*dt;
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YDIFF)
         {
@@ -215,10 +129,13 @@ for(label i=0; i<(nSpecies - 1); i++)
 
         if(diff_debug)
         {
-            osDiff<< "C1i = " << C1iCells[cellI] << nl
-                << "Y1i = " << Y1iCells[cellI] << nl
-                << endl;
+            osDiff<< setw(6) << cellI << "  " << setw(12) << C1iCells[cellI] << "  " << setw(12) << Y1iCells[cellI] << endl;
         }
+    }
+
+    if(diff_debug)
+    {
+        plicFuncs::print_line(osDiff, 80);
     }
 
     Info<< "Phase-1 Ci = "
@@ -241,17 +158,16 @@ for(label i=0; i<(nSpecies - 1); i++)
     {        
         if(Y1iCells[cellI] < Y1min[i])
         {
-            Y1iCells[cellI] = Y1min[i];
-            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+            Y1iCells[cellI] = Y1min[i];            
         }
         
         if(Y1iCells[cellI] > Y1max[i])
         {
-            Y1iCells[cellI] = Y1max[i];
-            //C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+            Y1iCells[cellI] = Y1max[i];            
         }
 
         C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
+        c1iCells[cellI] = rho1Cells[cellI]*Y1iCells[cellI];
     }
 
     Info<< "Phase-1 Ci after clipping = "
@@ -264,9 +180,9 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "  Max(Y1i) = " << max(Y1i).value()        
         << endl;
 
-    C1i.correctBoundaryConditions();
     Y1i.correctBoundaryConditions();
-    //done ph1
+    plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
+    //Done ph1
     //--------------------------------------------------------------//
 
     //--------------------------------------------------------------//
@@ -274,46 +190,19 @@ for(label i=0; i<(nSpecies - 1); i++)
     volScalarField surfInt_diffFlux_Y0i(fvc::surfaceIntegrate(diffFlux_Y0i));    
     scalarField& surfInt_diffFlux_Y0iCells = surfInt_diffFlux_Y0i.internalField();
 
-    forAll(C0iCells,cellI)
+    if(diff_debug)
     {
-        if(diff_debug)
-        {
-            const cell& curCell = meshCells[cellI];
+        plicFuncs::print_diffFluxFld(mesh, diffFlux_Y0i, alpha0, C0i, c0i, Y0i, c0iName, Y0iName, osDiff);
+        plicFuncs::print_diffFluxIntData(mesh, diffFlux_Y0i, surfInt_diffFlux_Y0iCells, dt, alpha0, C0i, c0i, Y0i, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", C0iName, c0iName, Y0iName, osDiff);
 
-            osDiff<< "Solving Y0[" << i << "] diff eqn in cell " << cellI << nl
-                << "C0i = " << C0iCells[cellI] << "  Y0i = " << Y0iCells[cellI] << "  alpha0 = " << alpha0Cells[cellI] << "  alpha0 oldTime = " << alpha0.oldTime().internalField()[cellI] << endl;
+        plicFuncs::print_line(osDiff, 80);
+        osDiff<< setw(6) << "cellI" << "  " << setw(12) << C0iName << "  " << setw(12) << Y0iName << endl;
+        plicFuncs::print_line(osDiff, 80);
+    }
 
-            forAll(curCell, faceI)
-            {
-                label curFaceLbl = curCell[faceI];
-                label curOwn = own[curFaceLbl];
-
-                osDiff<< "cell face label: " << curFaceLbl 
-                    << nl
-                    << "face own: " << curOwn << "  alpha0: " << alpha0Cells[curOwn] << "  C0i: " << C0iCells[curOwn] << "  Y0i: " << Y0iCells[curOwn] 
-                    << endl;
-                if(curFaceLbl < mesh.nInternalFaces())
-                {
-                    label curNei = nei[curFaceLbl];
-                    osDiff<< "face nei: " << curNei << "  alpha0: " << alpha0Cells[curNei] << "  C0i: " << C0iCells[curNei] << "  Y0i: " << Y0iCells[curNei]
-                        << nl
-                        << "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl] << "  gradf_Y0i: " << gradf_Y0[i][curFaceLbl] << "  diffFlux_Y0i: " << diffFlux_Y0i[curFaceLbl] 
-                        << endl;                        
-                }       
-                else
-                {
-                    osDiff<< "Af_ph0_own: " << Af_ph0_own[curFaceLbl] << "  Af_ph0_nei: " << Af_ph0_nei[curFaceLbl]
-                        << endl;
-                }
-            }
-
-            osDiff<< "cell V: " << meshV[cellI] << endl;
-
-            osDiff<< "div(diffFlux) = " << surfInt_diffFlux_Y0iCells[cellI] << "  div(diffFlux)*dt = " << surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue()
-                << endl;
-        }
-                
-        C0iCells[cellI] += -surfInt_diffFlux_Y0iCells[cellI]*runTime.deltaTValue();
+    forAll(C0iCells,cellI)
+    {                
+        C0iCells[cellI] += -surfInt_diffFlux_Y0iCells[cellI]*dt;
 
         if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YDIFF)
         {
@@ -326,10 +215,13 @@ for(label i=0; i<(nSpecies - 1); i++)
 
         if(diff_debug)
         {
-            osDiff<< "C0i = " << C0iCells[cellI] << nl
-                << "Y0i = " << Y0iCells[cellI] << nl
-                << endl;
+            osDiff<< setw(6) << cellI << "  " << setw(12) << C0iCells[cellI] << "  " << setw(12) << Y0iCells[cellI] << endl;
         }
+    }
+
+    if(diff_debug)
+    {
+        plicFuncs::print_line(osDiff, 80);
     }
 
     Info<< "Phase-0 Ci = "
@@ -346,23 +238,22 @@ for(label i=0; i<(nSpecies - 1); i++)
         << nl
         << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
         << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-        << endl;            
+        << endl;    
 
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < Y0min[i])
         {
-            Y0iCells[cellI] = Y0min[i];
-            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+            Y0iCells[cellI] = Y0min[i];            
         }
         
         if(Y0iCells[cellI] > Y0max[i])
         {
-            Y0iCells[cellI] = Y0max[i];
-            //C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+            Y0iCells[cellI] = Y0max[i];            
         }
 
         C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+        c0iCells[cellI] = rho0Cells[cellI]*Y0iCells[cellI];
     }
 
     Info<< "Phase-0 Ci after clipping = "
@@ -375,9 +266,9 @@ for(label i=0; i<(nSpecies - 1); i++)
         << "  Max(Y0i) = " << max(Y0i).value()        
         << endl;
 
-    C0i.correctBoundaryConditions();
     Y0i.correctBoundaryConditions();
-    //done ph0
+    plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
+    //Done ph0
     //--------------------------------------------------------------//
 
     Y1t += Y1i;
@@ -386,14 +277,20 @@ for(label i=0; i<(nSpecies - 1); i++)
 //Done solve species diffusion equations in both phases
 //------------------------------------------------------------------//
 
-Y1[nSpecies - 1] = scalar(1.0) - Y1t;
-Y1[nSpecies - 1].max(0.0);
-Y1[nSpecies - 1].min(1.0);
-C1[nSpecies - 1] = rho1*alpha1*Y1[nSpecies - 1];
+Y1[n-1] = scalar(1.0) - Y1t;
+Y1[n-1].max(0.0);
+Y1[n-1].min(1.0);
+C1[n-1] = rho1*alpha1*Y1[n-1];
+c1[n-1] = rho1*Y1[n-1];
+Y1[n-1].correctBoundaryConditions();
+plicFuncs::correct_boundaryField_C(Y1[n-1], rho1, alpha1, c1[n-1], C1[n-1]);
 
-Y0[nSpecies - 1] = scalar(1.0) - Y0t;
-Y0[nSpecies - 1].max(0.0);
-Y0[nSpecies - 1].min(1.0);
-C0[nSpecies - 1] = rho0*alpha0*Y0[nSpecies - 1];
+Y0[n-1] = scalar(1.0) - Y0t;
+Y0[n-1].max(0.0);
+Y0[n-1].min(1.0);
+C0[n-1] = rho0*alpha0*Y0[n-1];
+c0[n-1] = rho0*Y0[n-1];
+Y0[n-1].correctBoundaryConditions();
+plicFuncs::correct_boundaryField_C(Y0[n-1], rho0, alpha0, c0[n-1], C0[n-1]);
 
 Info<< "Done YDiffEqns" << endl;
