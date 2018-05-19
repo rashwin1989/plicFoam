@@ -10401,7 +10401,7 @@ void calc_mS_alphaS
                     mS0[i].internalField()[faceOwn] /= VOwn;
                     mS0[i].internalField()[faceNei] /= VNei;
                 }
-            }                        
+            }
 
             mS1Tot.internalField()[faceOwn] = mS1Tot_own/VOwn;
             mS0Tot.internalField()[faceOwn] = -mS1Tot_own/VOwn;
