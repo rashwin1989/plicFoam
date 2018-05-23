@@ -10,9 +10,34 @@ if(alpha_debug)
 volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
 scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
 
+if(alpha_debug)
+{
+    plicFuncs::print_advFluxFld(mesh, phiAlpha1, alpha1, "alpha1", osAlpha);
+    plicFuncs::print_advFluxIntData(mesh, phiAlpha1, surfInt_phiAlpha1Cells, dt, alpha1, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", osAlpha);
+
+    plicFuncs::print_line(osAlpha, 80);
+    osAlpha<< setw(6) << "cellI" << "  " << setw(12) << "alpha1" << "  " << setw(12) << "alpha1Old" << endl;
+    plicFuncs::print_line(osAlpha, 80);
+}
+
 forAll(alpha1Cells, cellI)
 {
+    if(alpha_debug)
+    {
+        osAlpha<< setw(6) << cellI << "  " << setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha1OldCells[cellI] << endl;
+    }
+
     alpha1Cells[cellI] = alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
+
+    if(alpha_debug)
+    {
+        osAlpha<< setw(6) << cellI << "  " << setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha1OldCells[cellI] << endl;
+    }
+}
+
+if(alpha_debug)
+{
+    plicFuncs::print_line(osAlpha, 80);
 }
 
 Info<< "Phase-1 volume fraction = "

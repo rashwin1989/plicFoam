@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
             Info<< "Calculating two-phase advective fluxes" << endl;
             dt = deltaT;
-            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, adv_debug, adv_debug2, osAdv);
+            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()

@@ -16,10 +16,10 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, phaseVolChange;
+bool alpha_debug, redist_alpha, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, phaseVolChange, advFlux_debug, advFlux_debug2;
 //Temp variables
 int n, i, maxAlpha1Cell, minAlpha1Cell;
-double T_0, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI;
+double T_0, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -75,7 +75,7 @@ ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 // debug and other bool switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
-adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
+//adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
@@ -85,6 +85,8 @@ ist_debug = transPropDict.lookupOrDefault("ist_debug", false);
 ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
 momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 phaseVolChange = solDict.lookupOrDefault("phaseVolChange", true);
+advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
+advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 //Done reading tolerances, max iters and switches
 //------------------------------------------------------------------//
 

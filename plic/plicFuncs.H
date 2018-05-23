@@ -1245,6 +1245,15 @@ namespace plicFuncs
         OFstream& os
     );
 
+    void print_advFluxFld
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& advFlux,
+        const volScalarField& alpha,
+        const word& alphaName,
+        OFstream& os
+    );
+
     void print_advFluxIntData
     (
         const fvMesh& mesh,
@@ -1262,6 +1271,20 @@ namespace plicFuncs
         const word& CName,
         const word& cName,
         const word& YName,
+        OFstream& os
+    );
+
+    void print_advFluxIntData
+    (
+        const fvMesh& mesh,
+        const surfaceScalarField& advFlux,
+        const scalarField& surfInt_advFlux,
+        const scalar& dt,
+        const volScalarField& alpha,    
+        const scalarField& Af_own,
+        const scalarField& Af_nei,
+        const word& phaseName,
+        const word& alphaName,    
         OFstream& os
     );
 

@@ -1969,6 +1969,58 @@ void Foam::plic::c_h_collectData
 }
 
 
+void Foam::plic::c_collectData
+(
+    const PtrList<volScalarField>& c1,
+    const PtrList<volScalarField>& c0    
+)
+{
+    const mapDistribute& map = faceStencil().map();
+
+    for(label i=0; i<(nSpecies_ - 1); i++)
+    {
+        const volScalarField& c1i = c1[i];
+        const volScalarField& c0i = c0[i];
+        List<scalar>& c1i_flatFld = c1_flatFld_[i];
+        List<scalar>& c0i_flatFld = c0_flatFld_[i];
+
+        // Insert my internal values
+        forAll(c1i, cellI)
+        {        
+            c1i_flatFld[cellI] = c1i[cellI];
+            c0i_flatFld[cellI] = c0i[cellI];
+        }
+        // Insert my boundary values
+        forAll(c1i.boundaryField(), patchI)
+        {        
+            const fvPatchScalarField& pc1i = c1i.boundaryField()[patchI];        
+            const fvPatchScalarField& pc0i = c0i.boundaryField()[patchI];      
+            label nCompact =
+                pc1i.patch().start()
+                -c1i.mesh().nInternalFaces()
+                +c1i.mesh().nCells();
+
+            forAll(pc1i, faceI)
+            {           
+                c1i_flatFld[nCompact] = pc1i[faceI];
+                c0i_flatFld[nCompact] = pc0i[faceI];
+                nCompact++;
+            }
+        }
+
+        // Do all swapping    
+        map.distribute(c1i_flatFld);
+        map.distribute(c0i_flatFld);
+    
+        if(debug2_)
+        {        
+            Foam::plicFuncs::write_flatFld(c1i_flatFld, c1i);
+            Foam::plicFuncs::write_flatFld(c0i_flatFld, c0i);
+        }
+    }    
+}
+
+
 Foam::scalar Foam::plic::tet_cell_intersect
 (
     tetPoints& curTet,
@@ -5499,12 +5551,6 @@ void Foam::plic::calc_2ph_advFluxes
 
             if(debug)
             {
-                os<< "Stencil for face " << faceI << endl;
-                Foam::plicFuncs::display_labelList(curFaceCells);
-            }
-
-            if(debug)
-            {
                 os<< "========================================================================" << nl
                     << "   Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
                     << "========================================================================" << nl << endl;
@@ -5839,12 +5885,6 @@ void Foam::plic::calc_2ph_advFluxes
 
                 if(debug)
                 {
-                    os<< "Stencil for face " << faceI << endl;
-                    Foam::plicFuncs::display_labelList(curFaceCells);
-                }
-
-                if(debug)
-                {
                     os<< "========================================================================" << nl
                         << "   Step 2: Intersecting face flux tetrahedrons with phase-1 subcells" << nl
                         << "========================================================================" << nl << endl;
@@ -6175,7 +6215,7 @@ void Foam::plic::calc_2ph_advFluxes
 
     intfcInfo_collectData();
 
-    Y_collectData(c1, c0);
+    c_collectData(c1, c0);
 
     if(debug)
     {
@@ -6418,12 +6458,6 @@ void Foam::plic::calc_2ph_advFluxes
             // current face to find from which cell that portion of flux
             // comes from                
             const labelList& curFaceCells = faceStencil().stencil()[faceI];
-
-            if(debug)
-            {
-                os<< "Stencil for face " << faceI << endl;
-                Foam::plicFuncs::display_labelList(curFaceCells);
-            }
 
             if(debug)
             {
@@ -6714,12 +6748,6 @@ void Foam::plic::calc_2ph_advFluxes
                 // current face to find from which cell that portion of flux
                 // comes from    
                 const labelList& curFaceCells = faceStencil().stencil()[faceI];
-
-                if(debug)
-                {
-                    os<< "Stencil for face " << faceI << endl;
-                    Foam::plicFuncs::display_labelList(curFaceCells);
-                }
 
                 if(debug)
                 {

@@ -340,6 +340,12 @@ class plic
         const volScalarField& h0
     );
 
+    void c_collectData
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0        
+    );
+
     scalar tet_cell_intersect(tetPoints&, const label&);
 
     void tet_cell_intersect(tetPoints&, const label&, scalar&, scalar&);
