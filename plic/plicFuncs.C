@@ -10133,6 +10133,15 @@ void calc_mS_alphaS
     OFstream& os
 )
 {
+    int n, i;
+    n = nSpecies;
+    scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, mS1i_cellI, max_mS, max_mSi;
+    List<scalar> mS1_cellI(n);
+    List<scalar> Js1_cellI(n);
+    List<scalar> Js0_cellI(n);
+    List<scalar> Ys1_cellI(n);
+    List<scalar> Ys0_cellI(n);    
+    
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
     const scalarField& V = mesh.V();
 
@@ -10158,72 +10167,61 @@ void calc_mS_alphaS
     //Js for all interface cells
     forAll(alpha1Cells, cellI)
     {
-        scalar alpha1_cellI = alpha1Cells[cellI];        
-        scalar rho1_cellI = rho1Cells[cellI];        
-        scalar rho0_cellI = rho0Cells[cellI];        
-        scalar V_cellI = V[cellI];
+        alpha1_cellI = alpha1Cells[cellI];        
+        rho1_cellI = rho1Cells[cellI];        
+        rho0_cellI = rho0Cells[cellI];        
+        V_cellI = V[cellI];
         if(debug)
         {
             os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
         }
 
-        scalar mS1Tot_cellI = 0;
-        scalar mS1i_cellI = 0;
-        //scalar mS0Tot_cellI = 0;
-        //List<scalar> mS1_cellI(nSpecies);
-        //List<scalar> mS0_cellI(nSpecies);
-        scalar limiter = 1;
-        scalar limiter_min = 1;
-        scalar max_mS;
-        scalar max_mSi;
+        for(i=0; i<n; i++)
+        {
+            Js1_cellI[i] = Js1[i].internalField()[cellI]/V_cellI;
+            Js0_cellI[i] = Js0[i].internalField()[cellI]/V_cellI;
+            Ys1_cellI[i] = Ys1[i].internalField()[cellI];
+            Ys0_cellI[i] = Ys0[i].internalField()[cellI];
+        }
+
+        mS1Tot_cellI = 0; mS1Tot_cellI_tmp = 0;
+        mS1i_cellI = 0;
+        limiter = 1;
+        limiter_min = 1;        
 
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
         {
-            mS1Tot_cellI = Js0[0].internalField()[cellI] - Js1[0].internalField()[cellI];
-            mS1Tot_cellI /= (Ys1[0].internalField()[cellI] - Ys0[0].internalField()[cellI]);
-            mS1Tot_cellI /= V_cellI;
+            mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
+            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
 
-            if(mS1Tot_cellI > 0)
+            if(mS1Tot_cellI_tmp > 0)
             {
                 max_mS = rho0_cellI*(1 - alpha1_cellI)/dt;
-                mS1Tot_cellI = min(max_mS, mS1Tot_cellI);
+                mS1Tot_cellI_tmp = min(max_mS, mS1Tot_cellI_tmp);
             }
             else
             {
                 max_mS = rho1_cellI*alpha1_cellI/dt;
-                mS1Tot_cellI = -min(max_mS, -mS1Tot_cellI);
+                mS1Tot_cellI_tmp = -min(max_mS, -mS1Tot_cellI_tmp);
             }
-
             
-            for(label i=0; i<nSpecies; i++)
+            for(i=0; i<n; i++)
             {                                
-                mS1i_cellI = mS1Tot_cellI*Ys1[i].internalField()[cellI] + Js1[i].internalField()[cellI]/V_cellI;
+                mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
                 
                 if(mS1i_cellI > 0)
                 {
                     max_mSi = C0[i].internalField()[cellI]/dt;
-
-                    if(mag(mS1i_cellI) > max_mSi)
-                    {
-                        limiter = max_mSi/mag(mS1i_cellI);
-                        limiter_min = min(limiter, limiter_min);                        
-                    }                    
-                }
-                else if(mS1i_cellI < 0)
-                {
-                    max_mSi = C1[i].internalField()[cellI]/dt;
-
-                    if(mag(mS1i_cellI) > max_mSi)
-                    {
-                        limiter = max_mSi/mag(mS1i_cellI);
-                        limiter_min = min(limiter, limiter_min);
-                    }
+                    mS1i_cellI = min(max_mSi, mS1i_cellI);
                 }
                 else
                 {
-                    limiter = 1;
-                    limiter_min = min(limiter, limiter_min);
+                    max_mSi = C1[i].internalField()[cellI]/dt;
+                    mS1i_cellI = -min(max_mSi, -mS1i_cellI);
                 }
+                
+                mS1_cellI[i] = mS1i_cellI;
+                mS1Tot_cellI += mS1i_cellI;
             }
 
             for(label i=0; i<nSpecies; i++)
