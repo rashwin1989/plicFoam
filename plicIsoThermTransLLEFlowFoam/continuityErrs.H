@@ -32,11 +32,14 @@ Description
 {
     volScalarField contErr(fvc::div(phi) - pS);
 
-    contErr += alpha1/rho1*(fvc::ddt(rho1)
+    contErr += p_rghEqnComp;
+
+    /*contErr += alpha1/rho1*(fvc::ddt(rho1)
     + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1));
 
     contErr += alpha0/rho0*(fvc::ddt(rho0)
     + fvc::div(phi, rho0, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho0));
+        */
 
     scalar sumLocalContErr = runTime.deltaTValue()*
         mag(contErr)().weightedAverage(mesh.V()).value();

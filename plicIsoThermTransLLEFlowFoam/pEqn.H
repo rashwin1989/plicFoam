@@ -34,15 +34,15 @@
         )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
     );
 
-    volScalarField p_rghEqnComp1 =
+    p_rghEqnComp1 =
         fvc::ddt(rho1)
         + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
 
-    volScalarField p_rghEqnComp0 =
+    p_rghEqnComp0 =
         fvc::ddt(rho0)
         + fvc::div(phi, rho0, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho0);
 
-    volScalarField p_rghEqnComp =
+    p_rghEqnComp =
         (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1
         + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0;
 
@@ -61,7 +61,7 @@
 
         p_rghEqn.solve(mesh.solver("p_rgh"));
 
-        if (iNonOrthCorr == nNonOrthCorr)
+        if (iNonOrthCorr == nNonOrthCorr-1)
         {
             dgdt =
             (

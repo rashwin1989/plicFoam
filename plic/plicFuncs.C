@@ -9863,8 +9863,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     label curCell_had_intfc;
     double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
-    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1;
-    double limiter_mS1Tot, limiter_min;
+    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1, mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
+    //double limiter_mS1Tot, limiter_min;
     vector nf, C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];    
     double *xeff1, *xeff0, *C1_cellI, *C0_cellI;
@@ -9896,14 +9896,16 @@ void calc_Xs_Ys_Js_mS_alphaS
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
-    
+    /*
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
 
     const surfaceVectorField& Sf = mesh.Sf();
     const surfaceScalarField& magSf = mesh.magSf();
     const surfaceVectorField& Cf = mesh.Cf();
-    
+        */
+
+    const scalarField& V = mesh.V();
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const vectorField& C_intfcCells = C_intfc.internalField();
@@ -9938,6 +9940,7 @@ void calc_Xs_Ys_Js_mS_alphaS
 
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX && A_intfc_cellI > A_INTFC_2PH_MIN)
         {
+            V_cellI = V[cellI];
             nf = nHatCells[cellI];
             C_intfc_cellI = C_intfcCells[cellI];
             curCellsAll = cellStencil[cellI];
@@ -10042,48 +10045,48 @@ void calc_Xs_Ys_Js_mS_alphaS
 
             if(debug)
             {
-                print_line(os, 80);
-                print_line(os, 80);                
+                print_line(os, 100);
+                print_line(os, 100);                
                 os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << nl
                     << "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
                     << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
                     << "T1 = " << T1Cells[cellI] << "  T0 = " << T0Cells[cellI] << "  rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 os<< setw(7) << "Species" << "  " << setw(10) << "x1" << "  " << setw(10) << "x0" << "  " << setw(10) << "y1" << "  " << setw(10) << "y0" << "  " << setw(10) << "C1" << "  " << setw(10) << "C0" << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
                     os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << y1_cellI[i] << "  " << setw(10) << y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
                 }
-                print_line(os, 80);
+                print_line(os, 100);
                 os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << "  Teff1 = " << Teff1 << "  Teff0 = " << Teff0 << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 os<< setw(7) << "Species" << "  " << setw(10) << "xeff1" << "  " << setw(10) << "xeff0" << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
                     os<< setw(7) << i << "  " << setw(10) << xeff1[i] << "  " << setw(10) << xeff0[i] << endl;                
                 }
-                print_line(os, 80);
+                print_line(os, 100);
                 os<< "Ts = " << Ts_cellI << "  mS1Tot = " << mS1Tot_cellI << "  alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << nl
-                    << "limiter_mS1Tot = " << limiter_mS1Tot << "  limiter_min = " << limiter_min << nl
+                    //<< "limiter_mS1Tot = " << limiter_mS1Tot << "  limiter_min = " << limiter_min << nl
                     << "iLLE = " << iLLE << "  iTs = " << iTs << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 os<< setw(7) << "Species" << "  " << setw(10) << "xs1" << "  " << setw(10) << "xs0" << "  " << setw(10) << "ys1" << "  " << setw(10) << "ys0" << endl;
-                print_line(os, 80);
+                print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
                     os<< setw(7) << i << "  " << setw(10) << xs1[i] << "  " << setw(10) << xs0[i] << "  " << setw(10) << ys1[i] << "  " << setw(10) << ys0[i] << endl;
                 }
-                print_line(os, 80);
-                os<< setw(7) << "Species" << "  " << setw(10) << "flux_m_1" << "  " << setw(10) << "flux_m_0" << "  " << setw(10) << "Js1" << "  " << setw(10) << "Js0" << "  " << setw(10) << "mS1" << "  " << setw(10) << "limiter" << endl;
-                print_line(os, 80);
+                print_line(os, 100);
+                os<< setw(7) << "Species" << "  " << setw(10) << "flux_m_1" << "  " << setw(10) << "flux_m_0" << "  " << setw(10) << "Js1" << "  " << setw(10) << "Js0" << "  " << setw(10) << "mS1" << endl;
+                print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << flux_m_1[i] << "  " << setw(10) << flux_m_0[i] << "  " << setw(10) << Js1_cellI[i] << "  " << setw(10) << Js0_cellI[i] << "  " << setw(10) << mS1_cellI[i] << "  " << setw(10) << limiter_mS1[i] << endl;
+                    os<< setw(7) << i << "  " << setw(10) << flux_m_1[i] << "  " << setw(10) << flux_m_0[i] << "  " << setw(10) << Js1_cellI[i] << "  " << setw(10) << Js0_cellI[i] << "  " << setw(10) << mS1_cellI[i] << endl;
                 }
-                print_line(os, 80);
-                print_line(os, 80);
+                print_line(os, 100);
+                print_line(os, 100);
             }
         }
         else
@@ -10107,6 +10110,7 @@ void calc_Xs_Ys_Js_mS_alphaS
         }        
     }
 
+    /*
     //Js, mS, alphaS for all internal faces very close to interface
     for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
@@ -10306,7 +10310,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             alphaS1Cells[faceNei] = mS1TotCells[faceNei]/rho1Nei;
             alphaS0Cells[faceNei] = mS0TotCells[faceNei]/rho0Nei;
         }
-    }
+    }*/
 
     _DDELETE_(xeff1);
     _DDELETE_(xeff0);

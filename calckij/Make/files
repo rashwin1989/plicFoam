@@ -1,0 +1,3 @@
+calckij.C
+
+EXE = $(FOAM_APPBIN)/calckij

@@ -2405,7 +2405,8 @@ Foam::plic::plic
     const surfaceScalarField& phi,
     const volScalarField& rho1,
     const volScalarField& rho0,
-    const volScalarField& rho
+    const volScalarField& rho,
+    OFstream& osPlic
 )
     :
     mesh_(mesh),
@@ -2627,7 +2628,8 @@ Foam::plic::plic
         ),
         mesh,
         dimensionedScalar("zeroh", dimMass/dimLength/dimTime/dimTime, 0)
-    )
+    ),
+    os(osPlic)
 {
     //Foam::plicFuncs::write_stencil(faceStencil().stencil(), mesh, "centredFPCCellToFaceStencil");
 
@@ -3088,14 +3090,14 @@ void Foam::plic::intfc_correct()
 
     if(debug_)
     {
-        Info<< "Correcting interface normal" << endl;
+        os<< "Correcting interface normal" << endl;
     }
 
     intfc_normal_correct();
 
     if(debug_)
     {
-        Info<< "Done correcting interface normal" << endl;
+        os<< "Done correcting interface normal" << endl;
     }
 
     const labelList& own = mesh().owner();
@@ -3105,7 +3107,7 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< "//====================================================================\\" << endl
+        os<< "//====================================================================\\" << endl
             << "                           Tagging mixed cells" << endl
             << "\\====================================================================//" << endl << endl
             << "------------------------------------------------------------------------" << endl
@@ -3146,13 +3148,13 @@ void Foam::plic::intfc_correct()
         
         if(debugIR_)
         {
-            Info<< "    " << cellI << "              " << talpha << "              " << cell_phaseState_[cellI] << endl;
+            os<< "    " << cellI << "              " << talpha << "              " << cell_phaseState_[cellI] << endl;
         }
     }    
 
     if(debugIR_)
     {
-        Info<< endl
+        os<< endl
             << "//====================================================================\\" << endl
             << "                         Done tagging mixed cells" << endl
             << "\\====================================================================//" << endl << endl << endl;        
@@ -3160,7 +3162,7 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< "//====================================================================\\" << endl
+        os<< "//====================================================================\\" << endl
             << "                  Interface plane reconstruction in cells" << endl
             << "\\====================================================================//" << endl << endl;        
     }
@@ -3186,7 +3188,7 @@ void Foam::plic::intfc_correct()
     {             
         if(debugIR_)
         {
-            Info<< "================================================================" << nl
+            os<< "================================================================" << nl
                 << "                Reconstructing Intfc in cell " << cellI << nl
                 << "================================================================" << nl 
                 << endl;
@@ -3206,7 +3208,7 @@ void Foam::plic::intfc_correct()
 
             if(mag(nHatCells[cellI]) < GRADALPHA_MIN && WARN_LOW_GRAD == 1)
             {
-                Info<< "Warning: Interface normal has low magnitude" << nl
+                os<< "Warning: Interface normal has low magnitude" << nl
                     << "Cell: " << cellI << " alpha1: " << alpha1Cells[cellI] << " nHat: " << nHatCells[cellI] << endl;
             }
 
@@ -3253,7 +3255,7 @@ void Foam::plic::intfc_correct()
 
             if(debugIR_)
             {
-                Info<< "Interface centre:      " << C_intfcCells[cellI] << endl
+                os<< "Interface centre:      " << C_intfcCells[cellI] << endl
                     << "Interface area:        " << A_intfcCells[cellI] << endl
                     << "Phase 1 centroid:      " << C_ph1Cells[cellI] << endl
                     << "Phase 0 centroid:      " << C_ph0Cells[cellI] << endl << endl
@@ -3307,7 +3309,7 @@ void Foam::plic::intfc_correct()
                     }//end if(ph1_fcLbls[faceI] == -1)
                     if(debugIR_)
                     {
-                        Info<< "------------------------------------------------------------" << nl
+                        os<< "------------------------------------------------------------" << nl
                             << "  Cell face index: " << faceI << "    Global face index: " << curFc_lbl << nl                            
                             << "------------------------------------------------------------" << nl
                             << "Face own: " << curFcOwn << "  cur cell: " << cellI << nl
@@ -3358,7 +3360,7 @@ void Foam::plic::intfc_correct()
                     }//end if(ph1_fcLbls[faceI] == -1)
                     if(debugIR_)
                     {
-                        Info<< "------------------------------------------------------------" << nl
+                        os<< "------------------------------------------------------------" << nl
                             << "  Cell face index: " << faceI << "    Global face index: " << curFc_lbl << nl                            
                             << "------------------------------------------------------------" << nl
                             << "Face own: " << curFcOwn << "  cur cell: " << cellI << nl
@@ -3422,7 +3424,7 @@ void Foam::plic::intfc_correct()
 
         if(debugIR_)
         {
-            Info<< "================================================================" << nl
+            os<< "================================================================" << nl
                 << "               Done reconstructing in cell " << cellI << nl
                 << "================================================================" << nl
                 << endl;
@@ -3431,7 +3433,7 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< "//====================================================================\\" << nl
+        os<< "//====================================================================\\" << nl
             << "                Done interface plane reconstruction in cells" << nl
             << "\\====================================================================//" << nl
             << endl;
@@ -3439,7 +3441,7 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< " Face        " << "Own         " << "alpha1Own        " << "nei          " << "alpha1Nei        " << "phaseStateOwn" << "        phaseStateNei" << endl;
+        os<< " Face        " << "Own         " << "alpha1Own        " << "nei          " << "alpha1Nei        " << "phaseStateOwn" << "        phaseStateNei" << endl;
     }
 
     for(label faceI=0; faceI<mesh().nInternalFaces(); faceI++)
@@ -3456,13 +3458,13 @@ void Foam::plic::intfc_correct()
         
         if(debugIR_)
         {
-            Info<< "  " << faceI << "         " << own[faceI] << "      " << alpha1Cells[own[faceI]] << "          " << nei[faceI] << "      " << alpha1Cells[nei[faceI]] << "        " << face_phaseState_own_[faceI] << face_phaseState_nei_[faceI] << endl;
+            os<< "  " << faceI << "         " << own[faceI] << "      " << alpha1Cells[own[faceI]] << "          " << nei[faceI] << "      " << alpha1Cells[nei[faceI]] << "        " << face_phaseState_own_[faceI] << face_phaseState_nei_[faceI] << endl;
         }
     }
 
     if(debugIR_)
     {
-        Info<< "//====================================================================\\" << nl
+        os<< "//====================================================================\\" << nl
             << "            Interface plane reconstruction in patch face cells" << nl
             << "\\====================================================================//" << nl 
             << endl;
@@ -3483,7 +3485,7 @@ void Foam::plic::intfc_correct()
     {
         if(debugIR_)
         {
-            Info<< "=======================================================" << nl
+            os<< "=======================================================" << nl
                 << "    Patch name:  " << patchNames[patchI] << nl
                 << "=======================================================" << nl
                 << endl;
@@ -3519,7 +3521,7 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {
-                    Info<< "=======================================================" << nl
+                    os<< "=======================================================" << nl
                         << "  Face index: " << nfCompact << "    Flat fld face index: " << nCompact << nl
                         << "=======================================================" << nl
                         << "Boundary alpha1 value:  " << pAlpha1[faceI] << nl                        
@@ -3539,7 +3541,7 @@ void Foam::plic::intfc_correct()
 
                     if(mag(pnHat[faceI]) < GRADALPHA_MIN && WARN_LOW_GRAD == 1)
                     {
-                        Info<< "Warning: Interface normal has low magnitude" << nl
+                        os<< "Warning: Interface normal has low magnitude" << nl
                             << "patch: " << patchI << " face: " << faceI << " alpha1: " << pAlpha1[faceI] << " nHat: " << pnHat[faceI] << endl;
                     }
 
@@ -3586,13 +3588,13 @@ void Foam::plic::intfc_correct()
              
                     if(debugIR_)
                     {
-                        Info<< "Phase 1 sub-cell:" << endl;
+                        os<< "Phase 1 sub-cell:" << endl;
                         Foam::plicFuncs::display_cell(ph1_cell, fcs, pts);
-                        Info<< "Phase 0 sub-cell:" << endl;
+                        os<< "Phase 0 sub-cell:" << endl;
                         Foam::plicFuncs::display_cell(ph0_cell, fcs, pts);    
-                        Info<< "Interface face:" << endl;
+                        os<< "Interface face:" << endl;
                         Foam::plicFuncs::display_face(intfc_face, pts);
-                        Info<< "Interface centre:      " << pC_intfc[faceI] << nl
+                        os<< "Interface centre:      " << pC_intfc[faceI] << nl
                             << "Interface area:        " << pA_intfc[faceI] << nl
                             << "Phase 1 centroid:      " << pC_ph1[faceI] << nl
                             << "Phase 0 centroid:      " << pC_ph0[faceI] << nl
@@ -3663,7 +3665,7 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {                    
-                    Info<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
+                    os<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
                         << "Phase 1 area: " << Af_ph1_nei_[nfCompact] << "    Phase 0 area: " << Af_ph0_nei_[nfCompact] << nl
                         << "Face phase state:  " << face_phaseState_nei_[nfCompact] << nl
                         << "-------------------------------------------------------" << nl 
@@ -3672,9 +3674,9 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {
-                    Info<< "=======================================================" << endl;
-                    Info<< " Done Face index: " << nfCompact << "    Flat fld face index: " << nCompact << endl;
-                    Info<< "=======================================================" << endl << endl;
+                    os<< "=======================================================" << endl;
+                    os<< " Done Face index: " << nfCompact << "    Flat fld face index: " << nCompact << endl;
+                    os<< "=======================================================" << endl << endl;
                 }
 
                 nfCompact++;
@@ -3709,7 +3711,7 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {
-                    Info<< "=======================================================" << nl
+                    os<< "=======================================================" << nl
                         << "  Face index: " << nfCompact << "    Flat fld face index: " << nCompact << nl
                         << "=======================================================" << nl
                         << "Boundary alpha1 value:  " << pAlpha1[faceI] << nl                        
@@ -3738,7 +3740,7 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {                    
-                    Info<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
+                    os<< "Phase 1 centroid: " << Cf_ph1_nei_[nfCompact] << "    Phase 0 centroid: " << Cf_ph0_nei_[nfCompact] << nl    
                         << "Phase 1 area: " << Af_ph1_nei_[nfCompact] << "    Phase 0 area: " << Af_ph0_nei_[nfCompact] << nl
                         << "Face phase state:  " << face_phaseState_nei_[nfCompact] << nl
                         << "-------------------------------------------------------" << nl 
@@ -3747,9 +3749,9 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {
-                    Info<< "=======================================================" << endl;
-                    Info<< " Done Face index: " << nfCompact << "    Flat fld face index: " << nCompact << endl;
-                    Info<< "=======================================================" << endl << endl;
+                    os<< "=======================================================" << endl;
+                    os<< " Done Face index: " << nfCompact << "    Flat fld face index: " << nCompact << endl;
+                    os<< "=======================================================" << endl << endl;
                 }
 
                 nfCompact++;
@@ -3769,7 +3771,7 @@ void Foam::plic::intfc_correct()
 
                 if(debugIR_)
                 {
-                    Info<< "=======================================================" << nl
+                    os<< "=======================================================" << nl
                         << "  Face index: " << nfCompact << "    Flat fld face index: " << nCompact << nl
                         << "=======================================================" << nl
                         << "Boundary alpha1 value:  " << pAlpha1[faceI] << nl                        
@@ -3787,9 +3789,9 @@ void Foam::plic::intfc_correct()
 
         if(debugIR_)
         {
-            Info<< "=======================================================" << endl;
-            Info<< "    Done Patch name:  " << patchNames[patchI] << endl;
-            Info<< "=======================================================" << endl << endl;                
+            os<< "=======================================================" << endl;
+            os<< "    Done Patch name:  " << patchNames[patchI] << endl;
+            os<< "=======================================================" << endl << endl;                
         }
     }//end forAll(alpha_ph1_.boundaryField(), patchI)   
 
@@ -3823,20 +3825,21 @@ void Foam::plic::intfc_correct()
 
     if(debugIR_)
     {
-        Info<< "//====================================================================\\" << nl
+        os<< "//====================================================================\\" << nl
             << "          Done interface plane reconstruction in patch face cells" << nl
             << "\\====================================================================//" << nl
             << endl;
     }
 
-    //Info<< "Max Brent iterations: " << brent_iters_max << nl << endl;
-    Info<< "Max Brent iters: " << brent_iters_max_ << nl
-        << "Max Brent error: " << brent_err_max_ << nl
-        << "Max Brent iters cell: " << brent_max_cell_ << nl
-        << "Max Brent iters cell loc: " << brent_max_cellC_ << nl
-        << "Max Brent iters cell alpha1: " << brent_max_cellAlpha_ << nl
-        << "Max Brent iters cell intfc normal: " << brent_max_cell_nHat_ << nl
-        << "Max Brent iters cell grad alpha1: " << brent_max_cell_gradAlpha1_ << endl;
+    //os<< "Max Brent iterations: " << brent_iters_max << nl << endl;
+    os<< mesh().time().timeName() << nl
+        << "Max Brent iters = " << brent_iters_max_
+        << "  Max Brent error = " << brent_err_max_ << endl;
+        //<< "Max Brent iters cell: " << brent_max_cell_ << nl
+        //<< "Max Brent iters cell loc: " << brent_max_cellC_ << nl
+        //<< "Max Brent iters cell alpha1: " << brent_max_cellAlpha_ << nl
+        //<< "Max Brent iters cell intfc normal: " << brent_max_cell_nHat_ << nl
+        //<< "Max Brent iters cell grad alpha1: " << brent_max_cell_gradAlpha1_ << endl;
 }
 
 

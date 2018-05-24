@@ -241,6 +241,8 @@ class plic
     vector brent_max_cell_gradAlpha1_;
     label brent_iters_tmp_;
     scalar brent_err_tmp_;
+
+    OFstream& os;
     
     // Member Functions
 
@@ -365,13 +367,14 @@ class plic
     //- volumetric flux field and density field
     plic
     (
-        const fvMesh&,
-        const volScalarField&,
-        const volVectorField&,
-        const surfaceScalarField&,
-        const volScalarField&,
-        const volScalarField&,
-        const volScalarField&     
+        const fvMesh& mesh,
+        const volScalarField& alpha_ph1,
+        const volVectorField& U,
+        const surfaceScalarField& phi,
+        const volScalarField& rho1,
+        const volScalarField& rho0,
+        const volScalarField& rho,
+        OFstream& osPlic
     );
 
 

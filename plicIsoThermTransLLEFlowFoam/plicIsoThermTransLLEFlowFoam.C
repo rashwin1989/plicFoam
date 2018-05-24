@@ -103,9 +103,11 @@ int main(int argc, char *argv[])
 
         for(iOCorr=0; iOCorr<nOCorr; iOCorr++)
         {
+            Info<< "Outer corrector " << iOCorr+1 << endl;
+
             Info<< "Calculating two-phase advective fluxes" << endl;
             dt = deltaT;
-            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, adv_debug, adv_debug2, osAdv);
+            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -190,6 +192,8 @@ int main(int argc, char *argv[])
 
             for(iPCorr=0; iPCorr<nPCorr; iPCorr++)
             {
+                Info<< "Pressure corrector " << iPCorr+1 << endl;
+
                 #include "pEqn.H"
                 
                 Info<< "ExecutionTime = "

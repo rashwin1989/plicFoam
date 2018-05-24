@@ -30,7 +30,7 @@
         pcorrEqn.setReference(pRefCell, pRefValue);
         pcorrEqn.solve();
 
-        if (iNonOrthCorr == nNonOrthCorr)
+        if (iNonOrthCorr == nNonOrthCorr-1)
         {
             phi -= pcorrEqn.flux();
             U = fvc::reconstruct(phi);

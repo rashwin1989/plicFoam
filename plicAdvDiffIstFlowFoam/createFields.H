@@ -102,6 +102,8 @@ n = nSpecies;
 
 //------------------------------------------------------------------//
 //Set up output streams linked to output files
+outputFile = "plic_dbg";
+OFstream osPlic(runTime.path()/outputFile);
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
 outputFile = "adv_dbg";
@@ -879,7 +881,7 @@ for(i=0; i<n; i++)
 
 //------------------------------------------------------------------//
 //PLIC interface class set up and interface properties like normal, curvature 
-plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho, osPlic);
 
 volScalarField alpha1_smooth
 (

@@ -1,0 +1,13 @@
+EXE_INC = \
+	-I../SCF-core/include \
+	-I$(LIB_SRC)/finiteVolume/lnInclude
+
+EXE_LIBS = \
+	 -L../SCF-core/lib \
+       	 -lscfcore \
+	 -lm -lgfortran \
+	 -lfiniteVolume
+
+
+
+

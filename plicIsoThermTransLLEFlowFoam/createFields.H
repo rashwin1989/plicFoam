@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr;
 label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
@@ -17,11 +17,11 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor;
+bool alpha_debug, redist_alpha, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
 double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI;
+double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -86,11 +86,12 @@ MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
+ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 A_INTFC_2PH_MIN = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN", 1E-03);
 // debug and other bool switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
-adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
+//adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
@@ -99,6 +100,8 @@ diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 ist_debug = transPropDict.lookupOrDefault("ist_debug", false);
 ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
 momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
+advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
+advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 // int switches
 n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -145,7 +148,7 @@ int *idx_species, *idx_groups;
 _NNEW2_(idx_species, int, n);
 _NNEW2_(idx_groups, int, n);
 
-f = fopen("species.dat+", "r");
+f = fopen("constant/species.dat+", "r");
 
 iread = fscanf(f, "%d %d", &n_pseudospecies_db, &n_purespecies_db);
 if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
@@ -155,7 +158,7 @@ Info<< "n_pseudoSpecies_db = " << n_pseudospecies_db << "  n_purespecies_db = " 
 
 fclose(f);
 
-f = fopen("input.dat+", "r");
+f = fopen("constant/input.dat+", "r");
 
 iread=fscanf(f, "%s %d", str_tmp, &n);  // num of species
 if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
@@ -178,7 +181,7 @@ Info<< endl;
 
 fclose(f);
 
-f = fopen("petro.dat+","r");
+f = fopen("constant/petro.dat+","r");
 
 for (j=0;j<n;j++) 
 {
@@ -341,6 +344,8 @@ flux_compRow_setRowCol(&flux_umf, n);
 Info<< "Done initialize UMFPACK" << endl;
 //------------------------------------------------------------------//
 //Set up output streams linked to output files
+outputFile = "plic_dbg";
+OFstream osPlic(runTime.path()/outputFile);
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
 outputFile = "adv_dbg";
@@ -1334,7 +1339,7 @@ for(i=0; i<n; i++)
 
 //------------------------------------------------------------------//
 //PLIC interface class set up and interface properties like normal, curvature 
-plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
+plic interface(mesh, alpha1, U, phi, rho1, rho0, rho, osPlic);
 
 volScalarField alpha1_smooth
 (
@@ -1745,6 +1750,8 @@ const labelListList& istCellStencil = cell_stencil.stencil();
 const mapDistribute& istMap = cell_stencil.map();
 n_flatFld_ist = istMap.constructSize();
 
+labelList calc_ist_for_cell(nCells, 0);
+
 // flat field for phase centroid position vectors
 List<vector> C_ph1_flatFld_ist(n_flatFld_ist, vector::one);
 List<vector> C_ph0_flatFld_ist(n_flatFld_ist, vector::one);
@@ -2130,3 +2137,15 @@ for(i=0; i<n; i++)
     C1min[i] = min(alpha1*rho1*Y1max[i]).value();
     C0min[i] = min(alpha0*rho0*Y0max[i]).value();
 }
+
+volScalarField p_rghEqnComp1 =
+    fvc::ddt(rho1)
+    + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
+
+volScalarField p_rghEqnComp0 =
+    fvc::ddt(rho0)
+    + fvc::div(phi, rho0, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho0);
+
+volScalarField p_rghEqnComp =
+    (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1
+    + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0;
