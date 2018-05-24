@@ -9896,14 +9896,14 @@ void calc_Xs_Ys_Js_mS_alphaS
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
-    /*
+    
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
 
     const surfaceVectorField& Sf = mesh.Sf();
     const surfaceScalarField& magSf = mesh.magSf();
     const surfaceVectorField& Cf = mesh.Cf();
-    */
+    
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const vectorField& C_intfcCells = C_intfc.internalField();
@@ -9930,7 +9930,7 @@ void calc_Xs_Ys_Js_mS_alphaS
         os<< endl;
     }
 
-    //Js for all interface cells
+    //Js, mS, alphaS for all interface cells
     forAll(alpha1Cells, cellI)
     {
         alpha1_cellI = alpha1Cells[cellI];
@@ -9951,10 +9951,10 @@ void calc_Xs_Ys_Js_mS_alphaS
             {
                 C1_cellI[i] = C1[i].internalField()[cellI];
                 C0_cellI[i] = C0[i].internalField()[cellI];
-                x1_cellI[i] = C1[i].internalField()[cellI];
-                x0_cellI[i] = C0[i].internalField()[cellI];
-                y1_cellI[i] = C1[i].internalField()[cellI];
-                y0_cellI[i] = C0[i].internalField()[cellI];
+                x1_cellI[i] = X1[i].internalField()[cellI];
+                x0_cellI[i] = X0[i].internalField()[cellI];
+                y1_cellI[i] = Y1[i].internalField()[cellI];
+                y0_cellI[i] = Y0[i].internalField()[cellI];
             }
             curCell_had_intfc = cell_had_intfc[cellI];
 
@@ -9977,14 +9977,16 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
 
             calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
-                        
+            
+            mS1Tot_cellI = 0; mS1Tot_cellI_tmp = 0;
+
             for(i=0; i<n; i++)
             {
-                Js1_cellI[i] = -A_intfc_cellI*flux_m_1[i];
-                Js0_cellI[i] = -A_intfc_cellI*flux_m_0[i];                
+                Js1_cellI[i] = -A_intfc_cellI*flux_m_1[i]/V_cellI;
+                Js0_cellI[i] = -A_intfc_cellI*flux_m_0[i]/V_cellI;                
             }
-            mS1Tot_cellI = -A_intfc_cellI*JsTot_cellI;
-            JsTotCells[cellI] = mS1Tot_cellI;
+            mS1Tot_cellI_tmp = -A_intfc_cellI*JsTot_cellI/V_cellI;
+            JsTotCells[cellI] = mS1Tot_cellI_tmp*V_cellI;
 
             //calculate the interfacial mass transfer source terms
             //from above fluxes. Involves limiter step for total phase change
@@ -9993,16 +9995,22 @@ void calc_Xs_Ys_Js_mS_alphaS
             //and phase densities
             for(i=0; i<n; i++)
             {
-                mS1_cellI[i] = mS1Tot_cellI*ys1[i] + Js1_cellI[i];
-            }
+                mS1i_cellI = mS1Tot_cellI_tmp*ys1[i] + Js1_cellI[i];
 
-            calc_limiter_mS1(mS1Tot_cellI, mS1_cellI, C1_cellI, C0_cellI, alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, dt, n, limiter_mS1Tot, limiter_mS1, limiter_min, debug, os);
+                if(mS1i_cellI > 0)
+                {
+                    max_mSi = C0[i].internalField()[cellI]/dt;
+                    mS1i_cellI = min(max_mSi, mS1i_cellI);
+                }
+                else
+                {
+                    max_mSi = C1[i].internalField()[cellI]/dt;
+                    mS1i_cellI = -min(max_mSi, -mS1i_cellI);
+                }
 
-            mS1Tot_cellI *= limiter_min/V_cellI;
-            for(i=0; i<n; i++)
-            {
-                mS1_cellI[i] *= limiter_min/V_cellI;
-            }
+                mS1_cellI[i] = mS1i_cellI;
+                mS1Tot_cellI += mS1i_cellI;                
+            }            
 
             //calculate the interfacial enthalpy transfer
             Qs_cellI = -A_intfc_cellI*conds1*(Teff1 - Ts_cellI)/dn1/V_cellI;
@@ -10097,6 +10105,207 @@ void calc_Xs_Ys_Js_mS_alphaS
             status_transLLE[cellI] = 0;            
             cell_had_intfc[cellI] = 0;
         }        
+    }
+
+    //Js, mS, alphaS for all internal faces very close to interface
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+        alpha1Own = alpha1Cells[faceOwn];
+        alpha1Nei = alpha1Cells[faceNei];        
+
+        if(alpha1Own >= ALPHA_2PH_MAX && alpha1Nei <= ALPHA_2PH_MIN)
+        {
+            A_intfc_cellI = magSf[faceI];
+            nf = -Sf[faceI]/A_intfc_cellI;
+            C_intfc_cellI = Cf[faceI];
+
+            VOwn = V[faceOwn];
+            VNei = V[faceNei];
+            rho1Own  = rho1Cells[faceOwn];
+            rho0Own  = rho0Cells[faceOwn];
+            rho1Nei = rho1Cells[faceNei];
+            rho0Nei = rho0Cells[faceNei];
+            TsOwn_old = TsCells[faceOwn];
+            TsNei_old = TsCells[faceNei];
+            T1Own = T1Cells[faceOwn];
+            T0Nei = T0Cells[faceNei];            
+            P_cellI = PCells[faceOwn];
+            for(i=0; i<n; i++)
+            {                
+                C1Own[i] = C1[i].internalField()[faceOwn];
+                C0Own[i] = C0[i].internalField()[faceOwn];
+                C1Nei[i] = C1[i].internalField()[faceNei];
+                C0Nei[i] = C0[i].internalField()[faceNei];
+            }
+            own_had_intfc = cell_had_intfc[faceOwn];
+            nei_had_intfc = cell_had_intfc[faceNei];
+
+            //phase-1
+            //ensure nf direction is into the phase
+            curCellsAll = cellStencil[faceOwn];
+            calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, x1_flatFld, T1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, xeff1, Teff1, debug, os);            
+
+            //phase-0
+            //ensure nf direction is into the phase
+            //then reverse nf again for Js0 calculation
+            curCellsAll = cellStencil[faceNei];
+            calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, x0_flatFld, T0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, xeff0, Teff0, debug, os);
+
+            if(own_had_intfc == 1)
+            {
+                Ts_cellI = TsOwn_old;
+            }
+            else
+            {
+                if(nei_had_intfc == 1)
+                {
+                    Ts_cellI = TsNei_old;
+                }
+                else
+                {
+                    Ts_cellI = 0.5*(T1Own + T0Nei);
+                }
+            }
+
+            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
+
+            for(i=0; i<n; i++)
+            {
+                Js1_cellI[i] = -A_intfc_cellI*flux_m_1[i];
+                Js0_cellI[i] = -A_intfc_cellI*flux_m_0[i];
+            }
+            mS1Tot_cellI_tmp = -A_intfc_cellI*JsTot_cellI;
+
+            mS1TotOwn = 0; mS1TotNei = 0;            
+
+            for(i=0; i<n; i++)
+            {
+                mS1i_cellI = mS1Tot_cellI_tmp*ys1[i] + Js1_cellI[i];
+                if(mS1i_cellI > 0)
+                {
+                    max_mSi = C0Own[i]*VOwn/dt;
+                    mS1Own[i] = min(max_mSi, mS1i_cellI);
+                    max_mSi = C0Nei[i]*VNei/dt;
+                    mS1Nei[i] = min(max_mSi, (mS1i_cellI - mS1Own[i]));
+                }
+                else
+                {
+                    max_mSi = C1Nei[i]*VNei/dt;
+                    mS1Nei[i] = -min(max_mSi, -mS1i_cellI);
+                    max_mSi = C1Own[i]*VOwn/dt;
+                    mS1Own[i] = -min(max_mSi, (-mS1i_cellI + mS1Nei[i]));
+                }
+
+                mS1TotOwn += mS1Own[i];
+                mS1TotNei += mS1Nei[i];
+
+                mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
+            }
+            
+            mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
+            mS1TotCells[faceNei] = mS1TotNei/VNei;
+
+            alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
+            alphaS0Cells[faceOwn] = -mS1TotCells[faceOwn]/rho0Own;
+            alphaS1Cells[faceNei] = mS1TotCells[faceNei]/rho1Nei;
+            alphaS0Cells[faceNei] = -mS1TotCells[faceNei]/rho0Nei;
+
+            //calculate the interfacial enthalpy transfer
+            Qs_cellI = -A_intfc_cellI*conds1*(Teff1 - Ts_cellI)/dn1/V_cellI;
+            for(i=0; i<n; i++)
+            {
+                Qs_cellI += mS1_cellI[i]*hs1[i]/(MW[i]*1e-3);
+            }
+            
+            //assign the calculated values to corresponding fields
+            TsCells[cellI] = Ts_cellI;
+            mS1TotCells[cellI] = mS1Tot_cellI;
+            for(i=0; i<n; i++)
+            {                
+                mS1[i].internalField()[cellI] = mS1_cellI[i];
+                Js1[i].internalField()[cellI] = Js1_cellI[i];
+                Js0[i].internalField()[cellI] = Js0_cellI[i];
+                Xs1[i].internalField()[cellI] = xs1[i];
+                Xs0[i].internalField()[cellI] = xs0[i];
+                Ys1[i].internalField()[cellI] = ys1[i];
+                Ys0[i].internalField()[cellI] = ys0[i];
+            }
+            alphaS1Cells[cellI] = mS1Tot_cellI/rho1_cellI;
+            alphaS0Cells[cellI] = -mS1Tot_cellI/rho0_cellI;
+            QsCells[cellI] = Qs_cellI;            
+
+            n_iters_Ts[cellI] = iTs;
+            status_transLLE[cellI] = iLLE;            
+            cell_had_intfc[cellI] = 1;
+        }
+
+        if(alpha1Own <= ALPHA_2PH_MIN && alpha1Nei >= ALPHA_2PH_MAX)
+        {
+            VOwn = V[faceOwn];
+            VNei = V[faceNei];
+            rho1Own  = rho1Cells[faceOwn];
+            rho0Own  = rho0Cells[faceOwn];
+            rho1Nei = rho1Cells[faceNei];
+            rho0Nei = rho0Cells[faceNei];
+            for(i=0; i<n; i++)
+            {
+                Js1_cellI[i] = Js1[i].internalField()[faceOwn];
+                Js0_cellI[i] = Js0[i].internalField()[faceOwn];
+                Ys1_cellI[i] = Ys1[i].internalField()[faceOwn];
+                Ys0_cellI[i] = Ys0[i].internalField()[faceOwn];
+                C1Own[i] = C1[i].internalField()[faceOwn];
+                C0Own[i] = C0[i].internalField()[faceOwn];
+                C1Nei[i] = C1[i].internalField()[faceNei];
+                C0Nei[i] = C0[i].internalField()[faceNei];
+            }
+
+            mS1TotOwn = 0; mS1TotNei = 0;
+
+            mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
+            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+
+            for(i=0; i<n; i++)
+            {
+                mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+
+                if(mS1i_cellI > 0)
+                {
+                    max_mSi = C0Nei[i]*VNei/dt;
+                    mS1Nei[i] = min(max_mSi, mS1i_cellI);
+                    max_mSi = C0Own[i]*VOwn/dt;
+                    mS1Own[i] = min(max_mSi, (mS1i_cellI - mS1Nei[i]));
+                }
+                else
+                {
+                    max_mSi = C1Own[i]*VOwn/dt;
+                    mS1Own[i] = -min(max_mSi, -mS1i_cellI);
+                    max_mSi = C1Nei[i]*VNei/dt;
+                    mS1Nei[i] = -min(max_mSi, (-mS1i_cellI + mS1Own[i]));
+                }
+
+                mS1TotOwn += mS1Own[i];
+                mS1TotNei += mS1Nei[i];
+
+                mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                mS0[i].internalField()[faceOwn] = -mS1Own[i]/VOwn;
+
+                mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
+                mS0[i].internalField()[faceNei] = -mS1Nei[i]/VNei;
+            }
+            
+            mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
+            mS0TotCells[faceOwn] = -mS1TotOwn/VOwn;
+            mS1TotCells[faceNei] = mS1TotNei/VNei;
+            mS0TotCells[faceNei] = -mS1TotNei/VNei;
+
+            alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
+            alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;
+            alphaS1Cells[faceNei] = mS1TotCells[faceNei]/rho1Nei;
+            alphaS0Cells[faceNei] = mS0TotCells[faceNei]/rho0Nei;
+        }
     }
 
     _DDELETE_(xeff1);
@@ -10330,7 +10539,6 @@ void calc_mS_alphaS
             for(i=0; i<n; i++)
             {
                 mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-
                 if(mS1i_cellI > 0)
                 {
                     max_mSi = C0Own[i]*VOwn/dt;
