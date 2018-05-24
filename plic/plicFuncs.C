@@ -7371,6 +7371,10 @@ label findCellInIntfcDir
                 magCCi += SMALL;
             }
             scalar magnf = mag(nf);
+            if(magnf < SMALL)
+            {
+                magnf += SMALL;
+            }
 
             scalar cosTheta = (nf & CCi)/magCCi/magnf;
 

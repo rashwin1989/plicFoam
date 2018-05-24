@@ -141,8 +141,10 @@ forAll(alpha1Cells, cellI)
     //species
     for(i=0; i<n; i++)
     {
-        C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;
-        C1Tot_cellI += C1[i].internalField()[cellI];
+        C1i_cellI = C1[i].internalField()[cellI] + mS1[i].internalField()[cellI]*dt;
+        C1i_cellI = max(C1i_cellI, 0.0);
+        C1[i].internalField()[cellI] = C1i_cellI;
+        C1Tot_cellI += C1i_cellI;
     }
 
     if(C1Tot_cellI < SMALL)
@@ -174,8 +176,10 @@ forAll(alpha1Cells, cellI)
     //species
     for(i=0; i<n; i++)
     {
-        C0[i].internalField()[cellI] += -mS1[i].internalField()[cellI]*dt;
-        C0Tot_cellI += C0[i].internalField()[cellI];
+        C0i_cellI = C0[i].internalField()[cellI] - mS1[i].internalField()[cellI]*dt;
+        C0i_cellI = max(C0i_cellI, 0.0);
+        C0[i].internalField()[cellI] = C0i_cellI;
+        C0Tot_cellI += C0i_cellI;        
     }
 
     if(C0Tot_cellI < SMALL)
