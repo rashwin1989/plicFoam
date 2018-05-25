@@ -2,10 +2,13 @@
 cd ${0%/*} || exit 1    # run from this directory
 set -x
 
-wclean libso plic
+cd SCF-core/src/
+make c
+cd ../../plic/
+wclean libso
+cd ../plicAdvDiffIstFlowFoam/
 wclean 
-wclean plicTFoam
-wclean plicFlowFoam
-wclean plicDiffFoam
+cd ../plicIsoThermTransLLEFlowFoam/
+wclean 
 
 # ----------------------------------------------------------------- end-of-file

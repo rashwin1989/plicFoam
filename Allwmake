@@ -2,9 +2,13 @@
 cd ${0%/*} || exit 1    # run from this directory
 set -x
 
-wmake libso plic
+cd SCF-core/src/
+make
+cd ../../plic/
+wmake libso
+cd ../plicAdvDiffIstFlowFoam/
 wmake
-wmake plicTFoam
-wmake plicFlowFoam
+cd ../plicIsoThermTransLLEFlowFoam/
+wmake
 
 # ----------------------------------------------------------------- end-of-file

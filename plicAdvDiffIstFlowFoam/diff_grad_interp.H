@@ -1,11 +1,9 @@
 
-if(grad_debug)
-{
-    plicFuncs::print_line(osGrad, 80);
-    osGrad<< "Solution Time = " << runTime.timeName() << "  Gradients and Interpolation for diffusion" << endl;
-    plicFuncs::print_line(osGrad, 80);
-    osGrad<< endl;
-}
+plicFuncs::print_line(osGrad, 100);
+osGrad<< "Solution Time = " << runTime.timeName() << nl 
+<<"Gradients and Interpolation for diffusion" << endl;
+plicFuncs::print_line(osGrad, 100);
+osGrad<< endl;
 
 //------------------------------------------------------------------//
 //Make flat fields for alpha1, phase centroids, Y, T required for gradient calculation

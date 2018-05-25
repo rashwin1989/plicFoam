@@ -185,6 +185,10 @@ int main(int argc, char *argv[])
 
             #include "correctRho.H"
 
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
             rho = alpha1*rho1 + (scalar(1) - alpha1)*rho0;
             rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
 

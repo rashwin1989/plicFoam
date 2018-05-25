@@ -1,13 +1,11 @@
 
-if(alpha_debug)
-{
-    plicFuncs::print_line(osAlpha, 80);
-    osAlpha<< "Solution Time = " << runTime.timeName() << "  alpha1 advection" << endl;
-    plicFuncs::print_line(osAlpha, 80);
-    osAlpha<< endl;    
-}
 
-volScalarField divU(fvc::div(fvc::absolute(phi, U)));
+plicFuncs::print_line(osAlpha, 100);
+osAlpha<< "Solution Time = " << runTime.timeName() << endl;
+plicFuncs::print_line(osAlpha, 100);
+osAlpha<< endl;
+
+volScalarField divU(fvc::div(phi));
 
 volScalarField::DimensionedInternalField Sp
 (
@@ -65,13 +63,12 @@ forAll(alpha1Cells, cellI)
     alpha1Cells[cellI] /= (scalar(1.0) - Sp[cellI]*dt);
 }
 
-Info<< "Phase-1 volume fraction = "
-    << alpha1.weightedAverage(mesh.Vsc()).value()
-    << "  Min(alpha1) = " << min(alpha1).value()
-    << "  Max(alpha1) = " << max(alpha1).value()
-    << nl
-    << "alpha1 undershoot = " << min(alpha1).value()
-    << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
+Info<< "alpha1:  avg = "
+    << alpha1.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha1).value()
+    << "  undershoot = " << min(min(alpha1).value(), 0)
+    << "  max = " << max(alpha1).value()
+    << "  overshoot = " << max((max(alpha1).value() - 1), 0)
     << endl;
 
 maxAlpha1 = 1;
@@ -118,13 +115,13 @@ if(alpha_debug)
                 }
             }
 
-            forAll(mesh.boundary(), patchI)
+            forAll(alpha1.boundaryField(), patchI)
             {
                 const labelUList& pFaceCells = mesh.boundary()[patchI].faceCells();
                 const fvsPatchScalarField& pphiAlpha1 = phiAlpha1.boundaryField()[patchI];
                 const fvsPatchScalarField& pphi = phi.boundaryField()[patchI];
 
-                forAll(mesh.boundary()[patchI], faceI)
+                forAll(pphi, faceI)
                 {
                     if(pFaceCells[faceI] == cellI)
                     {
@@ -135,17 +132,22 @@ if(alpha_debug)
                 }
             }
 
-            osAlpha<< "Cell alpha1 old time = " << alpha1.oldTime().internalField()[cellI] << nl
-                << "alpha1 face flux integrate = " << div_alpha1 << nl
-                << "face flux integrate = " << div_phi << endl;
+            osAlpha<< "alpha1 old time = " << alpha1.oldTime().internalField()[cellI] << "  alpha1Old = " << alpha1OldCells[cellI] << nl
+                << "div(phi)*V = " << div_phi
+                << "  div(phi, alpha1)*V = " << div_alpha1 << endl;
 
             div_alpha1 /= meshV[cellI];
             div_phi /= meshV[cellI];
-
-            osAlpha<< "divergence term in eqn = " << div_alpha1 << nl
-                << "div of velocity field = " << div_phi << nl
-                << "alpha1 solution update = " << div_alpha1*runTime.deltaT().value() << nl            
-                << "Cell alpha1 new time = " << alpha1Cells[cellI] << nl
+            osAlpha<< "div(phi) = " << div_phi
+                << "  div(phi, alpha1) = " << div_alpha1 << nl
+                << "pS = " << pSCells[cellI]
+                << "  dgdt = " << dgdt[cellI]
+                << "  Su = " << Su[cellI]
+                << " Sp = " << Sp[cellI] << nl
+                << "div(phi, alpha1)*dt = " << div_alpha1*dt
+                << "  Su*dt = " << Su[cellI]*dt
+                << " Sp*dt = " << Sp[cellI]*dt << nl
+                << "  alpha1 new time = " << alpha1Cells[cellI] << nl
                 << endl;
         }
     }
@@ -157,14 +159,13 @@ if(redist_alpha)
 
     alpha1.correctBoundaryConditions();
 
-    Info<< "Phase-1 volume fraction after redistribution = "
-        << alpha1.weightedAverage(mesh.Vsc()).value()
-        << "  Min(alpha1) = " << min(alpha1).value()
-        << "  Max(alpha1) = " << max(alpha1).value()
-        << nl
-        << "alpha1 undershoot = " << min(alpha1).value()
-        << "  alpha1 overshoot = " << (max(alpha1).value() - 1)
-        << endl;
+    Info<< "alpha1 after redistribution:  avg = "
+    << alpha1.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha1).value()
+    << "  undershoot = " << min(min(alpha1).value(), 0)
+    << "  max = " << max(alpha1).value()
+    << "  overshoot = " << max((max(alpha1).value() - 1), 0)
+    << endl;
 }
 
 if(alpha_debug)
@@ -189,10 +190,8 @@ if(alpha_debug)
 alpha1.max(0.0);
 alpha1.min(1.0);
 
-Info<< "Phase-1 volume fraction after clipping = "
-    << alpha1.weightedAverage(mesh.Vsc()).value()
-    << "  Min(alpha1) = " << min(alpha1).value()
-    << "  Max(alpha1) = " << max(alpha1).value()
+Info<< "alpha1 after clipping:  avg = "
+    << alpha1.weightedAverage(mesh.V()).value()    
     << endl;
 
 alpha1.correctBoundaryConditions();
