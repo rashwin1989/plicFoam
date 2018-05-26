@@ -1,11 +1,8 @@
 
-if(ist_debug)
-{
-    plicFuncs::print_line(osIst, 80);
-    osIst<< "Solution Time = " << runTime.timeName() << "  Interfacial transfer" << endl;
-    plicFuncs::print_line(osIst, 80);
-    osIst<< endl;
-}
+plicFuncs::print_line(osIst, 100);
+osIst<< "Solution Time = " << runTime.timeName() << "  Interfacial transfer" << endl;
+plicFuncs::print_line(osIst, 100);
+osIst<< endl;
 
 dt = deltaT;
 
@@ -65,46 +62,46 @@ forAll(alpha1Cells, cellI)
     {
         if(ist_debug)
         {    
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< "Cell " << cellI << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< "Before interfacial species transfer" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             for(i=0; i<n; i++)
             {
                 osIst<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Y1[i].internalField()[cellI] << "  " << setw(12) << Y0[i].internalField()[cellI] << endl;
             }
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< "Interface conditions" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< "Ts = " << TsCells[cellI] << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(7) << "Species" << "  " << setw(12) << "xs1" << "  " << setw(12) << "xs0" << "  " << setw(12) << "ys1" << "  " << setw(12) << "ys0" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             for(i=0; i<n; i++)
             {
                 osIst<< setw(7) << i << "  " << setw(12) << xs1[i].internalField()[cellI] << "  " << setw(12) << xs0[i].internalField()[cellI] << "  " << setw(12) << Ys1[i].internalField()[cellI] << "  " << setw(12) << Ys0[i].internalField()[cellI] << endl;
             }
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< "Interfacial transfer source terms" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(12) << "mS1Tot" << "  " << setw(12) << "alphaS1" << "  " << setw(12) << "alphaS0" << "  " << setw(12) << "Qs" << "  " << setw(12) << "pS" << "  " << setw(12) << "dt" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(12) << mS1TotCells[cellI] << "  " << setw(12) << alphaS1Cells[cellI] << "  " << setw(12) << alphaS0Cells[cellI] << "  " << setw(12) << QsCells[cellI] << "  " << setw(12) << pSCells[cellI] << "  " << setw(12) << dt << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             osIst<< setw(7) << "Species" << "  " << setw(12) << "mS1" << endl;
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
             for(i=0; i<n; i++)
             {
                 osIst<< setw(7) << i << "  " << setw(12) << mS1[i].internalField()[cellI] << endl;
             }
-            plicFuncs::print_line(osIst, 80);
+            plicFuncs::print_line(osIst, 100);
         }
     }
 }
@@ -240,22 +237,22 @@ forAll(alpha1Cells, cellI)
 {
     if(ist_debug)
     {    
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         osIst<< "Cell " << cellI << endl;
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         osIst<< "After interfacial species transfer" << endl;
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
-        plicFuncs::print_line(osIst, 80);
+        plicFuncs::print_line(osIst, 100);
         for(i=0; i<n; i++)
         {
             osIst<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Y1[i].internalField()[cellI] << "  " << setw(12) << Y0[i].internalField()[cellI] << endl;
         }        
-        plicFuncs::print_line(osIst, 80);        
+        plicFuncs::print_line(osIst, 100);        
     }
 }
 

@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr;
 label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
@@ -17,7 +17,7 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
 double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
@@ -87,11 +87,13 @@ SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDI
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
-A_INTFC_2PH_MIN = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN", 1E-03);
+A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
+scalar avgSf = (mesh.magSf()).average().value();
+A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
 // debug and other bool switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
-//adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
+adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
@@ -1462,6 +1464,8 @@ if (p_rgh.needReference())
 //alpha, species, density advection
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 centredCPCCellToCellStencilObject cell_stencil(mesh);
+
+labelList unbounded_Y_in_cell(nCells, 0);
 
 PtrList<surfaceScalarField> advFlux_Y1(n-1);
 PtrList<surfaceScalarField> advFlux_Y0(n-1);

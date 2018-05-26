@@ -1,19 +1,21 @@
 
+plicFuncs::print_line(osAdv, 100);
+osAdv<< "Solution Time = " << runTime.timeName() << "  Y Adv" << endl;
+plicFuncs::print_line(osAdv, 100);
+osAdv<< endl;
+
 dt = deltaT;
 
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];
 
+forAll(alpha1Cells, cellI)
+{
+    unbounded_Y_in_cell[cellI] = 0;
+}
+
 for(i=0; i<(n-1); i++)
 {
-    if(adv_debug2)
-    {
-        plicFuncs::print_line(osAdv, 80);
-        osAdv<< "Solution Time = " << runTime.timeName() << "  Y[" << i << "] Adv" << endl;
-        plicFuncs::print_line(osAdv, 80);
-        osAdv<< endl;    
-    }
-
     volScalarField& Y1i = Y1[i];
     volScalarField& Y0i = Y0[i];
     volScalarField& c1i = c1[i];
@@ -46,14 +48,19 @@ for(i=0; i<(n-1); i++)
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
     scalarField& surfInt_advFlux_Y1iCells = surfInt_advFlux_Y1i.internalField();
 
+    plicFuncs::print_line(osAdv, 100);
+    osAdv<< "Advecting " << C1iName << " field" << endl;
+    plicFuncs::print_line(osAdv, 100);
+    osAdv<< endl;
+
     if(adv_debug2)
-    {
+    {        
         plicFuncs::print_advFluxFld(mesh, advFlux_Y1i, alpha1, C1i, c1i, Y1i, c1iName, Y1iName, osAdv);
         plicFuncs::print_advFluxIntData(mesh, advFlux_Y1i, surfInt_advFlux_Y1iCells, dt, alpha1, C1i, c1i, Y1i, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", C1iName, c1iName, Y1iName, osAdv);
 
-        plicFuncs::print_line(osAdv, 80);
-        osAdv<< setw(6) << "cellI" << "  " << setw(12) << C1iName << "  " << setw(12) << Y1iName << endl;
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
+        osAdv<< setw(6) << "cellI" << "  " << setw(12) << "alpha1" << "  " << setw(12) << "rho1" << "  " << setw(12) << Y1iName << "  " << setw(12) << c1iName << "  " << setw(12) << C1iName << endl;
+        plicFuncs::print_line(osAdv, 100);
     }
 
     forAll(C1iCells,cellI)
@@ -71,57 +78,62 @@ for(i=0; i<(n-1); i++)
 
         if(adv_debug2)
         {
-            osAdv<< setw(6) << cellI << "  " << setw(12) << C1iCells[cellI] << "  " << setw(12) << Y1iCells[cellI] << endl;
+            osAdv<< setw(6) << cellI << "  " << setw(12) << alpha1Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << Y1iCells[cellI] << "  " << setw(12) << c1iCells[cellI] << "  " << setw(12) << C1iCells[cellI] << endl;
         }
     }
 
     if(adv_debug2)
     {
-        plicFuncs::print_line(osAdv, 80);
-    }
+        plicFuncs::print_line(osAdv, 100);
+        osAdv<< endl;
+    }    
 
-    Info<< "Phase-1 Ci = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()
-        << nl
-        << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
-        << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
-        << nl
-        << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
-        << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+    Info<< C1iName << ":  avg = " 
+        << (C1i).weightedAverage(mesh.V()).value()
         << endl;
 
-    if(adv_debug2)
+    osAdv<< C1iName << ":"
+        << "  avg = " << (C1i).weightedAverage(mesh.V()).value()
+        << "  min = " << min(C1i).value()
+        << "  undershoot = " << min((min(C1i).value() - C1min[i]), 0)
+        << "  max = " << max(C1i).value()       
+        << "  overshoot = " << max((max(C1i).value() - C1max[i]), 0)
+        << nl
+        << Y1iName << ":"
+        << "  min = " << min(Y1i).value()
+        << "  undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
+        << "  max = " << max(Y1i).value()        
+        << "  overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+        << endl;
+
+    if(adv_debug)
     {
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
         osAdv<< "Redistributing " << C1iName << " field" << endl;
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
         osAdv<< endl;
     }
     
     if(redist_C)
     {
-        plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
+        plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug, osAdv);
 
-        Info<< "Phase-1 Ci after redistribution = "
-            << (C1i).weightedAverage(mesh.Vsc()).value()
+        Info<< C1iName << " after redistribution:  avg = " 
+            << (C1i).weightedAverage(mesh.V()).value()
+            << endl;
+
+        osAdv<< C1iName << "after redistribution:"
+            << "  avg = " << (C1i).weightedAverage(mesh.V()).value()
+            << "  min = " << min(C1i).value()
+            << "  undershoot = " << min((min(C1i).value() - C1min[i]), 0)
+            << "  max = " << max(C1i).value()       
+            << "  overshoot = " << max((max(C1i).value() - C1max[i]), 0)
             << nl
-            << "Min(C1i) = " << min(C1i).value()
-            << "  Max(C1i) = " << max(C1i).value()
-            << nl
-            << "Min(Y1i) = " << min(Y1i).value()
-            << "  Max(Y1i) = " << max(Y1i).value()
-            << nl
-            << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
-            << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
-            << nl
-            << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
-            << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+            << Y1iName << ":"
+            << "  min = " << min(Y1i).value()
+            << "  undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
+            << "  max = " << max(Y1i).value()        
+            << "  overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
             << endl;
     }
    
@@ -129,26 +141,22 @@ for(i=0; i<(n-1); i++)
     {        
         if(Y1iCells[cellI] < Y1min[i])
         {
-            Y1iCells[cellI] = Y1min[i];            
+            Y1iCells[cellI] = Y1min[i];
+            unbounded_Y_in_cell[cellI] = 1;
         }
         
         if(Y1iCells[cellI] > Y1max[i])
         {
             Y1iCells[cellI] = Y1max[i];
+            unbounded_Y_in_cell[cellI] = 1;
         }   
 
         C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         c1iCells[cellI] = rho1Cells[cellI]*Y1iCells[cellI];
     }
 
-    Info<< "Phase-1 Ci after clipping = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()        
+    Info<< C1iName << " after clipping:  avg = " 
+        << (C1i).weightedAverage(mesh.V()).value()
         << endl;
 
     Y1i.correctBoundaryConditions();
@@ -158,14 +166,19 @@ for(i=0; i<(n-1); i++)
     volScalarField surfInt_advFlux_Y0i(fvc::surfaceIntegrate(advFlux_Y0i));
     scalarField& surfInt_advFlux_Y0iCells = surfInt_advFlux_Y0i.internalField();
 
+    plicFuncs::print_line(osAdv, 100);
+    osAdv<< "Advecting " << C0iName << " field" << endl;
+    plicFuncs::print_line(osAdv, 100);
+    osAdv<< endl;
+
     if(adv_debug2)
     {
         plicFuncs::print_advFluxFld(mesh, advFlux_Y0i, alpha0, C0i, c0i, Y0i, c0iName, Y0iName, osAdv);
         plicFuncs::print_advFluxIntData(mesh, advFlux_Y0i, surfInt_advFlux_Y0iCells, dt, alpha0, C0i, c0i, Y0i, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", C0iName, c0iName, Y0iName, osAdv);
 
-        plicFuncs::print_line(osAdv, 80);
-        osAdv<< setw(6) << "cellI" << "  " << setw(12) << C0iName << "  " << setw(12) << Y0iName << endl;
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
+        osAdv<< setw(6) << "cellI" << "  " << setw(12) << "alpha0" << "  " << setw(12) << "rho0" << "  " << setw(12) << Y0iName << "  " << setw(12) << c0iName << "  " << setw(12) << C0iName << endl;
+        plicFuncs::print_line(osAdv, 100);
     }
 
     forAll(C0iCells,cellI)
@@ -183,84 +196,84 @@ for(i=0; i<(n-1); i++)
         
         if(adv_debug2)
         {
-            osAdv<< setw(6) << cellI << "  " << setw(12) << C0iCells[cellI] << "  " << setw(12) << Y0iCells[cellI] << endl;
+            osAdv<< setw(6) << cellI << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << "  " << setw(12) << Y0iCells[cellI] << "  " << setw(12) << c0iCells[cellI] << "  " << setw(12) << C0iCells[cellI] << endl;
         }
     }
 
     if(adv_debug2)
     {
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
     }
 
-    Info<< "Phase-0 Ci = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << nl
-        << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
-        << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
-        << nl
-        << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
-        << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-        << endl;      
+    Info<< C0iName << ":  avg = " 
+        << (C0i).weightedAverage(mesh.V()).value()
+        << endl;
 
-    if(adv_debug2)
+    osAdv<< C0iName << ":"
+        << "  avg = " << (C0i).weightedAverage(mesh.V()).value()
+        << "  min = " << min(C0i).value()
+        << "  undershoot = " << min((min(C0i).value() - C0min[i]), 0)
+        << "  max = " << max(C0i).value()       
+        << "  overshoot = " << max((max(C0i).value() - C0max[i]), 0)
+        << nl
+        << Y0iName << ":"
+        << "  min = " << min(Y0i).value()
+        << "  undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
+        << "  max = " << max(Y0i).value()        
+        << "  overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
+        << endl;
+
+    if(adv_debug)
     {
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
         osAdv<< "Redistributing " << C0iName << " field" << endl;
-        plicFuncs::print_line(osAdv, 80);
+        plicFuncs::print_line(osAdv, 100);
         osAdv<< endl;
     }
 
     if(redist_C)
     {
-        plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug2, osAdv);
+        plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug, osAdv);
 
-        Info<< "Phase-0 Ci after redistribution = "
-            << (C0i).weightedAverage(mesh.Vsc()).value()
+        Info<< C0iName << " after redistribution:  avg = " 
+            << (C0i).weightedAverage(mesh.V()).value()
+            << endl;
+
+        osAdv<< C0iName << "after redistribution:"
+            << "  avg = " << (C0i).weightedAverage(mesh.V()).value()
+            << "  min = " << min(C0i).value()
+            << "  undershoot = " << min((min(C0i).value() - C0min[i]), 0)
+            << "  max = " << max(C0i).value()       
+            << "  overshoot = " << max((max(C0i).value() - C0max[i]), 0)
             << nl
-            << "Min(C0i) = " << min(C0i).value()
-            << "  Max(C0i) = " << max(C0i).value()
-            << nl
-            << "Min(Y0i) = " << min(Y0i).value()
-            << "  Max(Y0i) = " << max(Y0i).value()
-            << nl
-            << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
-            << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
-            << nl
-            << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
-            << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-            << endl;      
-    }     
+            << Y0iName << ":"
+            << "  min = " << min(Y0i).value()
+            << "  undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
+            << "  max = " << max(Y0i).value()        
+            << "  overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
+            << endl;
+    }
      
     forAll(C0iCells,cellI)
     {        
         if(Y0iCells[cellI] < Y0min[i])
         {
-            Y0iCells[cellI] = Y0min[i];            
+            Y0iCells[cellI] = Y0min[i];
+            unbounded_Y_in_cell[cellI] = 1;
         }
         
         if(Y0iCells[cellI] > Y0max[i])
         {
             Y0iCells[cellI] = Y0max[i];
+            unbounded_Y_in_cell[cellI] = 1;
         }   
 
         C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
         c0iCells[cellI] = rho0Cells[cellI]*Y0iCells[cellI];
     }
 
-    Info<< "Phase-0 Ci after clipping = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()        
+    Info<< C0iName << " after clipping:  avg = " 
+        << (C0i).weightedAverage(mesh.V()).value()
         << endl;
 
     Y0i.correctBoundaryConditions();
@@ -269,6 +282,19 @@ for(i=0; i<(n-1); i++)
     Y1t += Y1i;
     Y0t += Y0i;
 }
+
+/*
+if(adv_debug)
+{
+    forAll(alpha1Cells, cellI)
+    {
+        if(unbounded_Y_in_cell[cellI] == 1)
+        {
+            
+        }
+    }
+}
+    */
 
 Y1[n-1] = scalar(1.0) - Y1t;
 Y1[n-1].max(0.0);
