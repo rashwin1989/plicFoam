@@ -1181,6 +1181,8 @@ namespace plicFuncs
         double Ts_TOL,
         int MAX_ITERS_Ts,
         double MASS_FRAC_TOL,
+        const List<scalar>& xs1_0,
+        const List<scalar>& xs0_0,
         const bool debug,
         OFstream& os
     );

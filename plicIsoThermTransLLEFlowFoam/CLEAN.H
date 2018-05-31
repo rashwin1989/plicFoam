@@ -17,3 +17,7 @@ _DDELETE2_(SG);
 
 _DDELETE2_(x_cellI_tmp);
 _DDELETE2_(y_cellI_tmp);
+_DDELETE2_(xs1_tmp);
+_DDELETE2_(xs0_tmp);
+_DDELETE2_(ys1_tmp);
+_DDELETE2_(ys0_tmp);

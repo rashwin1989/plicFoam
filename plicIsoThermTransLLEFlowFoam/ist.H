@@ -29,7 +29,7 @@ for(i=0; i<n; i++)
 //-----------------------------------------------------------------------------------------------------//
 //Calculate interfacial species concentrations and mass fluxes
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, x1_flatFld_ist, x0_flatFld_ist, T1_flatFld_ist, T0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, x1, x0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, dt, Ys1, Ys0, xs1, xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, Qs, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, &flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITER_Ts, MASS_FRAC_TOL, ist_debug2, osIst);
+plicFuncs::calc_Xs_Ys_Js_mS_alphaS(mesh, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, istCellStencil, x1_flatFld_ist, x0_flatFld_ist, T1_flatFld_ist, T0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, T1, T0, Ts, P_thermo, C1, C0, x1, x0, Y1, Y0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, dt, Ys1, Ys0, xs1, xs0, Js1, Js0, mS1, JsTot, mS1Tot, alphaS1, alphaS0, Qs, n_iters_Ts, status_transLLE, cell_had_intfc, n_flux_type, &flux_umf, nSpecies, ALPHA_2PH_MIN, A_INTFC_2PH_MIN, Ts_TOL, MAX_ITER_Ts, MASS_FRAC_TOL, xs1_0, xs0_0, ist_debug2, osIst);
 //Done calculate interfacial species concentrations and mass fluxes
 //Done calculate interfacial species transfer source terms and alpha source terms
 //-----------------------------------------------------------------------------------------------------//
@@ -104,10 +104,8 @@ forAll(alpha1Cells, cellI)
             plicFuncs::print_line(osIst, 100);
         }
     }
-}
 
-forAll(alpha1Cells, cellI)
-{    
+  
     //ph-1
     //volume fraction
     alpha1Cells[cellI] += alphaS1Cells[cellI]*dt;    
@@ -192,6 +190,30 @@ forAll(alpha1Cells, cellI)
     {
         x0[i].internalField()[cellI] = x_cellI_tmp[i];
     }
+
+    
+    if(calc_ist_for_cell[cellI] == 1)
+    {
+        if(ist_debug)
+        {    
+            plicFuncs::print_line(osIst, 100);
+            osIst<< "Cell " << cellI << endl;
+            plicFuncs::print_line(osIst, 100);
+            osIst<< "After interfacial species transfer" << endl;
+            plicFuncs::print_line(osIst, 100);
+            osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
+            plicFuncs::print_line(osIst, 100);
+            osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
+            plicFuncs::print_line(osIst, 100);
+            osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
+            plicFuncs::print_line(osIst, 100);
+            for(i=0; i<n; i++)
+            {
+                osIst<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Y1[i].internalField()[cellI] << "  " << setw(12) << Y0[i].internalField()[cellI] << endl;
+            }        
+            plicFuncs::print_line(osIst, 100);        
+        }
+    }
 }
 
 alpha1.correctBoundaryConditions();
@@ -231,29 +253,6 @@ for(i=0; i<n; i++)
         << "Min(Y0i) = " << min(Y0i).value()
         << "  Max(Y0i) = " << max(Y0i).value()
         << endl;        
-}
-
-forAll(alpha1Cells, cellI)
-{
-    if(ist_debug)
-    {    
-        plicFuncs::print_line(osIst, 100);
-        osIst<< "Cell " << cellI << endl;
-        plicFuncs::print_line(osIst, 100);
-        osIst<< "After interfacial species transfer" << endl;
-        plicFuncs::print_line(osIst, 100);
-        osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
-        plicFuncs::print_line(osIst, 100);
-        osIst<< setw(12) << alpha1Cells[cellI] << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(16) << alpha1Cells[cellI] + alpha0Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << endl;
-        plicFuncs::print_line(osIst, 100);
-        osIst<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Y1" << "  " << setw(12) << "Y0" << endl;
-        plicFuncs::print_line(osIst, 100);
-        for(i=0; i<n; i++)
-        {
-            osIst<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Y1[i].internalField()[cellI] << "  " << setw(12) << Y0[i].internalField()[cellI] << endl;
-        }        
-        plicFuncs::print_line(osIst, 100);        
-    }
 }
 
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation

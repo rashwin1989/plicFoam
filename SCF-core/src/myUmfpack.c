@@ -315,118 +315,146 @@ void    flux_compRow_setRowCol(LPT_UMFPACK umf, int n)
   compCol_setRowCol(umf);
 }
 
-void Maxwell_Stefan_mass_flux(
-       double Z, // compressibility factor
-       int n, double *MW, double *x, double *Dij, double *rhs, 
-       double *flux, LPT_UMFPACK umf)
+void Maxwell_Stefan_mass_flux
+(
+    double Z, // compressibility factor
+    int n, double *MW, double *x, double *Dij, double *rhs, 
+    double *flux, LPT_UMFPACK umf
+)
 {
-  int i, j, idx, iz;
-  double small = 1e-8;
-  //double sum, rhs_sum;
-  double *y = (double*)malloc(sizeof(double)*n);
-  int i0 = 0;
+    int i, j, idx, iz;
+    double small = 1e-8;
+    //double sum, rhs_sum;
+    double *y = (double*)malloc(sizeof(double)*n);
+    int i0 = 0;
 
-  //sum = 0;
-  //for (i=0; i<n; i++) sum += rhs[i];
-  //rhs_sum = sum;
+    //sum = 0;
+    //for (i=0; i<n; i++) sum += rhs[i];
+    //rhs_sum = sum;
 
-  if (Z<1e-6) Z=1e-6;
+    if (Z<1e-6) Z=1e-6;
 
-  for (i=0; i<n; i++) {
-    if (i==i0) continue;
-
-    double sum = 0.0;
-
-    for (j=0; j<n; j++) {
-      if (j==i) continue;
-
-      idx = i + j*n;
-      iz = searchIndex(umf, i, j);
-
-      if (x[i]>small) {
-        //umf->AE[iz] = - x[i]/Dij[idx];
-        //sum += x[j]/Dij[idx];
-        umf->AE[iz] = - x[i]/(Dij[idx]*MW[j])*1e3;
-        sum += x[j]/(Dij[idx]*MW[i])*1e3;
-      }else{
-        umf->AE[iz] = 0.0;
-      }
-    }
-
-    iz = searchIndex(umf, i, i);
-    umf->AE[iz] = sum;
-    umf->rhs[i] = rhs[i];
-    //umf->rhs[i] = rhs[i] - rhs_sum*y[i];
-    //umf->rhs[i] = rhs[i] - rhs_sum*x[i];
-    
-    if (x[i]<small) 
+    for (i=0; i<n; i++) 
     {
+        //printf("i = %d\n", i);
+        //printf("x[i] = %9.21e  small = %9.21e\n", x[i], small);
+        if (i==i0) continue;
+
+        double sum = 0.0;
+
+        for (j=0; j<n; j++) 
+        {
+            //printf("j = %d\n", j);
+            if (j==i) continue;
+
+            idx = i + j*n;
+            iz = searchIndex(umf, i, j);
+            //printf("idx = %d  iz = %d\n", idx, iz);
+
+            if (x[i]>small) 
+            {
+                //umf->AE[iz] = - x[i]/Dij[idx];
+                //sum += x[j]/Dij[idx];
+                umf->AE[iz] = - x[i]/(Dij[idx]*MW[j])*1e3;
+                sum += x[j]/(Dij[idx]*MW[i])*1e3;
+            }
+            else
+            {
+                umf->AE[iz] = 0.0;
+            }
+            //printf("Dij[idx] = %9.21e  MW[j] = %9.21e\n", Dij[idx], MW[j]);
+            //printf("AE[iz] = %9.21e  sum[i] = %9.21e\n", umf->AE[iz], sum);
+        }
+
+        iz = searchIndex(umf, i, i);
+        umf->AE[iz] = sum;
+        umf->rhs[i] = rhs[i];
+        //umf->rhs[i] = rhs[i] - rhs_sum*y[i];
+        //umf->rhs[i] = rhs[i] - rhs_sum*x[i];
+    
+        if (x[i]<=small) 
+        {
+            umf->AE[iz] = 1.0;
+            umf->rhs[i] = 0.0;
+        }
+    }
+
+    i=i0;
+    for (j=0; j<n; j++) 
+    {
+        iz = searchIndex(umf, i, j);
         umf->AE[iz] = 1.0;
-        umf->rhs[i] = 0.0;
     }
-
-  }
-
-  i=i0;
-  for (j=0; j<n; j++) {
-    iz = searchIndex(umf, i, j);
-    umf->AE[iz] = 1.0;
-  }
-  umf->rhs[i] = 0.0;
-
+    umf->rhs[i] = 0.0;
   
-  printf("\tMaxwell-Stefan matrix:\n");
-  for (i=0; i<n; i++) {
-    printf("\t\t");
-    for (j=0; j<n; j++) {
-      iz = searchIndex(umf, i, j);
-      printf("%9.2le ", umf->AE[iz]);
-    }
-    printf("rhs %9.2le ", umf->rhs[i]);
-    printf("x %9.2le\n", umf->x[i]);
     //printf("My %9.2le\n", sqrt(MW[i]*y[i]));
-  }
-  
-
-  decomposeUmfpack(umf);
-  solveUmfpack(umf);
-
-  //printf("g_dx=%lf\n", g_T_s);
-
-  /*
-  printf("\tMaxwell-Stefan matrix:\n");
-  for (i=0; i<n; i++) {
-    printf("\t\t");
-    for (j=0; j<n; j++) {
-      iz = searchIndex(umf, i, j);
-      printf("%9.2le ", umf->AE[iz]);
+    /*
+    printf("\tMaxwell-Stefan matrix:\n");
+    for (i=0; i<n; i++) 
+    {
+        printf("\t\t");
+        for (j=0; j<n; j++) 
+        {
+            iz = searchIndex(umf, i, j);
+            printf("%9.2le ", umf->AE[iz]);
+        }
+        printf("rhs %9.2le ", umf->rhs[i]);
+        printf("x %9.2le\n", umf->x[i]);
     }
-    printf("rhs %9.2le ", umf->rhs[i]);
-    printf("x %9.2le\n", umf->x[i]);
-    //printf("My %9.2le\n", sqrt(MW[i]*y[i]));
-  }
-  */
-
-  // convert molar flux into mass flux
-  //sum = 0;
-  //for (i=0; i<n; i++) sum += umf->x[i]*MW[i]*1e-3;
-
-  // copy solutions out
-  //for (i=0; i<n; i++) flux[i] = umf->x[i]*MW[i]*1e-3 - sum*y[i];
-  for (i=0; i<n; i++) flux[i] = umf->x[i];
-
-  free(y);
-
-  /*
-  printf("\tDij matrix:\n");
-  for (i=0; i<n; i++) {
-    printf("\t\t");
-    for (j=0; j<n; j++) {
-      int idx = i + j*n;
-      printf("%9.2le ", Dij[idx]);
+        */
+    decomposeUmfpack(umf);
+    solveUmfpack(umf);
+    /*
+    printf("\tMaxwell-Stefan matrix:\n");
+    for (i=0; i<n; i++) 
+    {
+        printf("\t\t");
+        for (j=0; j<n; j++) 
+        {
+            iz = searchIndex(umf, i, j);
+            printf("%9.2le ", umf->AE[iz]);
+        }
+        printf("rhs %9.2le ", umf->rhs[i]);
+        printf("x %9.2le\n", umf->x[i]);
     }
-    printf("\n");
-  }
-  */
+        */
+    //printf("g_dx=%lf\n", g_T_s);
+    /*
+    printf("\tMaxwell-Stefan matrix:\n");
+    for (i=0; i<n; i++) {
+        printf("\t\t");
+        for (j=0; j<n; j++) {
+            iz = searchIndex(umf, i, j);
+            printf("%9.2le ", umf->AE[iz]);
+        }
+        printf("rhs %9.2le ", umf->rhs[i]);
+        printf("x %9.2le\n", umf->x[i]);
+        //printf("My %9.2le\n", sqrt(MW[i]*y[i]));
+    }
+        */
+
+    // convert molar flux into mass flux
+    //sum = 0;
+    //for (i=0; i<n; i++) sum += umf->x[i]*MW[i]*1e-3;
+
+    // copy solutions out
+    //for (i=0; i<n; i++) flux[i] = umf->x[i]*MW[i]*1e-3 - sum*y[i];
+    for (i=0; i<n; i++) flux[i] = umf->x[i];
+
+    free(y);
+
+    /*
+    printf("\tDij matrix:\n");
+    for (i=0; i<n; i++) 
+    {
+        printf("\t\t");
+        for (j=0; j<n; j++) 
+        {
+            int idx = i + j*n;
+            printf("%9.2le ", Dij[idx]);
+        }
+        printf("\n");
+    }
+        */
 }
 

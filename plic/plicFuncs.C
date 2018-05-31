@@ -4997,6 +4997,29 @@ void calc_2ph_diffFluxes_Y_MS
 
             //ph-1
             init_MS_flux(faceI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
+            /*
+            if(debug)
+            {
+                os<< "Face: " << faceI << "  ph-1 diff flux" << nl
+                    << "V1_tmp = " << V1_tmp << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    word xiName = "x_tmp["+name(i)+"]";
+                    os<< setw(12) << xiName << "  ";
+                }
+                os<< endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(12) << x_tmp[i] << "  ";
+                }
+                os<< endl;
+                print_line(os, 100);
+                os<< endl;
+            }
+                */
+
             calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
             for(i=0; i<n; i++)
@@ -9976,6 +9999,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     double Ts_TOL,
     int MAX_ITERS_Ts,
     double MASS_FRAC_TOL,
+    const List<scalar>& xs1_0,
+    const List<scalar>& xs0_0,
     const bool debug,
     OFstream& os
 )
@@ -10094,11 +10119,26 @@ void calc_Xs_Ys_Js_mS_alphaS
             if(curCell_had_intfc == 1)
             {
                 Ts_cellI = Ts_cellI_old;
+
+                for(i=0; i<n; i++)
+                {
+                    xs1[i] = x1_cellI[i];
+                    xs0[i] = x0_cellI[i];
+                }
             }
             else
             {
                 Ts_cellI = 0.5*(T1_cellI + T0_cellI);
+
+                for(i=0; i<n; i++)
+                {
+                    xs1[i] = Xs1[i].internalField()[cellI];
+                    xs0[i] = Xs0[i].internalField()[cellI];
+                }
             }
+
+            x2y(n, MW, xs1, ys1);
+            x2y(n, MW, xs0, ys0);
 
             calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
             

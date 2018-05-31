@@ -67,25 +67,130 @@ for(i=0; i<n; i++)
 }
 
 if(grad_debug2)
-{    
-    plicFuncs::print_field(v1, osGrad);
-    plicFuncs::print_surfaceField(v1f, mesh, osGrad);
-    
+{        
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< "Cell values ph-1: alpha1, y, x, v, rho" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< setw(6) << "cellI" << "  " << setw(8) << "alpha1" << "  ";
     for(i=0; i<n; i++)
     {
-        plicFuncs::print_field(x1[i], osGrad);
-        plicFuncs::print_surfaceField(x1f[i], mesh, osGrad);
+        word y1iName = "y1["+name(i)+"]";
+        osGrad<< setw(8) << y1iName << "  ";
     }
+    for(i=0; i<n; i++)
+    {
+        word x1iName = "x1["+name(i)+"]";
+        osGrad<< setw(8) << x1iName << "  ";
+    }
+    osGrad<< setw(8) << "v1" << "  " << setw(8) << "rho1" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    forAll(alpha1Cells, cellI)
+    {
+        osGrad<< setw(6) << cellI << "  " << setw(8) << alpha1Cells[cellI] << "  ";
+        for(i=0; i<n; i++)
+        {
+            osGrad<< setw(8) << Y1[i].internalField()[cellI] << "  ";
+        }
+        for(i=0; i<n; i++)
+        {
+            osGrad<< setw(8) << x1[i].internalField()[cellI] << "  ";
+        }
+        osGrad<< setw(8) << v1.internalField()[cellI] << "  " << setw(8) << rho1.internalField()[cellI] << endl;
+    }
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< endl;
 
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< "Cell values ph-1: alpha1, D" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< setw(6) << "cellI" << "  " << setw(8) << "alpha1" << "  ";
     for(i=0; i<n; i++)
     {
         for(j=0; j<n; j++)
         {
-            idx = i + j*n;
-            plicFuncs::print_field(D1[idx], osGrad);
-            plicFuncs::print_surfaceField(D1f[idx], mesh, osGrad);
+            word D1iName = "D1("+name(i)+","+name(j)+")";
+            osGrad<< setw(8) << D1iName << "  ";
         }
+    }    
+    osGrad<< endl;
+    plicFuncs::print_line(osGrad, 120);
+    forAll(alpha1Cells, cellI)
+    {
+        osGrad<< setw(6) << cellI << "  " << setw(8) << alpha1Cells[cellI] << "  ";
+        for(i=0; i<n; i++)
+        {
+            for(j=0; j<n; j++)
+            {
+                idx = i + j*n;
+                osGrad<< setw(8) << D1[idx].internalField()[cellI] << "  ";
+            }
+        }
+        osGrad<< endl;
     }
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< endl;
+
+
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< "Face values ph-1: alpha1, y, x, v, rho" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< setw(6) << "faceI" << "  " << setw(8) << "alpha1" << "  ";    
+    for(i=0; i<n; i++)
+    {
+        word x1iName = "x1["+name(i)+"]";
+        osGrad<< setw(8) << x1iName << "  ";
+    }
+    osGrad<< setw(8) << "v1" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        osGrad<< setw(6) << faceI << "  " << setw(8) << alpha1f[faceI] << "  ";
+        for(i=0; i<n; i++)
+        {
+            osGrad<< setw(8) << x1f[i][faceI] << "  ";
+        }
+        osGrad<< setw(8) << v1f[faceI] << endl;
+    }
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< endl;
+
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< "Face values ph-1: alpha1, D" << endl;
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< setw(6) << "faceI" << "  " << setw(8) << "alpha1" << "  ";
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            word D1iName = "D1("+name(i)+","+name(j)+")";
+            osGrad<< setw(8) << D1iName << "  ";
+        }
+    }    
+    osGrad<< endl;
+    plicFuncs::print_line(osGrad, 120);
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        osGrad<< setw(6) << faceI << "  " << setw(8) << alpha1f[faceI] << "  ";
+        for(i=0; i<n; i++)
+        {
+            for(j=0; j<n; j++)
+            {
+                idx = i + j*n;
+                osGrad<< setw(8) << D1f[idx][faceI] << "  ";
+            }
+        }
+        osGrad<< endl;
+    }
+    plicFuncs::print_line(osGrad, 120);
+    plicFuncs::print_line(osGrad, 120);
+    osGrad<< endl;
 }
 //Done linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 //------------------------------------------------------------------//

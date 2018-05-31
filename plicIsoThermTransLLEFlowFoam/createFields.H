@@ -5,7 +5,7 @@ label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITE
 scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr;
-label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
+label nCells, nFaces, n_flatFld_diff, n_flatFld_ist, faceI;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
 word fieldName;
@@ -31,7 +31,7 @@ double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y
 int *tk;
 double *Pc, *Tc, *Vc, *w, *MW, *coef_ab, *Tb, *SG, *H8, *k, *dm;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp;
+double *y_cellI_tmp, *x_cellI_tmp, *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
 
@@ -137,6 +137,10 @@ _NNEW2_(k, double, n);
 _NNEW2_(dm, double, n);
 _NNEW2_(y_cellI_tmp, double, n);
 _NNEW2_(x_cellI_tmp, double, n);
+_NNEW2_(xs1_tmp, double, n);
+_NNEW2_(xs0_tmp, double, n);
+_NNEW2_(ys1_tmp, double, n);
+_NNEW2_(ys0_tmp, double, n);
 //Done allocate memory for arrays
 //------------------------------------------------------------------//
 
@@ -1774,10 +1778,10 @@ for(i=0; i<n; i++)
 List<scalar> T1_flatFld_ist(n_flatFld_ist, T_0);
 List<scalar> T0_flatFld_ist(n_flatFld_ist, T_0);
 
-PtrList<dimensionedScalar> xs1_0(n);
-PtrList<dimensionedScalar> xs0_0(n);
-PtrList<dimensionedScalar> Ys1_0(n);
-PtrList<dimensionedScalar> Ys0_0(n);
+List<scalar> xs1_0(n);
+List<scalar> xs0_0(n);
+List<scalar> Ys1_0(n);
+List<scalar> Ys0_0(n);
 PtrList<volScalarField> xs1(n);
 PtrList<volScalarField> xs0(n);
 PtrList<volScalarField> Ys1(n);
@@ -1788,17 +1792,24 @@ PtrList<volScalarField> mS1(n);
 
 for(i=0; i<n; i++)
 {
-    fieldName = "xs1" + Foam::name(i);
-    Info<< "Reading interface equilibrium mole fraction " << fieldName << endl;
-    xs1_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(fieldName)
-        )
-    );
+    fieldName = "Ys1" + Foam::name(i);
+    Ys1_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
+    ys1_tmp[i] = Ys1_0[i];
+    fieldName = "Ys0" + Foam::name(i);
+    Ys0_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
+    ys0_tmp[i] = Ys0_0[i];
+}
+plicFuncs::y2x(n, MW, ys1_tmp, xs1_tmp);
+plicFuncs::y2x(n, MW, ys0_tmp, xs0_tmp);
+for(i=0; i<n; i++)
+{
+    xs1_0[i] = xs1_tmp[i];
+    xs0_0[i] = xs0_tmp[i];
+}
 
+for(i=0; i<n; i++)
+{
+    fieldName = "xs1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
     xs1.set
     (
@@ -1814,21 +1825,11 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            xs1_0[i]            
+            dimensionedScalar(fieldName+"_0", dimless, xs1_0[i])
         )
     );
 
-    fieldName = "Ys1" + Foam::name(i);
-    Info<< "Reading interface equilibrium mass fraction " << fieldName << endl;
-    Ys1_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(fieldName)
-        )
-    );
-
+    fieldName = "Ys1" + Foam::name(i);    
     Info<< "Initializing field " << fieldName << endl;
     Ys1.set
     (
@@ -1844,21 +1845,11 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            Ys1_0[i]            
+            dimensionedScalar(fieldName+"_0", dimless, Ys1_0[i])
         )
     );
 
-    fieldName = "xs0" + Foam::name(i);
-    Info<< "Reading interface equilibrium mole fraction " << fieldName << endl;
-    xs0_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(fieldName)
-        )
-    );
-
+    fieldName = "xs0" + Foam::name(i);    
     Info<< "Initializing field " << fieldName << endl;
     xs0.set
     (
@@ -1874,21 +1865,11 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            xs0_0[i]            
+            dimensionedScalar(fieldName+"_0", dimless, xs0_0[i])
         )
     );
 
-    fieldName = "Ys0" + Foam::name(i);
-    Info<< "Reading interface equilibrium mass fraction " << fieldName << endl;
-    Ys0_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            transPropDict.lookup(fieldName)
-        )
-    );
-
+    fieldName = "Ys0" + Foam::name(i);    
     Info<< "Initializing field " << fieldName << endl;
     Ys0.set
     (
@@ -1904,7 +1885,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            Ys0_0[i]            
+            dimensionedScalar(fieldName+"_0", dimless, Ys0_0[i])
         )
     );
 
