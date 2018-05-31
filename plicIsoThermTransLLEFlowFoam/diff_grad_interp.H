@@ -65,6 +65,28 @@ for(i=0; i<n; i++)
         plicFuncs::linearInterpolate_2ph(D0ij, mesh, w_ph1, D0fij);
     }
 }
+
+if(grad_debug2)
+{    
+    plicFuncs::print_field(v1, osGrad);
+    plicFuncs::print_surfaceField(v1f, mesh, osGrad);
+    
+    for(i=0; i<n; i++)
+    {
+        plicFuncs::print_field(x1[i], osGrad);
+        plicFuncs::print_surfaceField(x1f[i], mesh, osGrad);
+    }
+
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            idx = i + j*n;
+            plicFuncs::print_field(D1[idx], osGrad);
+            plicFuncs::print_surfaceField(D1f[idx], mesh, osGrad);
+        }
+    }
+}
 //Done linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 //------------------------------------------------------------------//
 

@@ -374,6 +374,20 @@ void Maxwell_Stefan_mass_flux(
   }
   umf->rhs[i] = 0.0;
 
+  
+  printf("\tMaxwell-Stefan matrix:\n");
+  for (i=0; i<n; i++) {
+    printf("\t\t");
+    for (j=0; j<n; j++) {
+      iz = searchIndex(umf, i, j);
+      printf("%9.2le ", umf->AE[iz]);
+    }
+    printf("rhs %9.2le ", umf->rhs[i]);
+    printf("x %9.2le\n", umf->x[i]);
+    //printf("My %9.2le\n", sqrt(MW[i]*y[i]));
+  }
+  
+
   decomposeUmfpack(umf);
   solveUmfpack(umf);
 

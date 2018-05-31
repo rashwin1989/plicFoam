@@ -100,6 +100,13 @@ namespace plicFuncs
     );
 
     template <class Type>
+    void print_field
+    (
+        const GeometricField<Type, fvPatchField, volMesh>&,
+        OFstream& os
+    );
+
+    template <class Type>
     void display_point_field
     (
         const GeometricField<Type, pointPatchField, pointMesh>&
@@ -178,6 +185,14 @@ namespace plicFuncs
     (
         const GeometricField<Type, fvsPatchField, surfaceMesh>&,
         const fvMesh&
+    );
+
+    template<class Type>
+    void print_surfaceField
+    (
+        const GeometricField<Type, fvsPatchField, surfaceMesh>&,
+        const fvMesh&,
+        OFstream& os
     );
 
     template<class Type>

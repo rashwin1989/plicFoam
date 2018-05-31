@@ -17,7 +17,7 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
 double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
@@ -97,6 +97,7 @@ adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
+grad_debug2 = transPropDict.lookupOrDefault("grad_debug2", false);
 diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 ist_debug = transPropDict.lookupOrDefault("ist_debug", false);

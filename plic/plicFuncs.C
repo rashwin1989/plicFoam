@@ -170,6 +170,69 @@ void write_field
 
 
 template <class Type>
+void print_field
+(
+    const GeometricField<Type, fvPatchField, volMesh>& fld,
+    OFstream& os
+)
+{
+    const fvMesh& mesh = fld.mesh();    
+
+    os<< "//==========================================================================\\" << endl << endl
+      << "                            " << fld.name() << " field" << endl << endl
+      << "\\==========================================================================//" << endl
+      << endl       
+      << "==============================================================================" << endl
+      << "                                Internal field" << endl
+      << "==============================================================================" << endl
+      << endl
+      << "------------------------------------------------------------------------------" << endl
+      << "    Cell index                        Field value" << endl
+      << "------------------------------------------------------------------------------" << endl;
+
+    forAll(fld.internalField(), cellI)
+    {
+        os<< "        " << cellI << "                           " << fld.internalField()[cellI] << endl;
+    }
+
+    os<< endl << endl
+      << "==============================================================================" << endl
+      << "                                Boundary field" << endl
+      << "==============================================================================" << endl
+      << endl;
+        
+    wordList patchNames(mesh.boundaryMesh().names());
+
+    forAll(fld.boundaryField(), patchI)
+    {
+        const fvPatchField<Type>& pfld = fld.boundaryField()[patchI];
+        const fvPatch& pp = mesh.boundary()[patchI];
+
+        label nf = pp.start();            
+        
+        os<< "------------------------------------------------------------------------------" << endl
+          << "                        " << patchNames[patchI] << endl
+          << "------------------------------------------------------------------------------" << endl << endl
+          << "------------------------------------------------------------------------------" << endl
+          << "Patch face index    Global face index                Field value" << endl
+          << "------------------------------------------------------------------------------" << endl;
+
+        forAll(pfld, i)
+        {
+            os<< "        " << i << "                  " << nf << "                         " << pfld[i] << endl;
+            nf++;
+        }
+        os<< endl;
+    }
+    
+    os<< "//==========================================================================\\" << endl << endl
+      << "                          End of " << fld.name() << " field" << endl << endl
+      << "\\==========================================================================//" << endl
+      << endl;         
+}
+
+
+template <class Type>
 void display_point_field
 (
     const GeometricField<Type, pointPatchField, pointMesh>& ptfld
@@ -590,6 +653,64 @@ void write_surfaceField
     fileName outputFile(sfld.name()+"_db");
     OFstream os(mesh.time().path()/mesh.time().timeName()/outputFile);
 
+    os<< "//==========================================================================\\" << endl << endl
+      << "                           " << sfld.name() << " field" << endl << endl
+      << "\\==========================================================================//" << endl
+      << endl       
+      << "==============================================================================" << endl  
+      << "                                Internal field" << endl
+      << "==============================================================================" << endl
+      << endl
+      << "------------------------------------------------------------------------------" << endl
+      << "    Point index                        Field value" << endl
+      << "------------------------------------------------------------------------------" << endl;
+
+    forAll(sfld.internalField(), pointI)
+    {
+        os<< "         " << pointI << "                           " << sfld.internalField()[pointI] << endl;
+    }
+
+    os<< endl << endl
+      << "==============================================================================" << endl
+      << "                                Boundary field" << endl
+      << "==============================================================================" << endl
+      << endl;
+        
+    wordList patchNames(mesh.boundaryMesh().names());
+
+    forAll(sfld.boundaryField(), patchI)
+    {
+        fvsPatchField<Type> psfld(sfld.boundaryField()[patchI]);    
+        
+        os<< "------------------------------------------------------------------------------" << endl
+          << "                       " << patchNames[patchI] << endl
+          << "------------------------------------------------------------------------------" << endl << endl
+          << "------------------------------------------------------------------------------" << endl
+          << "Patch face index                Field value" << endl
+          << "------------------------------------------------------------------------------" << endl;
+
+        forAll(psfld, i)
+        {
+            os<< "         " << i << "                         " << psfld[i] << endl;
+        }
+        os<< endl;
+    }
+    
+    os<< "//==========================================================================\\" << endl << endl
+      << "                      End of " << sfld.name() << " field" << endl << endl
+      << "\\==========================================================================//" << endl
+      << endl;    
+}
+
+
+template<class Type>
+void print_surfaceField
+(
+    const GeometricField<Type, fvsPatchField, surfaceMesh>& sfld,
+    const fvMesh& mesh,
+    OFstream& os
+)
+{    
     os<< "//==========================================================================\\" << endl << endl
       << "                           " << sfld.name() << " field" << endl << endl
       << "\\==========================================================================//" << endl
