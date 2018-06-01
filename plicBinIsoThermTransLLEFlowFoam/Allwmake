@@ -6,7 +6,7 @@ cd ../SCF-core/src/
 make
 cd ../../plic/
 wmake libso
-cd ../plicIsoThermTransLLEFlowFoam/
+cd ../plicBinIsoThermTransLLEFlowFoam/
 wmake
 
 # ----------------------------------------------------------------- end-of-file

@@ -6,7 +6,7 @@ cd ../SCF-core/src/
 make c
 cd ../../plic/
 wclean libso
-cd ../plicIsoThermTransLLEFlowFoam/
+cd ../plicBinIsoThermTransLLEFlowFoam/
 wclean 
 
 # ----------------------------------------------------------------- end-of-file
