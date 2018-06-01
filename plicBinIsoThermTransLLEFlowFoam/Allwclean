@@ -1,0 +1,12 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+set -x
+
+cd ../SCF-core/src/
+make c
+cd ../../plic/
+wclean libso
+cd ../plicIsoThermTransLLEFlowFoam/
+wclean 
+
+# ----------------------------------------------------------------- end-of-file
