@@ -1084,13 +1084,26 @@ for(i=0; i<(n-1); i++)
     );
 }
 
-volScalarField Y1t = 0.0*Y1[0];
-volScalarField Y0t = 0.0*Y0[0];
+volScalarField Yt
+(
+    IOobject
+    (
+        "Yt",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh
+);
+
+volScalarField Y1t = Yt;
+volScalarField Y0t = Yt;
 
 for(i=0; i<(n-1); i++)
 {
-    Y1t += Y1[i];
-    Y0t += Y0[i];
+    Y1t -= Y1[i];
+    Y0t -= Y0[i];
 }
 
 int endIndex = n-1;
@@ -1110,10 +1123,9 @@ Y1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y1[0]
+        Y1t
     )
 );
-Y1[endIndex] = scalar(1.0) - Y1t;
 Y1[endIndex].correctBoundaryConditions();
 
 fieldName = "x1" + Foam::name(endIndex);
@@ -1210,10 +1222,9 @@ Y0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y0[0]
+        Y0t
     )
 );
-Y0[endIndex] = scalar(1.0) - Y0t;
 Y0[endIndex].correctBoundaryConditions();
 
 fieldName = "x0" + Foam::name(endIndex);
@@ -2018,7 +2029,7 @@ scalarField& pSCells = pS.internalField();
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
-//Initialize dependent variable fields correctly 
+//Initialize dependent variable fields correctly
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 

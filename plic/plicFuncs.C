@@ -8817,7 +8817,7 @@ void correct_rho
         {
             x_tmp[i] = X[i].internalField()[cellI];
         }
-
+        
         calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
         density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
         rhoCells[cellI] = rho_tmp;
@@ -8835,7 +8835,7 @@ void correct_rho
             {
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
-
+            
             calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
             density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
             prho[fcI] = rho_tmp;
