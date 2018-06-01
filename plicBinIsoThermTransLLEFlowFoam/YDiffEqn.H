@@ -19,8 +19,8 @@ for(i=0; i<n; i++)
 {
     const volScalarField& Y1i = Y1[i];
     const volScalarField& Y0i = Y0[i];
-    const surfaceScalarField& D1fi = D1f[1];
-    const surfaceScalarField& D0fi = D0f[1];
+    const surfaceScalarField& D1fi = D1f[i];
+    const surfaceScalarField& D0fi = D0f[i];
     const surfaceScalarField& gradf_Y1i = gradf_Y1[i];
     const surfaceScalarField& gradf_Y0i = gradf_Y0[i];
 
@@ -59,51 +59,6 @@ for(i=0; i<n; i++)
         osDiff
     );
 }
-plicFuncs::calc_2ph_diffFluxes_Y_MS
-(
-    mesh,
-    Pf_thermo,
-    T1f,
-    T0f,
-    v1f,
-    v0f,
-    R_gas,
-    n,
-    Pc,
-    Tc,
-    w,
-    MW,
-    tk,
-    coef_ab,
-    D1f,
-    D0f,
-    x1f,
-    x0f,
-    gradf_x1,
-    gradf_x0,
-    Af_ph1_own,
-    Af_ph0_own,
-    Af_ph1_nei,
-    Af_ph0_nei,
-    face_phaseState_diff,
-    rho1,
-    alpha1,
-    Y1,
-    rho0,
-    alpha0,
-    Y0,
-    diffFlux_Y1,
-    diffFlux_Y0,
-    &flux_umf,
-    n_flux_type,
-    dt,
-    Y1min,
-    Y1max,
-    Y0min,
-    Y0max,
-    diff_debug2,
-    osDiff    
-);
 //Done calculate species diffusive fluxes for both phases
 //------------------------------------------------------------------//
 

@@ -2,10 +2,10 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr;
-label nCells, nFaces, n_flatFld_diff, n_flatFld_ist, faceI;
+label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
 word fieldName;
@@ -16,11 +16,9 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
-double R_gas, Ts_TOL, MASS_FRAC_TOL;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
 //Temp variables
-int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
+int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
 double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -75,21 +73,21 @@ const dictionary& solDict = mesh.solutionDict();
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
 nNonOrthCorr = solDict.lookupOrDefault("nNonOrthogonalCorrector", 1);
-MAX_ITER_Ts = 1;
-Ts_TOL = 1000;
+//MAX_ITER_Ts = 1;
+//Ts_TOL = 1000;
 ALPHA_BOUND_ITERS_MAX = 12;
 Y_BOUND_ITERS_MAX = 12;
 // tolerances
 ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
-MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
+//MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
-A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
-scalar avgSf = (mesh.magSf()).average().value();
-A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
+//A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
+//scalar avgSf = (mesh.magSf()).average().value();
+//A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
 // debug and other bool switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
@@ -97,7 +95,7 @@ adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
-grad_debug2 = transPropDict.lookupOrDefault("grad_debug2", false);
+//grad_debug2 = transPropDict.lookupOrDefault("grad_debug2", false);
 diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
 diff_debug2 = transPropDict.lookupOrDefault("diff_debug2", false);
 ist_debug = transPropDict.lookupOrDefault("ist_debug", false);
@@ -106,7 +104,7 @@ momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 // int switches
-n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
+//n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
 //------------------------------------------------------------------//
 
@@ -116,7 +114,7 @@ n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 nSpecies = transPropDict.lookupOrDefault("nSpecies", 2);
 Info<< "Number of species " << nSpecies << endl;
 n = nSpecies;
-R_gas = transPropDict.lookupOrDefault("R_GAS", 8.31412);
+//R_gas = transPropDict.lookupOrDefault("R_GAS", 8.31412);
 //Done read and set no. of species
 //arrays and lists need to be initialized with this size
 //------------------------------------------------------------------//
@@ -688,10 +686,12 @@ volScalarField dgdt
 int Nij = n*n;
 PtrList<dimensionedScalar> D1_0(n);
 PtrList<dimensionedScalar> D0_0(n);
-PtrList<volScalarField> D1(Nij);
-PtrList<volScalarField> D0(Nij);
-PtrList<surfaceScalarField> D1f(Nij);
-PtrList<surfaceScalarField> D0f(Nij);
+PtrList<volScalarField> Dij1(Nij);
+PtrList<volScalarField> Dij0(Nij);
+PtrList<volScalarField> D1(n);
+PtrList<volScalarField> D0(n);
+PtrList<surfaceScalarField> D1f(n);
+PtrList<surfaceScalarField> D0f(n);
 
 for(i=0; i<n; i++)
 {
@@ -724,32 +724,12 @@ for(i=0; i<n; i++)
     {
         ijIndex = n*i + j;
 
-        fieldName = "D1" + Foam::name(i) + Foam::name(j);
+        fieldName = "Dij1" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D1.set
+        Dij1.set
         (
             ijIndex,
             new volScalarField
-            (
-                IOobject
-                (
-                    fieldName,
-                    runTime.timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                D1_0[i]
-            )
-        );
-
-        fieldName = "D1f" + Foam::name(i) + Foam::name(j);
-        Info<< "Initializing field " << fieldName << endl;
-        D1f.set
-        (
-            ijIndex,
-            new surfaceScalarField
             (
                 IOobject
                 (
@@ -764,9 +744,9 @@ for(i=0; i<n; i++)
             )
         );
         
-        fieldName = "D0" + Foam::name(i) + Foam::name(j);
+        fieldName = "Dij0" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D0.set
+        Dij0.set
         (
             ijIndex,
             new volScalarField
@@ -782,28 +762,88 @@ for(i=0; i<n; i++)
                 mesh,
                 D0_0[i]
             )
-        );
-
-        fieldName = "D0f" + Foam::name(i) + Foam::name(j);
-        Info<< "Initializing field " << fieldName << endl;
-        D0f.set
-        (
-            ijIndex,
-            new surfaceScalarField
-            (
-                IOobject
-                (
-                    fieldName,
-                    runTime.timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                D0_0[i]
-            )
-        );
+        );        
     }
+
+    fieldName = "D1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D1_0[i]
+        )
+    );
+
+    fieldName = "D0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D0_0[i]
+        )
+    );
+
+    fieldName = "D1f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D1_0[i]
+        )
+    );
+
+    fieldName = "D0f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D0_0[i]
+        )
+    );        
 }
 //Done thermo and transport properties fields initialization
 //------------------------------------------------------------------//

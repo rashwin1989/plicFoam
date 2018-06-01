@@ -82,21 +82,19 @@ forAll(alpha1Cells, cellI)
             }
             plicFuncs::print_line(osIst, 100);
             osIst<< "Interface conditions" << endl;
-            plicFuncs::print_line(osIst, 100);
-            osIst<< "Ts = " << TsCells[cellI] << endl;
-            plicFuncs::print_line(osIst, 100);
-            osIst<< setw(7) << "Species" << "  " << setw(12) << "xs1" << "  " << setw(12) << "xs0" << "  " << setw(12) << "ys1" << "  " << setw(12) << "ys0" << endl;
+            plicFuncs::print_line(osIst, 100);            
+            osIst<< setw(7) << "Species" << "  " << setw(12) << "ys1" << "  " << setw(12) << "ys0" << endl;
             plicFuncs::print_line(osIst, 100);
             for(i=0; i<n; i++)
             {
-                osIst<< setw(7) << i << "  " << setw(12) << xs1[i].internalField()[cellI] << "  " << setw(12) << xs0[i].internalField()[cellI] << "  " << setw(12) << Ys1[i].internalField()[cellI] << "  " << setw(12) << Ys0[i].internalField()[cellI] << endl;
+                osIst<< setw(7) << i << "  " << setw(12) << Ys1[i].internalField()[cellI] << "  " << setw(12) << Ys0[i].internalField()[cellI] << endl;
             }
             plicFuncs::print_line(osIst, 100);
             osIst<< "Interfacial transfer source terms" << endl;
             plicFuncs::print_line(osIst, 100);
-            osIst<< setw(12) << "mS1Tot" << "  " << setw(12) << "alphaS1" << "  " << setw(12) << "alphaS0" << "  " << setw(12) << "Qs" << "  " << setw(12) << "pS" << "  " << setw(12) << "dt" << endl;
+            osIst<< setw(12) << "mS1Tot" << "  " << setw(12) << "alphaS1" << "  " << setw(12) << "alphaS0" << "  " << setw(12) << "pS" << "  " << setw(12) << "dt" << endl;
             plicFuncs::print_line(osIst, 100);
-            osIst<< setw(12) << mS1TotCells[cellI] << "  " << setw(12) << alphaS1Cells[cellI] << "  " << setw(12) << alphaS0Cells[cellI] << "  " << setw(12) << QsCells[cellI] << "  " << setw(12) << pSCells[cellI] << "  " << setw(12) << dt << endl;
+            osIst<< setw(12) << mS1TotCells[cellI] << "  " << setw(12) << alphaS1Cells[cellI] << "  " << setw(12) << alphaS0Cells[cellI] << "  " << setw(12) << pSCells[cellI] << "  " << setw(12) << dt << endl;
             plicFuncs::print_line(osIst, 100);
             osIst<< setw(7) << "Species" << "  " << setw(12) << "mS1" << endl;
             plicFuncs::print_line(osIst, 100);

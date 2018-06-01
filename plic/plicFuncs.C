@@ -9314,6 +9314,122 @@ void correct_thermo_trans_prop
 }
 
 
+void correct_D_from_Dij
+(
+    const PtrList<volScalarField>& x,
+    const PtrList<volScalarField>& Dij,
+    PtrList<volScalarField>& D,
+    int n
+)
+{
+    int i, j, idx;
+    double sum_xbyD;
+    double *x_tmp;
+    double *Dij_tmp; 
+    double *D_tmp;    
+
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(Dij_tmp, double, n*n);
+    _NNEW_(D_tmp, double, n);
+
+    forAll(x[0].internalField(), cellI)
+    {
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = x[i].internalField()[cellI];
+            for(j=0; j<n; j++)
+            {
+                idx = j + i*n;
+                Dij_tmp[idx] = Dij[idx].internalField()[cellI];
+            }
+        }
+
+        if(n==2)
+        {
+            for(i=0; i<n; i++)
+            {
+                D_tmp[i] = Dij_tmp[1];
+            }
+        }
+        else
+        {
+            for(i=0; i<n; i++)
+            {
+                sum_xbyD = 0.0;
+                for(j=0; j<n; j++)
+                {
+                    if(j!=i)
+                    {
+                        idx = j + i*n;
+                        sum_xbyD += x_tmp[j]/Dij_tmp[idx];
+                    }
+                }
+                if(sum_xbyD < SMALL) sum_xbyD += SMALL;
+
+                D_tmp[i] = 1.0/sum_xbyD;                
+            }
+        }
+        
+        for(i=0; i<n; i++)
+        {
+            D[i].internalField()[cellI] = D_tmp[i];
+        }
+    }
+
+    forAll(x[0].boundaryField(), patchI)
+    {
+        const fvPatchScalarField& px0 = x[0].boundaryField()[patchI];
+
+        forAll(px0, fcI)
+        {
+            for(i=0; i<n; i++)
+            {
+                x_tmp[i] = x[i].boundaryField()[patchI][fcI];
+                for(j=0; j<n; j++)
+                {
+                    idx = j + i*n;
+                    Dij_tmp[idx] = Dij[idx].boundaryField()[patchI][fcI];
+                }
+            }
+
+            if(n==2)
+            {
+                for(i=0; i<n; i++)
+                {
+                    D_tmp[i] = Dij_tmp[1];
+                }
+            }
+            else
+            {
+                for(i=0; i<n; i++)
+                {
+                    sum_xbyD = 0.0;
+                    for(j=0; j<n; j++)
+                    {
+                        if(j!=i)
+                        {
+                            idx = j + i*n;
+                            sum_xbyD += x_tmp[j]/Dij_tmp[idx];
+                        }
+                    }
+                    if(sum_xbyD < SMALL) sum_xbyD += SMALL;
+
+                    D_tmp[i] = 1.0/sum_xbyD;                
+                }
+            }
+        
+            for(i=0; i<n; i++)
+            {
+                D[i].boundaryField()[patchI][fcI] = D_tmp[i];
+            }
+        }
+    }
+
+    _DDELETE_(x_tmp);
+    _DDELETE_(Dij_tmp);
+    _DDELETE_(D_tmp);
+}
+
 void calc_intfc_transLLE
 (
     double P,

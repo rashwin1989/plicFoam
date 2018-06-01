@@ -38,23 +38,19 @@ plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_ow
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
 
-plicFuncs::linearInterpolate_2ph(rho1, mesh, w_ph1, v1f);
-plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, v0f);
+plicFuncs::linearInterpolate_2ph(rho1, mesh, w_ph1, rho1f);
+plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
 plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f);
 plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f);
 
 for(i=0; i<n; i++)
-{    
-    for(j=0; j<n; j++)
-    {
-        idx = i + j*n;
-        const volScalarField& D1ij = D1[idx];
-        const volScalarField& D0ij = D0[idx];
-        surfaceScalarField& D1fij = D1f[idx];
-        surfaceScalarField& D0fij = D0f[idx];
-        plicFuncs::linearInterpolate_2ph(D1ij, mesh, w_ph1, D1fij);
-        plicFuncs::linearInterpolate_2ph(D0ij, mesh, w_ph1, D0fij);
-    }
+{        
+    const volScalarField& D1i = D1[i];
+    const volScalarField& D0i = D0[i];
+    surfaceScalarField& D1fi = D1f[i];
+    surfaceScalarField& D0fi = D0f[i];
+    plicFuncs::linearInterpolate_2ph(D1i, mesh, w_ph1, D1fi);
+    plicFuncs::linearInterpolate_2ph(D0i, mesh, w_ph1, D0fi);
 }
 //Done linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 //------------------------------------------------------------------//
