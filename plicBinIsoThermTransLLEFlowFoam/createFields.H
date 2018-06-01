@@ -31,7 +31,7 @@ double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y
 int *tk;
 double *Pc, *Tc, *Vc, *w, *MW, *coef_ab, *Tb, *SG, *H8, *k, *dm;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp, *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
+double *y_cellI_tmp, *x_cellI_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
 
@@ -137,10 +137,6 @@ _NNEW2_(k, double, n);
 _NNEW2_(dm, double, n);
 _NNEW2_(y_cellI_tmp, double, n);
 _NNEW2_(x_cellI_tmp, double, n);
-_NNEW2_(xs1_tmp, double, n);
-_NNEW2_(xs0_tmp, double, n);
-_NNEW2_(ys1_tmp, double, n);
-_NNEW2_(ys0_tmp, double, n);
 //Done allocate memory for arrays
 //------------------------------------------------------------------//
 
@@ -1533,13 +1529,13 @@ List<vector> C_ph0_flatFld_diff(n_flatFld_diff, vector::one);
 
 // flat field for scalar variables
 List<scalar> alpha1_flatFld_diff(n_flatFld_diff, 0.0);
-List<List<scalar> > x1_flatFld_diff(n); 
-List<List<scalar> > x0_flatFld_diff(n);
-List<scalar> x_flatFld_diff(n_flatFld_diff, 0.0);
+List<List<scalar> > Y1_flatFld_diff(n); 
+List<List<scalar> > Y0_flatFld_diff(n);
+List<scalar> Y_flatFld_diff(n_flatFld_diff, 0.0);
 for(i=0; i<n; i++)
 {
-    x1_flatFld_diff[i] = x_flatFld_diff;    
-    x0_flatFld_diff[i] = x_flatFld_diff;        
+    Y1_flatFld_diff[i] = Y_flatFld_diff;    
+    Y0_flatFld_diff[i] = Y_flatFld_diff;        
 }
 List<scalar> T1_flatFld_diff(n_flatFld_diff, T_0);
 List<scalar> T0_flatFld_diff(n_flatFld_diff, T_0);
@@ -1577,69 +1573,21 @@ surfaceScalarField w_ph0
 );
 
 // fields interpolated to faces
-surfaceScalarField T1f(linearInterpolate(T1));
-surfaceScalarField T0f(linearInterpolate(T0));
-surfaceScalarField v1f(linearInterpolate(v1));
-surfaceScalarField v0f(linearInterpolate(v0));
 surfaceScalarField rho1f(linearInterpolate(rho1));
 surfaceScalarField rho0f(linearInterpolate(rho0));
 
-PtrList<surfaceScalarField> x1f(n);
-PtrList<surfaceScalarField> x0f(n);
-
-for(i=0; i<n; i++)
-{
-    fieldName = "x1f" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    x1f.set
-    (
-        i,
-        new surfaceScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            linearInterpolate(x1[i])            
-        )
-    );
-
-    fieldName = "x0f" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    x0f.set
-    (
-        i,
-        new surfaceScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            linearInterpolate(x0[i])            
-        )
-    );    
-}
-
 // gradient fields and diffusive flux fields
-PtrList<surfaceScalarField> gradf_x1(n);
-PtrList<surfaceScalarField> gradf_x0(n);
+PtrList<surfaceScalarField> gradf_Y1(n);
+PtrList<surfaceScalarField> gradf_Y0(n);
 
 PtrList<surfaceScalarField> diffFlux_Y1(n);
 PtrList<surfaceScalarField> diffFlux_Y0(n);
 
 for(i=0; i<n; i++)
 {
-    fieldName = "gradf_x1" + Foam::name(i);
+    fieldName = "gradf_Y1" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
-    gradf_x1.set
+    gradf_Y1.set
     (
         i,
         new surfaceScalarField
@@ -1653,13 +1601,13 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("gradf_x1", dimless/dimLength, 0)
+            dimensionedScalar("gradf_Y1", dimless/dimLength, 0)
         )
     );
 
-    fieldName = "gradf_x0" + Foam::name(i);
+    fieldName = "gradf_Y0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
-    gradf_x0.set
+    gradf_Y0.set
     (
         i,
         new surfaceScalarField
@@ -1673,7 +1621,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar("gradf_x0", dimless/dimLength, 0)
+            dimensionedScalar("gradf_Y0", dimless/dimLength, 0)
         )
     );
 
@@ -1767,68 +1715,34 @@ List<vector> C_ph0_flatFld_ist(n_flatFld_ist, vector::one);
 
 // flat field for scalar variables
 List<scalar> alpha1_flatFld_ist(n_flatFld_ist, 0.0);
-List<List<scalar> > x1_flatFld_ist(n); 
-List<List<scalar> > x0_flatFld_ist(n);
-List<scalar> x_flatFld_ist(n_flatFld_ist, 0.0);
+List<List<scalar> > Y1_flatFld_ist(n); 
+List<List<scalar> > Y0_flatFld_ist(n);
+List<scalar> Y_flatFld_ist(n_flatFld_ist, 0.0);
 for(i=0; i<n; i++)
 {
-    x1_flatFld_ist[i] = x_flatFld_ist;    
-    x0_flatFld_ist[i] = x_flatFld_ist;        
+    Y1_flatFld_ist[i] = Y_flatFld_ist;    
+    Y0_flatFld_ist[i] = Y_flatFld_ist;        
 }
-List<scalar> T1_flatFld_ist(n_flatFld_ist, T_0);
-List<scalar> T0_flatFld_ist(n_flatFld_ist, T_0);
 
-List<scalar> xs1_0(n);
-List<scalar> xs0_0(n);
 List<scalar> Ys1_0(n);
 List<scalar> Ys0_0(n);
-PtrList<volScalarField> xs1(n);
-PtrList<volScalarField> xs0(n);
 PtrList<volScalarField> Ys1(n);
 PtrList<volScalarField> Ys0(n);
 PtrList<volScalarField> Js1(n);
 PtrList<volScalarField> Js0(n);
 PtrList<volScalarField> mS1(n);
+PtrList<volScalarField> mS0(n);
 
 for(i=0; i<n; i++)
 {
     fieldName = "Ys1" + Foam::name(i);
-    Ys1_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
-    ys1_tmp[i] = Ys1_0[i];
+    Ys1_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);
     fieldName = "Ys0" + Foam::name(i);
-    Ys0_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
-    ys0_tmp[i] = Ys0_0[i];
-}
-plicFuncs::y2x(n, MW, ys1_tmp, xs1_tmp);
-plicFuncs::y2x(n, MW, ys0_tmp, xs0_tmp);
-for(i=0; i<n; i++)
-{
-    xs1_0[i] = xs1_tmp[i];
-    xs0_0[i] = xs0_tmp[i];
+    Ys0_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);
 }
 
 for(i=0; i<n; i++)
-{
-    fieldName = "xs1" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    xs1.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar(fieldName+"_0", dimless, xs1_0[i])
-        )
-    );
-
+{    
     fieldName = "Ys1" + Foam::name(i);    
     Info<< "Initializing field " << fieldName << endl;
     Ys1.set
@@ -1846,26 +1760,6 @@ for(i=0; i<n; i++)
             ),
             mesh,
             dimensionedScalar(fieldName+"_0", dimless, Ys1_0[i])
-        )
-    );
-
-    fieldName = "xs0" + Foam::name(i);    
-    Info<< "Initializing field " << fieldName << endl;
-    xs0.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedScalar(fieldName+"_0", dimless, xs0_0[i])
         )
     );
 
@@ -1948,22 +1842,27 @@ for(i=0; i<n; i++)
             dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
         )
     );
-}
 
-fieldName = "Ts";
-Info<< "Initializing field " << fieldName << endl;
-volScalarField Ts
-(
-    IOobject
+    fieldName = "mS0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    mS0.set
     (
-        fieldName,
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    alpha1*T1 + alpha0*T0
-);
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
+        )
+    );
+}
 
 fieldName = "JsTot";
 Info<< "Initializing field " << fieldName << endl;
@@ -1997,9 +1896,9 @@ volScalarField mS1Tot
     dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
 );
 
-fieldName = "Qs";
+fieldName = "mS0Tot";
 Info<< "Initializing field " << fieldName << endl;
-volScalarField Qs
+volScalarField mS0Tot
 (
     IOobject
     (
@@ -2010,7 +1909,7 @@ volScalarField Qs
         IOobject::NO_WRITE
     ),
     mesh,
-    dimensionedScalar(fieldName, dimPressure/dimTime, 0)
+    dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
 );
 
 fieldName = "alphaS1";
@@ -2061,10 +1960,6 @@ volScalarField pS
     dimensionedScalar(fieldName, dimless/dimTime, 0)
 );
 
-labelList n_iters_Ts(nCells);
-labelList status_transLLE(nCells);
-labelList cell_had_intfc(nCells);
-
 //Done interfacial conditions variables and source terms
 //------------------------------------------------------------------//
 
@@ -2075,11 +1970,9 @@ scalarField& alpha0Cells = alpha0.internalField();
 scalarField& alpha1OldCells = alpha1_old.internalField();
 scalarField& rho1Cells = rho1.internalField();
 scalarField& rho0Cells = rho0.internalField();
-scalarField& TsCells = Ts.internalField();
 scalarField& mS1TotCells = mS1Tot.internalField();
 scalarField& alphaS1Cells = alphaS1.internalField();
 scalarField& alphaS0Cells = alphaS0.internalField();
-scalarField& QsCells = Qs.internalField();
 scalarField& pSCells = pS.internalField();
 //Done reference to internal fields for easy access
 //------------------------------------------------------------------//
