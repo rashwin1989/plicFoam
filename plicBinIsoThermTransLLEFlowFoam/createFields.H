@@ -4,8 +4,8 @@
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
 scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
-label iOCorr, iPCorr, iNonOrthCorr;
-label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
+label iOCorr, iPCorr, iNonOrthCorr, faceI;
+label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
 word fieldName;
@@ -364,6 +364,7 @@ OFstream osIst(runTime.path()/outputFile);
 //Set mesh related variables and fields
 nCells = mesh.nCells();
 nFaces = mesh.nFaces();
+nIntFaces = mesh.nInternalFaces();
 
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
