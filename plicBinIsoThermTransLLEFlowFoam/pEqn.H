@@ -32,21 +32,7 @@
         )*rAUf*mesh.magSf()
     );
 
-    phiHbyA += phig;
-
-    if(pEqn_debug)
-    {        
-        plicFuncs::print_line(osPEqn, 100);
-        osPEqn<< setw(6) << "faceI" << "  " << setw(12) << "phi" << "  " << setw(12) << "phiHbyA" << "  " << setw(12) << "phig" << "  " << setw(12) << "rAUf" << endl;
-        plicFuncs::print_line(osPEqn, 100);
-
-        for(faceI=0; faceI<nIntFaces; faceI++)
-        {
-            osPEqn<< setw(6) << faceI << "  " << setw(12) << phi[faceI] << "  " << setw(12) << phiHbyA[faceI] << "  " << setw(12) << phig[faceI] << "  " << setw(12) << rAUf[faceI] << endl;
-        }
-        plicFuncs::print_line(osPEqn, 100);
-        osPEqn<< endl;
-    }
+    phiHbyA += phig;    
 
     // Update the fixedFluxPressure BCs to ensure flux consistency
     setSnGrad<fixedFluxPressureFvPatchScalarField>
@@ -57,7 +43,7 @@
           - (mesh.Sf().boundaryField() & U.boundaryField())
         )/(mesh.magSf().boundaryField()*rAUf.boundaryField())
     );
-
+    /*
     p_rghEqnComp1 =
         fvc::ddt(rho1)
         + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
@@ -81,6 +67,10 @@
     p_rghEqnComp_2 =
         (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1_2
         + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0_2;
+        */
+
+    volVectorField U_0 = U;
+    surfaceScalarField phi_0 = phi;
 
     for(iNonOrthCorr=0; iNonOrthCorr<nNonOrthCorr; iNonOrthCorr++)
     {
@@ -89,25 +79,70 @@
              fvc::div(phiHbyA) 
            - fvm::laplacian(rAUf, p_rgh)
            - pS
-           + p_rghEqnComp             
+             //+ p_rghEqnComp             
         );
 
         p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
 
-        p_rghEqn.solve(mesh.solver("p_rgh"));
+        p_rghEqn.solve(mesh.solver("p_rgh"));        
 
         if (iNonOrthCorr == nNonOrthCorr-1)
         {
+            /*
             dgdt =
             (
                 pos(alpha0)*p_rghEqnComp0/rho0
               - pos(alpha1)*p_rghEqnComp1/rho1
             );
-
+                */
             phi = phiHbyA + p_rghEqn.flux();
 
             U = HbyA + rAU*fvc::reconstruct((phig + p_rghEqn.flux())/rAUf);            
             U.correctBoundaryConditions();
+        }
+
+        if(pEqn_debug)
+        {
+            volScalarField div_phiHbyA = fvc::div(phiHbyA);
+            volScalarField div_rAUf_gradp = fvc::laplacian(rAUf, p_rgh);
+            volScalarField pEqn_val = div_phiHbyA - div_rAUf_gradp - pS;
+            volScalarField pEqn_val_2 = fvc::div(phi) - pS;
+
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< setw(6) << "celli" << " " << setw(12) << "pS" << " " << setw(12) << "div(phiHbyA)" << " " << setw(12) << "div(rAUf,grad(p_rgh))" << " " << setw(12) << "pEqn" << " " << setw(12) << "pEqn2" << endl;
+            plicFuncs::print_line(osPEqn, 100);
+
+            for(celli=0; celli<nCells; celli++)
+            {
+                osPEqn<< setw(6) << celli << " " << setw(12) << pS[celli] << " " << setw(12) << div_phiHbyA[celli] << " " << setw(12) << div_rAUf_gradp[celli] << " " << setw(12) << pEqn_val[celli] << " " << setw(12) << pEqn_val_2[celli] << endl;
+            }
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< endl;
+
+            surfaceScalarField pFlux = p_rghEqn.flux();
+            surfaceScalarField phiCorr = phig + p_rghEqn.flux();
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< setw(6) << "faceI" << " " << setw(8) << "phi_0" << " " << setw(8) << "phiHbyA" << " " << setw(8) << "pFlux" << " " << setw(8) << "phi" << " " << setw(8) << "phig" << " " << setw(8) << "rAUf" << " " << setw(8) << "phiCorr" << endl;
+            plicFuncs::print_line(osPEqn, 100);
+
+            for(faceI=0; faceI<nIntFaces; faceI++)
+            {
+                osPEqn<< setw(6) << faceI << " " << setw(8) << phi_0[faceI] << " " << setw(8) << phiHbyA[faceI] << " " << setw(8) << pFlux[faceI] << " " << setw(8) << phi[faceI] << " " << setw(8) << phig[faceI] << " " << setw(8) << rAUf[faceI] << " " << setw(8) << phiCorr[faceI] << endl;
+            }
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< endl;
+            
+            volVectorField UCorr = fvc::reconstruct((phig + p_rghEqn.flux())/rAUf);
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< setw(6) << "celli" << " " << setw(12) << "U_0" << " " << setw(12) << "HbyA" << " " << setw(12) << "rAU" << " " << setw(12) << "UCorr" << setw(12) << " " << "U" << endl;
+            plicFuncs::print_line(osPEqn, 100);
+
+            for(celli=0; celli<nCells; celli++)
+            {
+                osPEqn<< setw(6) << celli << " " << setw(12) << U_0[celli] << " " << setw(12) << HbyA[celli] << " " << setw(12) << rAU[celli] << " " << setw(12) << UCorr[celli] << " " << setw(12) << U[celli] << endl;
+            }
+            plicFuncs::print_line(osPEqn, 100);
+            osPEqn<< endl;
         }
     }
 

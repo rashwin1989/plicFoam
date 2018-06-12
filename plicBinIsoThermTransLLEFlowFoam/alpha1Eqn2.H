@@ -57,6 +57,7 @@ forAll(dgdt, celli)
     */
 
 surfInt_phiAlpha1 = fvc::surfaceIntegrate(phiAlpha1);
+surfInt_phiAlpha0 = fvc::surfaceIntegrate((phi - phiAlpha1));
 
 forAll(alpha1Cells, cellI)
 {
@@ -64,7 +65,8 @@ forAll(alpha1Cells, cellI)
     alpha1Cells[cellI] = (alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt + Su[cellI]*dt);
     alpha1Cells[cellI] /= (scalar(1.0) - Sp[cellI]*dt);
         */
-    alpha1Cells[cellI] = alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
+    alpha1Cells[cellI] = alpha1OldCells[cellI] + (-surfInt_phiAlpha1Cells[cellI] + alphaS1Cells[cellI])*dt;
+    alpha0Cells[cellI] = alpha0OldCells[cellI] + (-surfInt_phiAlpha0Cells[cellI] + alphaS0Cells[cellI])*dt;
 }
 
 Info<< "alpha1:  avg = "
@@ -85,7 +87,18 @@ ALPHA_MAX_BOUND = 1 + ALPHA_BOUND_ERR;
 
 if(alpha_debug)
 {
+    scalarField alphaCells = alpha1Cells + alpha0Cells;
+    plicFuncs::print_line(osAlpha, 100);
+    osAlpha<< setw(6) << "celli" << " " << setw(12) << "alpha1" << " " << setw(12) << "alpha0" << " " << setw(12) << "alpha" << endl;
+    plicFuncs::print_line(osAlpha, 100);
+
+    for(celli=0; celli<nCells; celli++)
+    {
+        osAlpha<< setw(6) << celli << " " << setw(12) << alpha1Cells[celli] << " " << setw(12) << alpha0Cells[celli] << " " << setw(12) << alphaCells[celli] << endl;
+    }
+    plicFuncs::print_line(osAlpha, 100);
     osAlpha<< endl;
+
     forAll(alpha1Cells, cellI)
     {
         if(alpha1Cells[cellI] < ALPHA_MIN_BOUND || alpha1Cells[cellI] > ALPHA_MAX_BOUND)
@@ -145,7 +158,7 @@ if(alpha_debug)
             osAlpha<< "div(phi) = " << div_phi
                 << "  div(phi, alpha1) = " << div_alpha1 << nl
                 << "pS = " << pSCells[cellI]
-                << "  dgdt = " << dgdt[cellI]
+                //<< "  dgdt = " << dgdt[cellI]
                 //<< "  Su = " << Su[cellI]
                 //<< " Sp = " << Sp[cellI] << nl
                 << "div(phi, alpha1)*dt = " << div_alpha1*dt

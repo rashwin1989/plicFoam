@@ -4,7 +4,7 @@
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
 scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX;
 //Temp variables
-label iOCorr, iPCorr, iNonOrthCorr, faceI;
+label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
 label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
@@ -16,7 +16,7 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
 double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
@@ -103,6 +103,7 @@ ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
 momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
+pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
 // int switches
 //n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -357,6 +358,8 @@ outputFile = "diff_dbg";
 OFstream osDiff(runTime.path()/outputFile);
 outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
+outputFile = "pEqn_dbg";
+OFstream osPEqn(runTime.path()/outputFile);
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//
 
@@ -438,6 +441,7 @@ volScalarField alpha1_old
 
 Info<< "Calculating field alpha0\n" << endl;
 volScalarField alpha0("alpha0", scalar(1) - alpha1);
+volScalarField alpha0_old = alpha0;
 
 volScalarField limitedAlpha1
 (
@@ -856,11 +860,13 @@ PtrList<volScalarField> x1(n);
 PtrList<volScalarField> c1(n);
 PtrList<volScalarField> C1(n);
 PtrList<volScalarField> C1_old(n);
+PtrList<volScalarField> c1_old(n);
 PtrList<volScalarField> Y0(n);
 PtrList<volScalarField> x0(n);
 PtrList<volScalarField> c0(n);
 PtrList<volScalarField> C0(n);
 PtrList<volScalarField> C0_old(n);
+PtrList<volScalarField> c0_old(n);
 
 PtrList<volScalarField> C_phAvg(n);
 
@@ -965,6 +971,26 @@ for(i=0; i<(n-1); i++)
         )
     );
 
+    fieldName = "c1_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c1_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho1*Y1[i],
+            Y1[i].boundaryField().types()
+        )
+    );
+
     fieldName = "Y0" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
     Y0.set
@@ -1023,7 +1049,7 @@ for(i=0; i<(n-1); i++)
             Y0[i].boundaryField().types()
         )
     );
-
+    
     fieldName = "C0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
     C0.set
@@ -1060,6 +1086,26 @@ for(i=0; i<(n-1); i++)
                 IOobject::NO_WRITE
             ),
             C0[i],
+            Y0[i].boundaryField().types()
+        )
+    );
+
+    fieldName = "c0_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c0_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho0*Y0[i],
             Y0[i].boundaryField().types()
         )
     );
@@ -1208,6 +1254,26 @@ C1_old.set
     )
 );
 
+fieldName = "c1_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+c1_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        rho1*Y1[endIndex],
+        Y1[endIndex].boundaryField().types()
+    )
+);
+
 fieldName = "Y0" + Foam::name(endIndex);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
@@ -1303,6 +1369,26 @@ C0_old.set
             IOobject::NO_WRITE
         ),
         C0[endIndex],
+        Y0[endIndex].boundaryField().types()
+    )
+);
+
+fieldName = "c0_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+c0_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        rho0*Y0[endIndex],
         Y0[endIndex].boundaryField().types()
     )
 );
@@ -1516,6 +1602,10 @@ if (p_rgh.needReference())
 //------------------------------------------------------------------//
 //alpha, species, density advection
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
+volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
+scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
+volScalarField surfInt_phiAlpha0(fvc::surfaceIntegrate((phi- phiAlpha1)));
+scalarField& surfInt_phiAlpha0Cells = surfInt_phiAlpha0.internalField();
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
 labelList unbounded_Y_in_cell(nCells, 0);
@@ -1635,6 +1725,11 @@ PtrList<surfaceScalarField> gradf_Y0(n);
 PtrList<surfaceScalarField> diffFlux_Y1(n);
 PtrList<surfaceScalarField> diffFlux_Y0(n);
 
+PtrList<volScalarField> diffTerm_Y1(n);
+PtrList<volScalarField> diffTerm_Y0(n);
+
+dimensionedScalar diffTerm_zero("diffTerm_zero", C1[0].dimensions(), 0.0);
+
 for(i=0; i<n; i++)
 {
     fieldName = "gradf_Y1" + Foam::name(i);
@@ -1697,6 +1792,26 @@ for(i=0; i<n; i++)
         )
     );
 
+    fieldName = "diffTerm_Y1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    diffTerm_Y1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            diffTerm_zero
+        )
+    );
+
     fieldName = "diffFlux_Y0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
     diffFlux_Y0.set
@@ -1714,6 +1829,26 @@ for(i=0; i<n; i++)
             ),
             mesh,
             dimensionedScalar("diffFlux_Y0", dimVol*dimDensity/dimTime, 0)
+        )
+    );
+
+    fieldName = "diffTerm_Y0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    diffTerm_Y0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            diffTerm_zero
         )
     );
 }
@@ -2020,6 +2155,7 @@ volScalarField pS
 scalarField& alpha1Cells = alpha1.internalField();
 scalarField& alpha0Cells = alpha0.internalField();
 scalarField& alpha1OldCells = alpha1_old.internalField();
+scalarField& alpha0OldCells = alpha0_old.internalField();
 scalarField& rho1Cells = rho1.internalField();
 scalarField& rho0Cells = rho0.internalField();
 scalarField& mS1TotCells = mS1Tot.internalField();

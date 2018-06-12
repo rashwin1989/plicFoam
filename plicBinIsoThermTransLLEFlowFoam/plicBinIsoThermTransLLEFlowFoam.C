@@ -105,19 +105,25 @@ int main(int argc, char *argv[])
         {
             Info<< "Outer corrector " << iOCorr+1 << endl;
 
-            Info<< "Calculating two-phase advective fluxes" << endl;
+            for(i=0; i<n; i++)
+            {
+                diffTerm_Y1[i] = diffTerm_zero;
+                diffTerm_Y0[i] = diffTerm_zero;
+            }
+
             dt = deltaT;
-            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
+            Info<< "Calculating two-phase advective fluxes" << endl;
+            interface.calc_2ph_advFluxes(c1_old, c0_old, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << endl; 
 
-            #include "alpha1Eqn.H"        
+            #include "alpha1Eqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << nl << endl;             
+                << " s" << nl << endl;
             
             #include "YAdvEqn.H"
 
@@ -182,14 +188,14 @@ int main(int argc, char *argv[])
             #include "curvature.H"
 
             dt = deltaT;
-
+            /*
             #include "correctRho.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
-
-            rho = alpha1*rho1 + (scalar(1) - alpha1)*rho0;
+                */
+            rho = alpha1*rho1 + alpha0*rho0;
             rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
 
             #include "UEqn.H"
@@ -204,6 +210,37 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << endl; 
             }
+
+            alpha1 = alpha1_old;
+            alpha1.correctBoundaryConditions();
+
+            interface.intfc_correct();                
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            dt = deltaT;
+            Info<< "Calculating two-phase advective fluxes" << endl;
+            interface.calc_2ph_advFluxes(c1_old, c0_old, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
+
+            #include "alpha1Eqn2.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+            
+            #include "YEqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+            
+            interface.intfc_correct();                            
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
         }
 
         for(i=0; i<n; i++)
