@@ -8,7 +8,7 @@ if(diff_debug)
 }
 
 //set fractional time-step for diffusion
-dt = 0.5*deltaT;
+dt = deltaT;
 
 Y1t = 0.0*Y1[0];
 Y0t = 0.0*Y0[0];

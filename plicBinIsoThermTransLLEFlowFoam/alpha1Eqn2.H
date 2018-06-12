@@ -89,12 +89,12 @@ if(alpha_debug)
 {
     scalarField alphaCells = alpha1Cells + alpha0Cells;
     plicFuncs::print_line(osAlpha, 100);
-    osAlpha<< setw(6) << "celli" << " " << setw(12) << "alpha1" << " " << setw(12) << "alpha0" << " " << setw(12) << "alpha" << endl;
+    osAlpha<< setw(6) << "celli" << "     " << setw(12) << "alpha1" << "     " << setw(12) << "alpha0" << "     " << setw(12) << "alpha" << "     " << setw(12) << "(alpha-1)" << endl;
     plicFuncs::print_line(osAlpha, 100);
 
     for(celli=0; celli<nCells; celli++)
     {
-        osAlpha<< setw(6) << celli << " " << setw(12) << alpha1Cells[celli] << " " << setw(12) << alpha0Cells[celli] << " " << setw(12) << alphaCells[celli] << endl;
+        osAlpha<< setw(6) << celli << "     " << setw(12) << alpha1Cells[celli] << "     " << setw(12) << alpha0Cells[celli] << "     " << setw(12) << alphaCells[celli] << "     " << setw(12) << (alphaCells[celli] - 1) << endl;
     }
     plicFuncs::print_line(osAlpha, 100);
     osAlpha<< endl;
@@ -161,7 +161,7 @@ if(alpha_debug)
                 //<< "  dgdt = " << dgdt[cellI]
                 //<< "  Su = " << Su[cellI]
                 //<< " Sp = " << Sp[cellI] << nl
-                << "div(phi, alpha1)*dt = " << div_alpha1*dt
+                << "  div(phi, alpha1)*dt = " << div_alpha1*dt
                 //<< "  Su*dt = " << Su[cellI]*dt
                 //<< " Sp*dt = " << Sp[cellI]*dt << nl
                 << "  alpha1 new time = " << alpha1Cells[cellI] << nl

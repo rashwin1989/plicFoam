@@ -19,6 +19,7 @@ Info<< "Min(mu) = " << min(mu).value()
     << endl;
 Info<< "Min(muf) = " << min(muf).value()
     << "  Max(muf) = " << max(muf).value()
+    << nl
     << endl;
 
 

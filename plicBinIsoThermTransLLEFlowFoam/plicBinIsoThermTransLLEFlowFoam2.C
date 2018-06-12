@@ -104,21 +104,88 @@ int main(int argc, char *argv[])
         for(iOCorr=0; iOCorr<nOCorr; iOCorr++)
         {
             Info<< "Outer corrector " << iOCorr+1 << endl;
-            
+
             for(i=0; i<n; i++)
             {
                 diffTerm_Y1[i] = diffTerm_zero;
                 diffTerm_Y0[i] = diffTerm_zero;
             }
-                       
+
+            dt = deltaT;
+            Info<< "Calculating two-phase advective fluxes" << endl;
+            interface.calc_2ph_advFluxes(c1_old, c0_old, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
+     
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << endl; 
+
+            #include "alpha1Eqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+            
+            #include "YAdvEqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+            
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "correct_thermo_trans_prop.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "diff_grad_interp.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "YDiffEqn.H"            
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+            
             #include "ist.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
-            //alpha1 == alpha1_old;
-            //alpha1.correctBoundaryConditions();
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "correct_thermo_trans_prop.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "diff_grad_interp.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "YDiffEqn.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
 
             #include "curvature.H"
 
@@ -146,13 +213,19 @@ int main(int argc, char *argv[])
                     << " s" << endl; 
             }
 
+            alpha1 == alpha1_old;
+            alpha1.correctBoundaryConditions();
+
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
             dt = deltaT;
             Info<< "Calculating two-phase advective fluxes" << endl;
             interface.calc_2ph_advFluxes(c1_old, c0_old, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
-     
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << endl;            
 
             #include "alpha1Eqn2.H"
 
@@ -168,24 +241,6 @@ int main(int argc, char *argv[])
             
             interface.intfc_correct();
             Info<< "Done interface reconstruction" << endl;
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "correct_thermo_trans_prop.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "diff_grad_interp.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "YDiffEqn.H"            
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()

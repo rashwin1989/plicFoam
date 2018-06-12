@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
 label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
@@ -85,6 +85,7 @@ SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDI
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
+ALPHA_2PH_MIN_IST = transPropDict.lookupOrDefault("ALPHA_2PH_MIN_IST", 1E-06);
 //A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
 //scalar avgSf = (mesh.magSf()).average().value();
 //A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
@@ -2183,17 +2184,41 @@ for(i=0; i<n; i++)
     volScalarField& C0i = C0[i];
     volScalarField& C1Oldi = C1_old[i];
     volScalarField& C0Oldi = C0_old[i];
+    volScalarField& c1Oldi = c1_old[i];
+    volScalarField& c0Oldi = c0_old[i];
 
     c1i = rho1*Y1i;
     C1i = alpha1*c1i;
     C1Oldi = C1i;
+    c1Oldi = c1i;
 
     c0i = rho0*Y0i;
     C0i = alpha0*c0i;
     C0Oldi = C0i;
+    c0Oldi = c0i;
+
+    Y1i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
+
+    Y0i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
+
+    forAll(C1i.boundaryField(), patchI)
+    {
+        forAll(C1i.boundaryField()[patchI], fcI)
+        {
+            C1Oldi.boundaryField()[patchI][fcI] = C1i.boundaryField()[patchI][fcI];
+            C0Oldi.boundaryField()[patchI][fcI] = C0i.boundaryField()[patchI][fcI];
+            c1Oldi.boundaryField()[patchI][fcI] = c1i.boundaryField()[patchI][fcI];
+            c0Oldi.boundaryField()[patchI][fcI] = c0i.boundaryField()[patchI][fcI];
+        }
+    }
 }
 
 #include "correct_thermo_trans_prop.H"
+
+rho = alpha1*rho1 + alpha0*rho0;
+mu = alpha1*mu1 + alpha0*mu0;
 //Done initialize dependent variable fields correctly
 //------------------------------------------------------------------//
 
@@ -2205,6 +2230,7 @@ for(i=0; i<n; i++)
     C0min[i] = min(alpha0*rho0*Y0max[i]).value();
 }
 
+/*
 volScalarField p_rghEqnComp1 =
     fvc::ddt(rho1)
     + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
@@ -2216,3 +2242,4 @@ volScalarField p_rghEqnComp0 =
 volScalarField p_rghEqnComp =
     (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1
     + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0;
+    */

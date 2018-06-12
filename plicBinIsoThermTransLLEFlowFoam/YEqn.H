@@ -78,7 +78,7 @@ for(i=0; i<(n-1); i++)
 
     forAll(C1iCells,cellI)
     {                        
-        C1iCells[cellI] = C1OldiCells[cellI] - surfInt_advFlux_Y1iCells[cellI]*dt + mS1iCells[cellI]*dt + diffTerm_Y1iCells[cellI];
+        C1iCells[cellI] = C1OldiCells[cellI] - surfInt_advFlux_Y1iCells[cellI]*dt + mS1iCells[cellI]*dt;
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
@@ -202,7 +202,7 @@ for(i=0; i<(n-1); i++)
 
     forAll(C0iCells,cellI)
     {                
-        C0iCells[cellI] = C0OldiCells[cellI] - surfInt_advFlux_Y0iCells[cellI]*dt - mS1iCells[cellI]*dt + diffTerm_Y0iCells[cellI];
+        C0iCells[cellI] = C0OldiCells[cellI] - surfInt_advFlux_Y0iCells[cellI]*dt - mS1iCells[cellI]*dt;
 
         if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {

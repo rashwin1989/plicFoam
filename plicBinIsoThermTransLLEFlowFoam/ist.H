@@ -26,13 +26,13 @@ for(i=0; i<n; i++)
 
 //------------------------------------------------------------------//
 //Calculate interfacial species mass fluxes
-plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, ist_debug2, osIst);
+plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, ist_debug2, osIst);
 //Done calculate interfacial species mass fluxes
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, dt, ist_debug2, osIst);
+plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, dt, ist_debug2, osIst);
 //Done calculate interfacial species transfer source terms and alpha source terms
 //------------------------------------------------------------------//
 
@@ -106,7 +106,7 @@ forAll(alpha1Cells, cellI)
         }
     }
 
-  
+    /*
     //ph-1
     //volume fraction
     alpha1Cells[cellI] += alphaS1Cells[cellI]*dt;    
@@ -215,8 +215,10 @@ forAll(alpha1Cells, cellI)
             plicFuncs::print_line(osIst, 100);        
         }
     }
+        */
 }
 
+/*
 alpha1.correctBoundaryConditions();
 alpha0.correctBoundaryConditions();
 
@@ -255,13 +257,14 @@ for(i=0; i<n; i++)
         << "  Max(Y0i) = " << max(Y0i).value()
         << endl;        
 }
-
+    */
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 //-----------------------------------------------------------------------------------------------------------//
 
 //-----------------------------------------------------------------------------------------------------------//
 //Reset the allowable limits for concentrations and mass fractions in the phases
 
+/*
 for(i=0; i<n; i++)
 {
     C1max[i] = max(C1[i]).value();
@@ -269,5 +272,6 @@ for(i=0; i<n; i++)
     C1min[i] = min(C1[i]).value();
     C0min[i] = min(C0[i]).value();
 }
+    */
 
-Info<< "Done Interfacial Species Transfer" << endl;
+Info<< "Done Interfacial Species Transfer Source Terms Calculation" << endl;

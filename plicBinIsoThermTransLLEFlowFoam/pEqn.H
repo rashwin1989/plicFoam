@@ -82,7 +82,7 @@
              //+ p_rghEqnComp             
         );
 
-        p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
+        //p_rghEqn.setReference(pRefCell, getRefCellValue(p_rgh, pRefCell));
 
         p_rghEqn.solve(mesh.solver("p_rgh"));        
 
@@ -158,6 +158,7 @@
 
     p == p_rgh + rho*gh;
 
+    /*
     if (p_rgh.needReference())
     {
         p += dimensionedScalar
@@ -167,5 +168,6 @@
             pRefValue - getRefCellValue(p, pRefCell)
         );
         p_rgh = p - rho*gh;
-    }    
+    }
+        */   
 }

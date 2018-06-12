@@ -57,7 +57,9 @@ for(i=0; i<(n-1); i++)
     {        
         plicFuncs::print_advFluxFld(mesh, advFlux_Y1i, alpha1, C1i, c1i, Y1i, c1iName, Y1iName, osAdv);
         plicFuncs::print_advFluxIntData(mesh, advFlux_Y1i, surfInt_advFlux_Y1iCells, dt, alpha1, C1i, c1i, Y1i, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", C1iName, c1iName, Y1iName, osAdv);
-
+    }
+    if(adv_debug)
+    {
         plicFuncs::print_line(osAdv, 100);
         osAdv<< setw(6) << "cellI" << "  " << setw(12) << "alpha1" << "  " << setw(12) << "rho1" << "  " << setw(12) << Y1iName << "  " << setw(12) << c1iName << "  " << setw(12) << C1iName << endl;
         plicFuncs::print_line(osAdv, 100);
@@ -76,13 +78,13 @@ for(i=0; i<(n-1); i++)
             Y1iCells[cellI] = C1iCells[cellI]/alpha1Cells[cellI]/rho1Cells[cellI];
         }
 
-        if(adv_debug2)
+        if(adv_debug)
         {
             osAdv<< setw(6) << cellI << "  " << setw(12) << alpha1Cells[cellI] << "  " << setw(12) << rho1Cells[cellI] << "  " << setw(12) << Y1iCells[cellI] << "  " << setw(12) << c1iCells[cellI] << "  " << setw(12) << C1iCells[cellI] << endl;
         }
     }
 
-    if(adv_debug2)
+    if(adv_debug)
     {
         plicFuncs::print_line(osAdv, 100);
         osAdv<< endl;
@@ -104,18 +106,18 @@ for(i=0; i<(n-1); i++)
         << "  undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
         << "  max = " << max(Y1i).value()        
         << "  overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
-        << endl;
-
-    if(adv_debug)
-    {
-        plicFuncs::print_line(osAdv, 100);
-        osAdv<< "Redistributing " << C1iName << " field" << endl;
-        plicFuncs::print_line(osAdv, 100);
-        osAdv<< endl;
-    }
+        << endl;    
     
     if(redist_C)
     {
+        if(adv_debug)
+        {
+            plicFuncs::print_line(osAdv, 100);
+            osAdv<< "Redistributing " << C1iName << " field" << endl;
+            plicFuncs::print_line(osAdv, 100);
+            osAdv<< endl;
+        }
+
         plicFuncs::redistribute_Ci_field(mesh, C1iCells, Y1iCells, alpha1Cells, rho1Cells, cell_stencil.stencil(), Y1min[i], Y1max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug, osAdv);
 
         Info<< C1iName << " after redistribution:  avg = " 
@@ -175,7 +177,9 @@ for(i=0; i<(n-1); i++)
     {
         plicFuncs::print_advFluxFld(mesh, advFlux_Y0i, alpha0, C0i, c0i, Y0i, c0iName, Y0iName, osAdv);
         plicFuncs::print_advFluxIntData(mesh, advFlux_Y0i, surfInt_advFlux_Y0iCells, dt, alpha0, C0i, c0i, Y0i, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", C0iName, c0iName, Y0iName, osAdv);
-
+    }
+    if(adv_debug)
+    {
         plicFuncs::print_line(osAdv, 100);
         osAdv<< setw(6) << "cellI" << "  " << setw(12) << "alpha0" << "  " << setw(12) << "rho0" << "  " << setw(12) << Y0iName << "  " << setw(12) << c0iName << "  " << setw(12) << C0iName << endl;
         plicFuncs::print_line(osAdv, 100);
@@ -194,15 +198,16 @@ for(i=0; i<(n-1); i++)
             Y0iCells[cellI] = C0iCells[cellI]/alpha0Cells[cellI]/rho0Cells[cellI];
         }
         
-        if(adv_debug2)
+        if(adv_debug)
         {
             osAdv<< setw(6) << cellI << "  " << setw(12) << alpha0Cells[cellI] << "  " << setw(12) << rho0Cells[cellI] << "  " << setw(12) << Y0iCells[cellI] << "  " << setw(12) << c0iCells[cellI] << "  " << setw(12) << C0iCells[cellI] << endl;
         }
     }
 
-    if(adv_debug2)
+    if(adv_debug)
     {
         plicFuncs::print_line(osAdv, 100);
+        osAdv<< endl;
     }
 
     Info<< C0iName << ":  avg = " 
@@ -221,18 +226,18 @@ for(i=0; i<(n-1); i++)
         << "  undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
         << "  max = " << max(Y0i).value()        
         << "  overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-        << endl;
-
-    if(adv_debug)
-    {
-        plicFuncs::print_line(osAdv, 100);
-        osAdv<< "Redistributing " << C0iName << " field" << endl;
-        plicFuncs::print_line(osAdv, 100);
-        osAdv<< endl;
-    }
+        << endl;    
 
     if(redist_C)
     {
+        if(adv_debug)
+        {
+            plicFuncs::print_line(osAdv, 100);
+            osAdv<< "Redistributing " << C0iName << " field" << endl;
+            plicFuncs::print_line(osAdv, 100);
+            osAdv<< endl;
+        }
+
         plicFuncs::redistribute_Ci_field(mesh, C0iCells, Y0iCells, alpha0Cells, rho0Cells, cell_stencil.stencil(), Y0min[i], Y0max[i], SMALLEST_ALPHA_FOR_YADV, Y_BOUND_ITERS_MAX, adv_debug, osAdv);
 
         Info<< C0iName << " after redistribution:  avg = " 

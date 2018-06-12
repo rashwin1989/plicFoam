@@ -145,10 +145,10 @@ if(alpha_debug)
             osAlpha<< "div(phi) = " << div_phi
                 << "  div(phi, alpha1) = " << div_alpha1 << nl
                 << "pS = " << pSCells[cellI]
-                << "  dgdt = " << dgdt[cellI]
+                //<< "  dgdt = " << dgdt[cellI]
                 //<< "  Su = " << Su[cellI]
                 //<< " Sp = " << Sp[cellI] << nl
-                << "div(phi, alpha1)*dt = " << div_alpha1*dt
+                << "  div(phi, alpha1)*dt = " << div_alpha1*dt
                 //<< "  Su*dt = " << Su[cellI]*dt
                 //<< " Sp*dt = " << Sp[cellI]*dt << nl
                 << "  alpha1 new time = " << alpha1Cells[cellI] << nl
