@@ -10656,6 +10656,8 @@ void calc_mS_alphaS
     List<scalar> Js0_cellI(n);
     List<scalar> Ys1_cellI(n);
     List<scalar> Ys0_cellI(n);
+    List<scalar> Y1_cellI(n);
+    List<scalar> Y0_cellI(n);
     List<scalar> C1Own(n);
     List<scalar> C0Own(n);
     List<scalar> C1Nei(n);
@@ -10708,11 +10710,20 @@ void calc_mS_alphaS
                 Js0_cellI[i] = Js0[i].internalField()[cellI]/V_cellI;
                 Ys1_cellI[i] = Ys1[i].internalField()[cellI];
                 Ys0_cellI[i] = Ys0[i].internalField()[cellI];
+                Y1_cellI[i] = Y1[i].internalField()[cellI];
+                Y0_cellI[i] = Y0[i].internalField()[cellI];
             }
             mS1Tot_cellI = 0; mS1Tot_cellI_tmp = 0;
             
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
-            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);            
+            if(mS1Tot_cellI_tmp > 0)
+            {
+                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0_cellI[0]);
+            }
+            else
+            {
+                mS1Tot_cellI_tmp /= (Y1_cellI[0] - Ys0_cellI[0]);
+            }
             
             for(i=0; i<n; i++)
             {                                
