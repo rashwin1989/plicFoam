@@ -10619,6 +10619,64 @@ void calc_Xs_Ys_Js_mS_alphaS
 }
 
 
+void calc_mS_limiter
+(
+    const List<scalar>& C1_0,
+    const List<scalar>& C0_0,
+    const List<scalar>& Ys1,
+    const List<scalar>& Ys0,
+    const List<scalar>& mS1,
+    const scalar& mS1Tot,
+    const scalar& dt,    
+    int n,
+    scalar& limiter_min,
+    const bool debug,
+    OFstream& os
+)
+{
+    int i;
+    scalar m1_0, m0_0, mTot_0, m1_eq, mS1Tot_eq, limiter;
+    List<scalar> mS1_eq(n);
+
+    m1_0 = 0; m0_0 = 0;  
+    for(i=0; i<n; i++)
+    {
+        m1_0 += C1_0[i];
+        m0_0 += C0_0[i];
+    }
+    mTot_0 = m1_0 + m0_0;
+
+    m1_eq = C1_0[0] + C0_0[0] - mTot_0*Ys0[0];
+    m1_eq /= (Ys1[0] - Ys0[0]);
+
+    if(m1_eq < 0)
+    { 
+        m1_eq = 0;
+        mS1Tot_eq = (m1_eq - m1_0)/dt;
+        for(i=0; i<n; i++) mS1_eq[i] = -C1_0[i]/dt;
+    }
+    else if(m1_eq > mTot_0)
+    {
+        m1_eq = mTot_0;
+        mS1Tot_eq = (m1_eq - m1_0)/dt;
+        for(i=0; i<n; i++) mS1_eq[i] = C0_0[i]/dt;
+    }
+    else
+    {
+        mS1Tot_eq = (m1_eq - m1_0)/dt;
+        for(i=0; i<n; i++) mS1_eq[i] = (m1_eq*Ys1[i] - C1_0[i])/dt;
+    }
+
+    limiter_min = mag(mS1Tot_eq)/(max(mag(mS1Tot), SMALL));
+    for(i=0; i<n; i++)
+    {
+        limiter = mag(mS1_eq[i])/(max(mag(mS1[i]), SMALL));
+        limiter_min = min(limiter, limiter_min);
+    }
+    limiter_min = min(limiter_min, 1);
+}
+
+
 void calc_mS_alphaS
 (
     const fvMesh& mesh,
@@ -10649,7 +10707,7 @@ void calc_mS_alphaS
     int n, i;
     label faceI, bndFaceI, nBnd, faceOwn, faceNei;
     n = nSpecies;
-    scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
+    scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, limiter;
     scalar alpha1Own, alpha1Nei, VOwn, VNei, rho1Own, rho0Own, rho1Nei, rho0Nei, mS1TotOwn, mS1TotNei;
     List<scalar> mS1_cellI(n);
     List<scalar> Js1_cellI(n);
@@ -10658,12 +10716,20 @@ void calc_mS_alphaS
     List<scalar> Ys0_cellI(n);
     List<scalar> Y1_cellI(n);
     List<scalar> Y0_cellI(n);
+    List<scalar> C1_cellI(n);
+    List<scalar> C0_cellI(n);
+    List<scalar> Y1Own(n);
+    List<scalar> Y0Own(n);
+    List<scalar> Y1Nei(n);
+    List<scalar> Y0Nei(n);
     List<scalar> C1Own(n);
     List<scalar> C0Own(n);
     List<scalar> C1Nei(n);
     List<scalar> C0Nei(n);
     List<scalar> mS1Own(n);
     List<scalar> mS1Nei(n);
+    List<scalar> mS0Own(n);
+    List<scalar> mS0Nei(n);
 
     nBnd = mesh.nFaces() - mesh.nInternalFaces();
     List<scalar> VNeiFld(nBnd);
@@ -10712,6 +10778,8 @@ void calc_mS_alphaS
                 Ys0_cellI[i] = Ys0[i].internalField()[cellI];
                 Y1_cellI[i] = Y1[i].internalField()[cellI];
                 Y0_cellI[i] = Y0[i].internalField()[cellI];
+                C1_cellI[i] = C1[i].internalField()[cellI];
+                C0_cellI[i] = C0[i].internalField()[cellI];
             }
             mS1Tot_cellI = 0; mS1Tot_cellI_tmp = 0;
             
@@ -10719,33 +10787,32 @@ void calc_mS_alphaS
             if(mS1Tot_cellI_tmp > 0)
             {
                 mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0_cellI[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+                }
             }
             else
             {
                 mS1Tot_cellI_tmp /= (Y1_cellI[0] - Ys0_cellI[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1_cellI[i] + Js1_cellI[i];
+                }
             }
-            
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+                        
             for(i=0; i<n; i++)
             {                                
-                mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-                
-                if(mS1i_cellI > 0)
-                {
-                    max_mSi = C0[i].internalField()[cellI]/dt;
-                    mS1i_cellI = min(max_mSi, mS1i_cellI);
-                }
-                else
-                {
-                    max_mSi = C1[i].internalField()[cellI]/dt;
-                    mS1i_cellI = -min(max_mSi, -mS1i_cellI);
-                }
-                
-                mS1_cellI[i] = mS1i_cellI;
-                mS1Tot_cellI += mS1i_cellI;
+                mS1_cellI[i] = limiter*(mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i]);                
 
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
                 mS0[i].internalField()[cellI] = -mS1_cellI[i];
             }
+            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
             mS1TotCells[cellI] = mS1Tot_cellI;
             mS0TotCells[cellI] = -mS1Tot_cellI;
@@ -10766,7 +10833,8 @@ void calc_mS_alphaS
                     os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Js1[i].internalField()[cellI] << "  " << setw(12) << Js0[i].internalField()[cellI] << "  " << setw(12) << mS1[i].internalField()[cellI] << "  " << setw(12) << mS0[i].internalField()[cellI] << endl;
                 }
                 print_line(os, 100);
-                os<< "mS1Tot = " << mS1TotCells[cellI] << "  mS0Tot = " << mS0TotCells[cellI] << nl
+                os<< "limiter = " << limiter << nl
+                    << "mS1Tot = " << mS1TotCells[cellI] << "  mS0Tot = " << mS0TotCells[cellI] << nl
                     << "rho1 = " << rho1_cellI << "  rho0 = " << rho0_cellI << nl
                     << "alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << endl;
                 print_line(os, 100);
@@ -10821,45 +10889,83 @@ void calc_mS_alphaS
                 C0Own[i] = C0[i].internalField()[faceOwn];
                 C1Nei[i] = C1[i].internalField()[faceNei];
                 C0Nei[i] = C0[i].internalField()[faceNei];
+                Y1Own[i] = Y1[i].internalField()[faceOwn];
+                Y0Own[i] = Y0[i].internalField()[faceOwn];
+                Y1Nei[i] = Y1[i].internalField()[faceNei];
+                Y0Nei[i] = Y0[i].internalField()[faceNei];
             }
 
             mS1TotOwn = 0; mS1TotNei = 0;
 
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
-            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+            if(mS1Tot_cellI_tmp > 0)
+            {
+                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+                }
+            }
+            else
+            {
+                mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Own[i] + Js1_cellI[i];
+                }
+            }
 
             for(i=0; i<n; i++)
             {
-                mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-                if(mS1i_cellI > 0)
-                {
-                    max_mSi = C0Own[i]*VOwn/dt;
-                    mS1Own[i] = min(max_mSi, mS1i_cellI);
-                    max_mSi = C0Nei[i]*VNei/dt;
-                    mS1Nei[i] = min(max_mSi, (mS1i_cellI - mS1Own[i]));
-                }
-                else
-                {
-                    max_mSi = C1Nei[i]*VNei/dt;
-                    mS1Nei[i] = -min(max_mSi, -mS1i_cellI);
-                    max_mSi = C1Own[i]*VOwn/dt;
-                    mS1Own[i] = -min(max_mSi, (-mS1i_cellI + mS1Nei[i]));
-                }
-
-                mS1TotOwn += mS1Own[i];
-                mS1TotNei += mS1Nei[i];
-
-                mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
-                mS0[i].internalField()[faceOwn] = -mS1Own[i]/VOwn;
-
-                mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
-                mS0[i].internalField()[faceNei] = -mS1Nei[i]/VNei;
+                C1_cellI[i] = VOwn*C1Own[i] + VNei*C1Nei[i];
+                C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
             }
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
             
-            mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
-            mS0TotCells[faceOwn] = -mS1TotOwn/VOwn;
-            mS1TotCells[faceNei] = mS1TotNei/VNei;
-            mS0TotCells[faceNei] = -mS1TotNei/VNei;
+            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+
+            if(mS1Tot_cellI_tmp > 0)
+            {
+                for(i=0; i<n; i++)
+                {
+                    mS1Own[i] = limiter*Js1_cellI[i];
+                    mS1Nei[i] = mS1Tot_cellI*Ys1_cellI[i];
+
+                    mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = 0;
+
+                    mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
+                    mS0[i].internalField()[faceNei] = (-mS1Nei[i] - mS1Own[i])/VNei;
+                }
+
+                mS1TotOwn = 0;
+                mS1TotNei = mS1Tot_cellI/VNei;
+            }
+            else
+            {
+                for(i=0; i<n; i++)
+                {
+                    mS0Nei[i] = -limiter*Js0_cellI[i];
+                    mS0Own[i] = -mS1Tot_cellI*Ys0_cellI[i];
+
+                    mS1[i].internalField()[faceOwn] = (-mS0Own[i] - mS0Nei[i])/VOwn;
+                    mS0[i].internalField()[faceOwn] = mS0Own[i]/VOwn;
+
+                    mS1[i].internalField()[faceNei] = 0;
+                    mS0[i].internalField()[faceNei] = mS0Nei[i]/VNei;
+                }
+
+                mS1TotOwn = mS1Tot_cellI/VOwn;
+                mS1TotNei = 0;
+            }
+
+            mS1TotCells[faceOwn] = mS1TotOwn;
+            mS0TotCells[faceOwn] = -mS1TotOwn;
+            mS1TotCells[faceNei] = mS1TotNei;
+            mS0TotCells[faceNei] = -mS1TotNei;
 
             alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
             alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;
@@ -10882,7 +10988,8 @@ void calc_mS_alphaS
                     os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
-                os<< "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
+                os<< "limiter = " << limiter << nl
+                    << "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
                     << "rho1 = " << rho1Own << "  rho0 = " << rho0Own << nl
                     << "alphaS1 = " << alphaS1Cells[faceOwn] << "  alphaS0 = " << alphaS0Cells[faceOwn] << endl;
                 print_line(os, 100);
@@ -10895,7 +11002,8 @@ void calc_mS_alphaS
                     os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceNei] << "  " << setw(12) << C0[i].internalField()[faceNei] << "  " << setw(12) << Js1[i].internalField()[faceNei] << "  " << setw(12) << Js0[i].internalField()[faceNei] << "  " << setw(12) << mS1[i].internalField()[faceNei] << "  " << setw(12) << mS0[i].internalField()[faceNei] << endl;
                 }
                 print_line(os, 100);
-                os<< "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
+                os<< "limiter = " << limiter << nl
+                    << "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
                     << "rho1 = " << rho1Nei << "  rho0 = " << rho0Nei << nl
                     << "alphaS1 = " << alphaS1Cells[faceNei] << "  alphaS0 = " << alphaS0Cells[faceNei] << endl;
                 print_line(os, 100);
@@ -10921,46 +11029,83 @@ void calc_mS_alphaS
                 C0Own[i] = C0[i].internalField()[faceOwn];
                 C1Nei[i] = C1[i].internalField()[faceNei];
                 C0Nei[i] = C0[i].internalField()[faceNei];
+                Y1Own[i] = Y1[i].internalField()[faceOwn];
+                Y0Own[i] = Y0[i].internalField()[faceOwn];
+                Y1Nei[i] = Y1[i].internalField()[faceNei];
+                Y0Nei[i] = Y0[i].internalField()[faceNei];
             }
 
             mS1TotOwn = 0; mS1TotNei = 0;
 
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
-            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+            if(mS1Tot_cellI_tmp > 0)
+            {
+                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+                }
+            }
+            else
+            {
+                mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+
+                for(i=0; i<n; i++)
+                {                                
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Nei[i] + Js1_cellI[i];
+                }
+            }
 
             for(i=0; i<n; i++)
             {
-                mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-
-                if(mS1i_cellI > 0)
-                {
-                    max_mSi = C0Nei[i]*VNei/dt;
-                    mS1Nei[i] = min(max_mSi, mS1i_cellI);
-                    max_mSi = C0Own[i]*VOwn/dt;
-                    mS1Own[i] = min(max_mSi, (mS1i_cellI - mS1Nei[i]));
-                }
-                else
-                {
-                    max_mSi = C1Own[i]*VOwn/dt;
-                    mS1Own[i] = -min(max_mSi, -mS1i_cellI);
-                    max_mSi = C1Nei[i]*VNei/dt;
-                    mS1Nei[i] = -min(max_mSi, (-mS1i_cellI + mS1Own[i]));
-                }
-
-                mS1TotOwn += mS1Own[i];
-                mS1TotNei += mS1Nei[i];
-
-                mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
-                mS0[i].internalField()[faceOwn] = -mS1Own[i]/VOwn;
-
-                mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
-                mS0[i].internalField()[faceNei] = -mS1Nei[i]/VNei;
+                C1_cellI[i] = VOwn*C1Own[i] + VNei*C1Nei[i];
+                C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
             }
-            
-            mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
-            mS0TotCells[faceOwn] = -mS1TotOwn/VOwn;
-            mS1TotCells[faceNei] = mS1TotNei/VNei;
-            mS0TotCells[faceNei] = -mS1TotNei/VNei;
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+
+            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+
+            if(mS1Tot_cellI_tmp > 0)
+            {
+                for(i=0; i<n; i++)
+                {
+                    mS1Nei[i] = limiter*Js1_cellI[i];
+                    mS1Own[i] = mS1Tot_cellI*Ys1_cellI[i];
+
+                    mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
+                    mS0[i].internalField()[faceNei] = 0;
+
+                    mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                    mS0[i].internalField()[faceOwn] = (-mS1Nei[i] - mS1Own[i])/VOwn;
+                }
+
+                mS1TotNei = 0;
+                mS1TotOwn = mS1Tot_cellI/VOwn;
+            }
+            else
+            {
+                for(i=0; i<n; i++)
+                {
+                    mS0Own[i] = -limiter*Js0_cellI[i];
+                    mS0Nei[i] = -mS1Tot_cellI*Ys0_cellI[i];
+
+                    mS1[i].internalField()[faceNei] = (-mS0Own[i] - mS0Nei[i])/VNei;
+                    mS0[i].internalField()[faceNei] = mS0Nei[i]/VNei;
+
+                    mS1[i].internalField()[faceOwn] = 0;
+                    mS0[i].internalField()[faceOwn] = mS0Own[i]/VOwn;
+                }
+
+                mS1TotNei = mS1Tot_cellI/VNei;
+                mS1TotOwn = 0;
+            }
+
+            mS1TotCells[faceOwn] = mS1TotOwn;
+            mS0TotCells[faceOwn] = -mS1TotOwn;
+            mS1TotCells[faceNei] = mS1TotNei;
+            mS0TotCells[faceNei] = -mS1TotNei;
 
             alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
             alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;
@@ -10983,7 +11128,8 @@ void calc_mS_alphaS
                     os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
-                os<< "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
+                os<< "limiter = " << limiter << nl
+                    << "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
                     << "rho1 = " << rho1Own << "  rho0 = " << rho0Own << nl
                     << "alphaS1 = " << alphaS1Cells[faceOwn] << "  alphaS0 = " << alphaS0Cells[faceOwn] << endl;
                 print_line(os, 100);
@@ -11086,43 +11232,80 @@ void calc_mS_alphaS
                         const scalarField& C0iNeiFld = C0[i].boundaryField()[patchI].patchNeighbourField();
                         C1Nei[i] = C1iNeiFld[fcI];
                         C0Nei[i] = C0iNeiFld[fcI];
+                        Y1Own[i] = Y1[i].internalField()[faceOwn];
+                        Y0Own[i] = Y0[i].internalField()[faceOwn];
+                        const scalarField& Y1iNeiFld = Y1[i].boundaryField()[patchI].patchNeighbourField();
+                        const scalarField& Y0iNeiFld = Y0[i].boundaryField()[patchI].patchNeighbourField();
+                        Y1Nei[i] = Y1iNeiFld[fcI];
+                        Y0Nei[i] = Y0iNeiFld[fcI];
                     }
+
                     mS1TotOwn = 0; mS1TotNei = 0;
 
                     mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
-                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                    if(mS1Tot_cellI_tmp > 0)
+                    {
+                        mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+
+                        for(i=0; i<n; i++)
+                        {                                
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+                        }
+                    }
+                    else
+                    {
+                        mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+
+                        for(i=0; i<n; i++)
+                        {                                
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Own[i] + Js1_cellI[i];
+                        }
+                    }
 
                     for(i=0; i<n; i++)
                     {
-                        mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-
-                        if(mS1i_cellI > 0)
-                        {
-                            max_mSi = C0Own[i]*VOwn/dt;
-                            mS1Own[i] = min(max_mSi, mS1i_cellI);
-                            max_mSi = C0Nei[i]*VNei/dt;
-                            mS1Nei[i] = min(max_mSi, (mS1i_cellI - mS1Own[i]));
-                        }
-                        else
-                        {
-                            max_mSi = C1Nei[i]*VNei/dt;
-                            mS1Nei[i] = -min(max_mSi, -mS1i_cellI);
-                            max_mSi = C1Own[i]*VOwn/dt;
-                            mS1Own[i] = -min(max_mSi, (-mS1i_cellI + mS1Nei[i]));
-                        }
-
-                        mS1TotOwn += mS1Own[i];
-                        mS1TotNei += mS1Nei[i];
-
-                        mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
-                        mS0[i].internalField()[faceOwn] = -mS1Own[i]/VOwn;                        
+                        C1_cellI[i] = VOwn*C1Own[i] + VNei*C1Nei[i];
+                        C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
                     }
+
+                    calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
             
-                    mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
-                    mS0TotCells[faceOwn] = -mS1TotOwn/VOwn;                    
+                    mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+
+                    if(mS1Tot_cellI_tmp > 0)
+                    {
+                        for(i=0; i<n; i++)
+                        {
+                            mS1Own[i] = limiter*Js1_cellI[i];
+                            mS1Nei[i] = mS1Tot_cellI*Ys1_cellI[i];
+
+                            mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = 0;                            
+                        }
+
+                        mS1TotOwn = 0;
+                        mS1TotNei = mS1Tot_cellI/VNei;
+                    }
+                    else
+                    {
+                        for(i=0; i<n; i++)
+                        {
+                            mS0Nei[i] = -limiter*Js0_cellI[i];
+                            mS0Own[i] = -mS1Tot_cellI*Ys0_cellI[i];
+
+                            mS1[i].internalField()[faceOwn] = (-mS0Own[i] - mS0Nei[i])/VOwn;
+                            mS0[i].internalField()[faceOwn] = mS0Own[i]/VOwn;                            
+                        }
+
+                        mS1TotOwn = mS1Tot_cellI/VOwn;
+                        mS1TotNei = 0;
+                    }
+
+                    mS1TotCells[faceOwn] = mS1TotOwn;
+                    mS0TotCells[faceOwn] = -mS1TotOwn;                    
 
                     alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
-                    alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;                   
+                    alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;                    
 
                     if(debug)
                     {
@@ -11168,43 +11351,80 @@ void calc_mS_alphaS
                         const scalarField& C0iNeiFld = C0[i].boundaryField()[patchI].patchNeighbourField();
                         C1Nei[i] = C1iNeiFld[fcI];
                         C0Nei[i] = C0iNeiFld[fcI];
+                        Y1Own[i] = Y1[i].internalField()[faceOwn];
+                        Y0Own[i] = Y0[i].internalField()[faceOwn];
+                        const scalarField& Y1iNeiFld = Y1[i].boundaryField()[patchI].patchNeighbourField();
+                        const scalarField& Y0iNeiFld = Y0[i].boundaryField()[patchI].patchNeighbourField();
+                        Y1Nei[i] = Y1iNeiFld[fcI];
+                        Y0Nei[i] = Y0iNeiFld[fcI];
                     }
+
                     mS1TotOwn = 0; mS1TotNei = 0;
 
                     mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
-                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                    if(mS1Tot_cellI_tmp > 0)
+                    {
+                        mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+
+                        for(i=0; i<n; i++)
+                        {                                
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
+                        }
+                    }
+                    else
+                    {
+                        mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+
+                        for(i=0; i<n; i++)
+                        {                                
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Nei[i] + Js1_cellI[i];
+                        }
+                    }
 
                     for(i=0; i<n; i++)
                     {
-                        mS1i_cellI = mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i];
-
-                        if(mS1i_cellI > 0)
-                        {
-                            max_mSi = C0Nei[i]*VNei/dt;
-                            mS1Nei[i] = min(max_mSi, mS1i_cellI);
-                            max_mSi = C0Own[i]*VOwn/dt;
-                            mS1Own[i] = min(max_mSi, (mS1i_cellI - mS1Nei[i]));
-                        }
-                        else
-                        {
-                            max_mSi = C1Own[i]*VOwn/dt;
-                            mS1Own[i] = -min(max_mSi, -mS1i_cellI);
-                            max_mSi = C1Nei[i]*VNei/dt;
-                            mS1Nei[i] = -min(max_mSi, (-mS1i_cellI + mS1Own[i]));
-                        }
-
-                        mS1TotOwn += mS1Own[i];
-                        mS1TotNei += mS1Nei[i];
-
-                        mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
-                        mS0[i].internalField()[faceOwn] = -mS1Own[i]/VOwn;
+                        C1_cellI[i] = VOwn*C1Own[i] + VNei*C1Nei[i];
+                        C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
                     }
-            
-                    mS1TotCells[faceOwn] = mS1TotOwn/VOwn;
-                    mS0TotCells[faceOwn] = -mS1TotOwn/VOwn;                    
+
+                    calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+
+                    mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+
+                    if(mS1Tot_cellI_tmp > 0)
+                    {
+                        for(i=0; i<n; i++)
+                        {
+                            mS1Nei[i] = limiter*Js1_cellI[i];
+                            mS1Own[i] = mS1Tot_cellI*Ys1_cellI[i];                  
+
+                            mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
+                            mS0[i].internalField()[faceOwn] = (-mS1Nei[i] - mS1Own[i])/VOwn;
+                        }
+
+                        mS1TotNei = 0;
+                        mS1TotOwn = mS1Tot_cellI/VOwn;
+                    }
+                    else
+                    {
+                        for(i=0; i<n; i++)
+                        {
+                            mS0Own[i] = -limiter*Js0_cellI[i];
+                            mS0Nei[i] = -mS1Tot_cellI*Ys0_cellI[i];                            
+
+                            mS1[i].internalField()[faceOwn] = 0;
+                            mS0[i].internalField()[faceOwn] = mS0Own[i]/VOwn;
+                        }
+
+                        mS1TotNei = mS1Tot_cellI/VNei;
+                        mS1TotOwn = 0;
+                    }
+
+                    mS1TotCells[faceOwn] = mS1TotOwn;
+                    mS0TotCells[faceOwn] = -mS1TotOwn;                    
 
                     alphaS1Cells[faceOwn] = mS1TotCells[faceOwn]/rho1Own;
-                    alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;                   
+                    alphaS0Cells[faceOwn] = mS0TotCells[faceOwn]/rho0Own;                    
 
                     if(debug)
                     {

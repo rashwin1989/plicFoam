@@ -43,12 +43,12 @@ for(i=0; i<(n-1); i++)
 
     surfaceScalarField& advFlux_Y1i = advFlux_Y1[i];
     surfaceScalarField& advFlux_Y0i = advFlux_Y0[i];
-
+    /*
     volScalarField& diffTerm_Y1i = diffTerm_Y1[i];
     scalarField& diffTerm_Y1iCells = diffTerm_Y1i.internalField();
     volScalarField& diffTerm_Y0i = diffTerm_Y0[i];
     scalarField& diffTerm_Y0iCells = diffTerm_Y0i.internalField();
-
+        */
     scalarField& mS1iCells = mS1[i].internalField();    
 
     //Phase-1

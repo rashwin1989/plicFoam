@@ -1195,6 +1195,21 @@ namespace plicFuncs
         OFstream& os
     );
 
+    void calc_mS_limiter
+    (
+        const List<scalar>& C1_0,
+        const List<scalar>& C0_0,
+        const List<scalar>& Ys1,
+        const List<scalar>& Ys0,
+        const List<scalar>& mS1,
+        const scalar& mS1Tot,
+        const scalar& dt,    
+        int n,
+        scalar& limiter_min,
+        const bool debug,
+        OFstream& os
+    );
+
     void calc_mS_alphaS
     (
         const fvMesh& mesh,

@@ -19,7 +19,7 @@ fileName outputFile;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
+double T_0, P_thermo_tmp, pSCoeff, /*Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI,*/ alpha1_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
