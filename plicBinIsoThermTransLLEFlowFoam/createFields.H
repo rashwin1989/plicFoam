@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
 label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
@@ -19,7 +19,7 @@ fileName outputFile;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, pSCoeff, /*Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI,*/ alpha1_cellI;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -86,6 +86,7 @@ MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 ALPHA_2PH_MIN_IST = transPropDict.lookupOrDefault("ALPHA_2PH_MIN_IST", 1E-06);
+ALPHA_2PH_MAX_IST = 1 - ALPHA_2PH_MIN_IST;
 //A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
 //scalar avgSf = (mesh.magSf()).average().value();
 //A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
@@ -593,6 +594,9 @@ volScalarField mu0
     mesh,
     mu0_0
 );
+
+volScalarField mu1_thermo = mu1;
+volScalarField mu0_thermo = mu0;
 
 surfaceScalarField mu1f(linearInterpolate(mu1));
 surfaceScalarField mu0f(linearInterpolate(mu0));

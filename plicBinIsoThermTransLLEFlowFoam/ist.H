@@ -49,7 +49,7 @@ forAll(alpha1Cells, cellI)
 {
     alpha1_cellI = alpha1Cells[cellI];
     
-    if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
+    if(alpha1_cellI > ALPHA_2PH_MIN_IST && alpha1_cellI < ALPHA_2PH_MAX_IST)
     {        
         calc_ist_for_cell[cellI] = 1;
     }
@@ -57,6 +57,17 @@ forAll(alpha1Cells, cellI)
     {
         calc_ist_for_cell[cellI] = 0;
     }
+}
+for(faceI=0; faceI<nIntFaces; faceI++)
+{
+    label faceOwn = own[faceI];
+    label faceNei = nei[faceI];
+
+    if((alpha1Cells[faceOwn] > ALPHA_2PH_MAX_IST && alpha1Cells[faceNei] < ALPHA_2PH_MIN_IST) || (alpha1Cells[faceNei] > ALPHA_2PH_MAX_IST && alpha1Cells[faceOwn] < ALPHA_2PH_MIN_IST))
+    {
+        calc_ist_for_cell[faceOwn] = 1;
+        calc_ist_for_cell[faceNei] = 1;
+    } 
 }
 
 forAll(alpha1Cells, cellI)
@@ -106,7 +117,7 @@ forAll(alpha1Cells, cellI)
         }
     }
 
-    /*
+    
     //ph-1
     //volume fraction
     alpha1Cells[cellI] += alphaS1Cells[cellI]*dt;    
@@ -152,13 +163,14 @@ forAll(alpha1Cells, cellI)
 
     //ph-0
     //volume fraction
-    alpha0Cells[cellI] += alphaS0Cells[cellI]*dt;    
+    //alpha0Cells[cellI] += alphaS0Cells[cellI]*dt;
+    alpha0Cells[cellI] = scalar(1.0) - alpha1Cells[cellI];
 
     C0Tot_cellI = 0.0;
     //species
     for(i=0; i<n; i++)
     {
-        C0i_cellI = C0[i].internalField()[cellI] - mS1[i].internalField()[cellI]*dt;
+        C0i_cellI = C0[i].internalField()[cellI] + mS0[i].internalField()[cellI]*dt;
         C0i_cellI = max(C0i_cellI, 0.0);
         C0[i].internalField()[cellI] = C0i_cellI;
         C0Tot_cellI += C0i_cellI;        
@@ -215,10 +227,9 @@ forAll(alpha1Cells, cellI)
             plicFuncs::print_line(osIst, 100);        
         }
     }
-        */
 }
 
-/*
+
 alpha1.correctBoundaryConditions();
 alpha0.correctBoundaryConditions();
 
@@ -257,14 +268,13 @@ for(i=0; i<n; i++)
         << "  Max(Y0i) = " << max(Y0i).value()
         << endl;        
 }
-    */
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 //-----------------------------------------------------------------------------------------------------------//
 
 //-----------------------------------------------------------------------------------------------------------//
 //Reset the allowable limits for concentrations and mass fractions in the phases
 
-/*
+
 for(i=0; i<n; i++)
 {
     C1max[i] = max(C1[i]).value();
@@ -272,6 +282,6 @@ for(i=0; i<n; i++)
     C1min[i] = min(C1[i]).value();
     C0min[i] = min(C0[i]).value();
 }
-    */
+
 
 Info<< "Done Interfacial Species Transfer Source Terms Calculation" << endl;

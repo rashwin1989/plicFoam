@@ -18,7 +18,7 @@ plicFuncs::correct_thermo_trans_prop
     x1,
     T1,
     v1,    
-    mu1,
+    mu1_thermo,
     Dij1
 );
 
@@ -42,7 +42,7 @@ plicFuncs::correct_thermo_trans_prop
     x0,
     T0,
     v0,    
-    mu0,
+    mu0_thermo,
     Dij0
 );
 

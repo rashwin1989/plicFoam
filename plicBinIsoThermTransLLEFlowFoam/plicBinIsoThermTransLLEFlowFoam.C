@@ -117,6 +117,13 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
             //alpha1 == alpha1_old;
             //alpha1.correctBoundaryConditions();
 
@@ -148,19 +155,19 @@ int main(int argc, char *argv[])
 
             dt = deltaT;
             Info<< "Calculating two-phase advective fluxes" << endl;
-            interface.calc_2ph_advFluxes(c1_old, c0_old, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
+            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << endl;            
 
-            #include "alpha1Eqn2.H"
+            #include "alpha1Eqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
             
-            #include "YEqn.H"
+            #include "YAdvEqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()

@@ -64,7 +64,7 @@ forAll(alpha1Cells, cellI)
     alpha1Cells[cellI] = (alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt + Su[cellI]*dt);
     alpha1Cells[cellI] /= (scalar(1.0) - Sp[cellI]*dt);
         */
-    alpha1Cells[cellI] = alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
+    alpha1Cells[cellI] = alpha1Cells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
 }
 
 Info<< "alpha1:  avg = "
