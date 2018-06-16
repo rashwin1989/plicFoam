@@ -2221,6 +2221,8 @@ for(i=0; i<n; i++)
 
 #include "correct_thermo_trans_prop.H"
 
+#include "diff_grad_interp.H"
+
 rho = alpha1*rho1 + alpha0*rho0;
 mu = alpha1*mu1 + alpha0*mu0;
 //Done initialize dependent variable fields correctly
