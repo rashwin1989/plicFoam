@@ -4587,7 +4587,8 @@ void calc_2ph_diffFluxes_Yi_Fick
                 // check diffFlux > maxDiffFlux causing unboundedness and
                 // limit diffFlux if that is the case 
                 
-                //ph1        
+                //ph1   
+                /*
                 diffFlux_limiter = 1;
                 
                 calc_diffFlux_limiter
@@ -4662,7 +4663,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 }
 
                 pdiffFlux_Y0i[fcI] *= min(diffFlux_limiter, 1);
-
+                    */
                 faceI++;
             }//end forAll(pY1i, fcI)
         }//end else if(isA<fixedValueFvPatchScalarField>(pY1i))
