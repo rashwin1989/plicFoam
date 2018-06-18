@@ -40,8 +40,8 @@ plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
 
 plicFuncs::linearInterpolate_2ph(rho1, mesh, w_ph1, rho1f);
 plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
-plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f);
-plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f);
+plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f, interp_debug, osGrad);
+plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f, interp_debug, osGrad);
 
 for(i=0; i<n; i++)
 {        

@@ -6778,15 +6778,18 @@ void linearInterpolate_2ph
     GeometricField<Type, fvsPatchField, surfaceMesh>& Yf
 )
 {
+    label faceI, faceOwn, faceNei;
+    scalar YOwn;
+
     const labelList& own = mesh.owner();
     const labelList& nei = mesh.neighbour();
 
     const Field<Type>& YCells = Y.internalField();
 
-    for(label faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
-        label faceOwn = own[faceI];
-        label faceNei = nei[faceI];
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
         scalar wf = weights[faceI];
 
         Yf[faceI] = wf*YCells[faceOwn] + (1.0 - wf)*YCells[faceNei];
@@ -6800,14 +6803,112 @@ void linearInterpolate_2ph
         fvsPatchField<Type>& pYf = Yf.boundaryField()[patchI];
         const fvPatchField<Type>& pY = Y.boundaryField()[patchI];
         const fvsPatchScalarField& pw = weights.boundaryField()[patchI];
+        faceI = pp.start();
+
         if(pp.coupled())
         {
+            //const Field<Type>& pYOwn = pY.patchInternalField();
+            const Field<Type>& pYNei = pY.patchNeighbourField();
+            forAll(pYf, fcI)
+            {
+                faceOwn = own[faceI];
+                YOwn = YCells[faceOwn];
+                scalar wf = pw[fcI];
+                pYf[fcI] = wf*YOwn + (1.0 - wf)*pYNei[fcI];
+
+                faceI++;
+            }
+        }
+        else
+        {
+            forAll(pYf, fcI)
+            {
+                scalar wf = pw[fcI];
+                pYf[fcI] = wf*pY[fcI] + (1.0 - wf)*pY[fcI];
+            }
+        }
+    }
+}
+
+
+template<class Type>
+void linearInterpolate_2ph
+(
+    const GeometricField<Type, fvPatchField, volMesh>& Y,
+    const fvMesh& mesh,
+    const surfaceScalarField& weights,
+    GeometricField<Type, fvsPatchField, surfaceMesh>& Yf,
+    const bool debug,
+    OFstream& os
+)
+{
+    label faceI, faceOwn, faceNei;
+    scalar wf, YOwn;
+
+    if(debug)
+    {
+        print_line(os, 100);
+        os<< "Interpolating field " << Y.name() << endl; 
+        print_line(os, 100);
+        os<< endl;
+    }
+
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+
+    const Field<Type>& YCells = Y.internalField();
+
+    for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+    {
+        faceOwn = own[faceI];
+        faceNei = nei[faceI];
+        wf = weights[faceI];
+
+        Yf[faceI] = wf*YCells[faceOwn] + (1.0 - wf)*YCells[faceNei];
+    }
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    const wordList& patchNames = patches.names();
+
+    forAll(Yf.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        fvsPatchField<Type>& pYf = Yf.boundaryField()[patchI];
+        const fvPatchField<Type>& pY = Y.boundaryField()[patchI];
+        const fvsPatchScalarField& pw = weights.boundaryField()[patchI];
+        faceI = pp.start();
+
+        if(pp.coupled())
+        {
+            if(debug)
+            {
+                print_line(os, 100);
+                os<< "Couples patch " << patchNames[patchI] << endl; 
+                print_line(os, 100);
+                os<< setw(6) << "faceI" << "  " << setw(8) << "own" << "  " << setw(8) << "own w" << setw(8) << "own val" << "  " << setw(8) << "pif val" << "  " << setw(8) << "pnf val" << "  " << setw(8) << "face val" << endl;
+                print_line(os, 100);
+            }
+
             const Field<Type>& pYOwn = pY.patchInternalField();
             const Field<Type>& pYNei = pY.patchNeighbourField();
             forAll(pYf, fcI)
             {
-                scalar wf = pw[fcI];
-                pYf[fcI] = wf*pYOwn[fcI] + (1.0 - wf)*pYNei[fcI];
+                faceOwn = own[faceI];
+                YOwn = YCells[faceOwn];
+                wf = pw[fcI];
+                pYf[fcI] = wf*YOwn + (1.0 - wf)*pYNei[fcI];
+                if(debug)
+                {
+                    os<< setw(6) << fcI << "  " << setw(8) << faceOwn << "  " << setw(8) << wf << "  " << setw(8) << YCells[faceOwn] << "  " << setw(8) << pYOwn[fcI] << "  " << setw(8) << pYNei[fcI] << "  " << setw(8) << pYf[fcI] << endl;
+                }
+
+                faceI++;
+            }
+            
+            if(debug)
+            {
+                print_line(os, 100);
+                os<< endl;
             }
         }
         else

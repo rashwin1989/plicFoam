@@ -753,6 +753,17 @@ namespace plicFuncs
         GeometricField<Type, fvsPatchField, surfaceMesh>& Yf
     );
 
+    template<class Type>
+    void linearInterpolate_2ph
+    (
+        const GeometricField<Type, fvPatchField, volMesh>& Y,
+        const fvMesh& mesh,
+        const surfaceScalarField& weights,
+        GeometricField<Type, fvsPatchField, surfaceMesh>& Yf,
+        const bool debug,
+        OFstream& os
+    );
+
     void calc_2ph_linearInterpolation_weights
     (
         const fvMesh& mesh,

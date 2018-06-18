@@ -22,8 +22,8 @@ for(i=0; i<(n-1); i++)
     volScalarField& c0i = c0[i];
     volScalarField& C1i = C1[i];
     volScalarField& C0i = C0[i];
-    volScalarField& C1Oldi = C1_old[i];
-    volScalarField& C0Oldi = C0_old[i];
+    //volScalarField& C1Oldi = C1_old[i];
+    //volScalarField& C0Oldi = C0_old[i];
 
     scalarField& Y1iCells = Y1i.internalField();
     scalarField& Y0iCells = Y0i.internalField();
@@ -31,8 +31,8 @@ for(i=0; i<(n-1); i++)
     scalarField& c0iCells = c0i.internalField();
     scalarField& C1iCells = C1i.internalField();
     scalarField& C0iCells = C0i.internalField();
-    scalarField& C1OldiCells = C1Oldi.internalField();
-    scalarField& C0OldiCells = C0Oldi.internalField();
+    //scalarField& C1OldiCells = C1Oldi.internalField();
+    //scalarField& C0OldiCells = C0Oldi.internalField();
 
     word C1iName = "C1["+name(i)+"]";
     word c1iName = "c1["+name(i)+"]";

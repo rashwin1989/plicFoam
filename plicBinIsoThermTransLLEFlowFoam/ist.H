@@ -120,7 +120,9 @@ forAll(alpha1Cells, cellI)
     
     //ph-1
     //volume fraction
-    alpha1Cells[cellI] += alphaS1Cells[cellI]*dt;    
+    alpha1_cellI = alpha1Cells[cellI] + alphaS1Cells[cellI]*dt;
+    alpha1_cellI = max(alpha1_cellI, 0.0);
+    alpha1Cells[cellI] = alpha1_cellI;
 
     C1Tot_cellI = 0.0;
     //species
@@ -163,8 +165,10 @@ forAll(alpha1Cells, cellI)
 
     //ph-0
     //volume fraction
-    //alpha0Cells[cellI] += alphaS0Cells[cellI]*dt;
-    alpha0Cells[cellI] = scalar(1.0) - alpha1Cells[cellI];
+    alpha0_cellI = alpha0Cells[cellI] + alphaS0Cells[cellI]*dt;
+    alpha0_cellI = max(alpha0_cellI, 0.0);
+    alpha0Cells[cellI] = alpha0_cellI;
+    //alpha0Cells[cellI] = scalar(1.0) - alpha1Cells[cellI];
 
     C0Tot_cellI = 0.0;
     //species
@@ -229,6 +233,21 @@ forAll(alpha1Cells, cellI)
     }
 }
 
+Info<< "alpha1:  avg = "
+    << alpha1.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha1).value()
+    << "  undershoot = " << min(min(alpha1).value(), 0)
+    << "  max = " << max(alpha1).value()
+    << "  overshoot = " << max((max(alpha1).value() - 1), 0)
+    << endl;
+
+Info<< "alpha0:  avg = "
+    << alpha0.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha0).value()
+    << "  undershoot = " << min(min(alpha0).value(), 0)
+    << "  max = " << max(alpha0).value()
+    << "  overshoot = " << max((max(alpha0).value() - 1), 0)
+    << endl;
 
 alpha1.correctBoundaryConditions();
 alpha0.correctBoundaryConditions();

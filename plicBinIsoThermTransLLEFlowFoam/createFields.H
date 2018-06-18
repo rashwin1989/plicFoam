@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, /*ALPHA_2PH_MIN, */ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
 label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
@@ -16,10 +16,10 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -83,8 +83,8 @@ SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV
 //MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
-ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
-ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
+//ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
+//ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 ALPHA_2PH_MIN_IST = transPropDict.lookupOrDefault("ALPHA_2PH_MIN_IST", 1E-06);
 ALPHA_2PH_MAX_IST = 1 - ALPHA_2PH_MIN_IST;
 //A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
@@ -106,6 +106,8 @@ momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
+U_debug = transPropDict.lookupOrDefault("U_debug", false);
+interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
 // int switches
 //n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -362,6 +364,8 @@ outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
 outputFile = "pEqn_dbg";
 OFstream osPEqn(runTime.path()/outputFile);
+outputFile = "U_dbg";
+OFstream osU(runTime.path()/outputFile);
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//
 
@@ -1609,8 +1613,8 @@ if (p_rgh.needReference())
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
 volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
 scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
-volScalarField surfInt_phiAlpha0(fvc::surfaceIntegrate((phi- phiAlpha1)));
-scalarField& surfInt_phiAlpha0Cells = surfInt_phiAlpha0.internalField();
+//volScalarField surfInt_phiAlpha0(fvc::surfaceIntegrate((phi- phiAlpha1)));
+//scalarField& surfInt_phiAlpha0Cells = surfInt_phiAlpha0.internalField();
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
 labelList unbounded_Y_in_cell(nCells, 0);
@@ -2160,7 +2164,7 @@ volScalarField pS
 scalarField& alpha1Cells = alpha1.internalField();
 scalarField& alpha0Cells = alpha0.internalField();
 scalarField& alpha1OldCells = alpha1_old.internalField();
-scalarField& alpha0OldCells = alpha0_old.internalField();
+//scalarField& alpha0OldCells = alpha0_old.internalField();
 scalarField& rho1Cells = rho1.internalField();
 scalarField& rho0Cells = rho0.internalField();
 scalarField& mS1TotCells = mS1Tot.internalField();
