@@ -2032,7 +2032,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
@@ -2052,7 +2052,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
@@ -2086,7 +2086,7 @@ volScalarField mS1Tot
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
@@ -2102,7 +2102,7 @@ volScalarField mS0Tot
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
@@ -2118,7 +2118,7 @@ volScalarField alphaS1
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar(fieldName, dimless/dimTime, 0)
@@ -2134,7 +2134,7 @@ volScalarField alphaS0
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar(fieldName, dimless/dimTime, 0)
@@ -2150,7 +2150,7 @@ volScalarField pS
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar(fieldName, dimless/dimTime, 0)
