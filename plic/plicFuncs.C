@@ -9419,15 +9419,16 @@ void correct_thermo_trans_prop
             xTot += x_tmp[i];
         }
 
-        if(xTot < 1)
-        {
+        //if(xTot < 1)
+        //{
             Info<< "Fatal Error!! Incorrect mole fractions in cell " << cellI << endl;
+            Info<< P << "  " << T_tmp << "  ";
             for(i=0; i<n; i++)
             {
                 Info<< x_tmp[i] << "  " << endl;
             }
             Info<< endl;
-        }
+            //}
 
         MW_tmp = 0;
         for(i=0; i<n; i++)
@@ -9479,15 +9480,16 @@ void correct_thermo_trans_prop
                     xTot += x_tmp[i];
                 }
 
-                if(xTot < 1)
-                {
-                    Info<< "Fatal Error!! Incorrect mole fractions in patch " << patchNames[patchI] << "  Face " << fcI << endl;
+                //if(xTot < 1)
+                //{
+                    Info<< "Patch " << patchNames[patchI] << "  Face " << fcI << endl;
+                    Info<< P << "  " << T_tmp << "  ";
                     for(i=0; i<n; i++)
                     {
                         Info<< x_tmp[i] << "  " << endl;
                     }
                     Info<< endl;
-                }
+                    //}
 
                 MW_tmp = 0;
                 for(i=0; i<n; i++)
