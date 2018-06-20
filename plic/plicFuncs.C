@@ -9306,49 +9306,55 @@ void correct_thermo_trans_prop
         }
     }
 
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
     forAll(T.boundaryField(), patchI)
     {
+        const polyPatch& pp = patches[patchI];
         const fvPatchScalarField& pT = T.boundaryField()[patchI];
         fvPatchScalarField& pv = v.boundaryField()[patchI];
         fvPatchScalarField& plambda = lambda.boundaryField()[patchI];
         fvPatchScalarField& pCp = Cp.boundaryField()[patchI];
         fvPatchScalarField& pmu = mu.boundaryField()[patchI];
 
-        forAll(pT, fcI)
+        if((!pp.coupled()))
         {
-            T_tmp = pT[fcI];
-
-            for(i=0; i<n; i++)
+            forAll(pT, fcI)
             {
-                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
-            }
-            MW_tmp = 0;
-            for(i=0; i<n; i++)
-            {
-                MW_tmp += x_tmp[i]*MW[i];
-            }
-            MW_tmp *= 1e-3;
-        
-            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+                T_tmp = pT[fcI];
 
-            calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG,&Cp_tmp,h_tmp);
-
-            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
-
-            new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
-
-            pv[fcI] = V;
-            plambda[fcI] = cond;
-            pCp[fcI] = Cp_tmp/MW_tmp;
-            pmu[fcI] = vis;
-            for(i=0; i<n; i++)
-            {
-                hpar[i].boundaryField()[patchI][fcI] = h_tmp[i]/(MW[i]*1e-3);
-            
-                for(j=0; j<n; j++)
+                for(i=0; i<n; i++)
                 {
-                    idx = i + j*n;
-                    D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                    x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+                }
+                MW_tmp = 0;
+                for(i=0; i<n; i++)
+                {
+                    MW_tmp += x_tmp[i]*MW[i];
+                }
+                MW_tmp *= 1e-3;
+        
+                calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+
+                calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG,&Cp_tmp,h_tmp);
+
+                vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+
+                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+                pv[fcI] = V;
+                plambda[fcI] = cond;
+                pCp[fcI] = Cp_tmp/MW_tmp;
+                pmu[fcI] = vis;
+                for(i=0; i<n; i++)
+                {
+                    hpar[i].boundaryField()[patchI][fcI] = h_tmp[i]/(MW[i]*1e-3);
+            
+                    for(j=0; j<n; j++)
+                    {
+                        idx = i + j*n;
+                        D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                    }
                 }
             }
         }
@@ -9386,7 +9392,7 @@ void correct_thermo_trans_prop
 )
 {
     int i, j, idx, bKijSet;    
-    double T_tmp, V, MW_tmp; 
+    double T_tmp, V, MW_tmp, xTot; 
     double CvIG;    
     double cond, vis;
     double *x_tmp;
@@ -9406,10 +9412,23 @@ void correct_thermo_trans_prop
     forAll(TCells, cellI)
     {
         T_tmp = TCells[cellI];
+        xTot = 0;
         for(i=0; i<n; i++)
         {
             x_tmp[i] = X[i].internalField()[cellI];
+            xTot += x_tmp[i];
         }
+
+        if(xTot < 1)
+        {
+            Info<< "Fatal Error!! Incorrect mole fractions in cell " << cellI << endl;
+            for(i=0; i<n; i++)
+            {
+                Info<< x_tmp[i] << "  " << endl;
+            }
+            Info<< endl;
+        }
+
         MW_tmp = 0;
         for(i=0; i<n; i++)
         {
@@ -9437,43 +9456,63 @@ void correct_thermo_trans_prop
         }
     }
 
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    const wordList& patchNames = patches.names();
+    
     forAll(T.boundaryField(), patchI)
     {
+        const polyPatch& pp = patches[patchI];
         const fvPatchScalarField& pT = T.boundaryField()[patchI];
         fvPatchScalarField& pv = v.boundaryField()[patchI];        
         fvPatchScalarField& pmu = mu.boundaryField()[patchI];
 
-        forAll(pT, fcI)
+        if(!(pp.coupled()))
         {
-            T_tmp = pT[fcI];
-
-            for(i=0; i<n; i++)
+            forAll(pT, fcI)
             {
-                x_tmp[i] = X[i].boundaryField()[patchI][fcI];
-            }
-            MW_tmp = 0;
-            for(i=0; i<n; i++)
-            {
-                MW_tmp += x_tmp[i]*MW[i];
-            }
-            MW_tmp *= 1e-3;
-        
-            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+                T_tmp = pT[fcI];
 
-            calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
-
-            vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
-
-            new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
-
-            pv[fcI] = V;            
-            pmu[fcI] = vis;
-            for(i=0; i<n; i++)
-            {
-                for(j=0; j<n; j++)
+                xTot = 0;
+                for(i=0; i<n; i++)
                 {
-                    idx = i + j*n;
-                    D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                    x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+                    xTot += x_tmp[i];
+                }
+
+                if(xTot < 1)
+                {
+                    Info<< "Fatal Error!! Incorrect mole fractions in patch " << patchNames[patchI] << "  Face " << fcI << endl;
+                    for(i=0; i<n; i++)
+                    {
+                        Info<< x_tmp[i] << "  " << endl;
+                    }
+                    Info<< endl;
+                }
+
+                MW_tmp = 0;
+                for(i=0; i<n; i++)
+                {
+                    MW_tmp += x_tmp[i]*MW[i];
+                }
+                MW_tmp *= 1e-3;
+        
+                calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+
+                calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
+
+                vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+
+                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+
+                pv[fcI] = V;            
+                pmu[fcI] = vis;
+                for(i=0; i<n; i++)
+                {
+                    for(j=0; j<n; j++)
+                    {
+                        idx = i + j*n;
+                        D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                    }
                 }
             }
         }
