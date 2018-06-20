@@ -19,7 +19,7 @@ fileName outputFile;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
@@ -479,15 +479,51 @@ surfaceScalarField alpha0f = scalar(1) - alpha1f;
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
+//T, Enthalpy initialization
+Info<< "Reading field T1" << endl;
+volScalarField T1
+(
+    IOobject
+    (
+        "T1",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+T1.correctBoundaryConditions();
+
+Info<< "Reading field T0" << endl;
+volScalarField T0
+(
+    IOobject
+    (
+        "T0",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+T0.correctBoundaryConditions();
+
+T_0 = T1.internalField()[0];
+//Done T, Enthalpy initialization
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
 //Thermo and transport properties fields initialization
 Info<< "Reading transportProperties\n" << endl;
 
 //initialization of values for phase densities
-const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
+//const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
+//const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
 //initialization of values for phase viscosities
-const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
-const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
+//const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
+//const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
 //initialization of values for thermal conductivities
 const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
 const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
@@ -497,9 +533,18 @@ const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
 //initialization of values for mass diffusivities
 //const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
 //const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
-//initialization of values for molecular weights
-const dimensionedScalar& MW1_0 = transPropDict.lookup("MW1");
-const dimensionedScalar& MW0_0 = transPropDict.lookup("MW0");
+
+x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0;
+plicFuncs::calc_rho(n,Pc,Tc,w,MW,tk,coef_ab,P_thermo_tmp,x_cellI_tmp,T_0,rho_tmp);
+dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
+plicFuncs::calc_mu(n,Pc,Tc,Vc,w,MW,tk,coef_ab,Tb,SG,H8,k,dm,P_thermo_tmp,x_cellI_tmp,T_0,mu_tmp);
+dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
+
+x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1;
+plicFuncs::calc_rho(n,Pc,Tc,w,MW,tk,coef_ab,P_thermo_tmp,x_cellI_tmp,T_0,rho_tmp);
+dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
+plicFuncs::calc_mu(n,Pc,Tc,Vc,w,MW,tk,coef_ab,Tb,SG,H8,k,dm,P_thermo_tmp,x_cellI_tmp,T_0,mu_tmp);
+dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
 
 volScalarField rho1
 (
@@ -526,7 +571,7 @@ volScalarField v1
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW1_0/rho1_0
+    1e-3*MW[0]/rho1_0
 );
 
 volScalarField rho0
@@ -554,7 +599,7 @@ volScalarField v0
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW0_0/rho0_0
+    1e-3*MW[1]/rho0_0
 );
 
 volScalarField rho
@@ -1424,41 +1469,6 @@ C_phAvg.set
 //Done species concentrations Y, x, C initialization
 //------------------------------------------------------------------//
 
-//------------------------------------------------------------------//
-//T, Enthalpy initialization
-Info<< "Reading field T1" << endl;
-volScalarField T1
-(
-    IOobject
-    (
-        "T1",
-        runTime.timeName(),
-        mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh
-);
-T1.correctBoundaryConditions();
-
-Info<< "Reading field T0" << endl;
-volScalarField T0
-(
-    IOobject
-    (
-        "T0",
-        runTime.timeName(),
-        mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh
-);
-T0.correctBoundaryConditions();
-
-T_0 = T1.internalField()[0];
-//Done T, Enthalpy initialization
-//------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Max and min values for scalar fields
@@ -2179,8 +2189,8 @@ scalarField& pSCells = pS.internalField();
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);
+//plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
+//plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);
 
 for(i=0; i<n; i++)
 {

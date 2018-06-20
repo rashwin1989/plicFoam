@@ -8885,6 +8885,75 @@ double calc_CvIG_from_CpIG(int n, double *x, double *CpIG)
 }
 
 
+void calc_rho
+(
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double P,
+    double *x,
+    double T,
+    double& rho
+)
+{
+    int bKijSet;
+    double rho_tmp;
+    double *kij_tmp;
+
+    _NNEW_(kij_tmp, double, n*n);
+
+    bKijSet = 1;
+
+    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
+    density_pr_eos_(&P,&T,&n,Pc,Tc,w,MW,x,tk,coef_ab,&rho_tmp);    
+    rho = rho_tmp;
+
+    _DDELETE_(kij_tmp);
+}
+
+
+void calc_mu
+(
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,
+    int *tk,
+    double *coef_ab,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
+    double P,
+    double *x,
+    double T,
+    double& mu
+)
+{
+    int bKijSet;
+    double vis, cond, V, CvIG;
+    double *kij_tmp;
+
+    _NNEW_(kij_tmp, double, n*n);
+
+    bKijSet = 1;
+
+    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
+    calc_v_cvig_(&P,&T,x,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
+    vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x,&CvIG,&V,&cond,&vis);    
+    mu = vis;
+
+    _DDELETE_(kij_tmp);
+}
+
+
 void correct_rho
 (
     int n,

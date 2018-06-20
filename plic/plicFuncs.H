@@ -925,6 +925,42 @@ namespace plicFuncs
 
     double calc_CvIG_from_CpIG(int n, double *x, double *CpIG);
 
+    void calc_rho
+    (
+        int n,
+        double *Pc,
+        double *Tc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double P,
+        double *x,
+        double T,
+        double& rho
+    );
+
+    void calc_mu
+    (
+        int n,
+        double *Pc,
+        double *Tc,
+        double *Vc,
+        double *w,
+        double *MW,
+        int *tk,
+        double *coef_ab,
+        double *Tb,
+        double *SG,
+        double *H8,
+        double *k,
+        double *dm,
+        double P,
+        double *x,
+        double T,
+        double& mu
+    );
+
     void correct_rho
     (
         int n,
