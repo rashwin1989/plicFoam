@@ -1077,7 +1077,9 @@ namespace plicFuncs
         const volScalarField& T,
         volScalarField& v,
         volScalarField& mu,
-        PtrList<volScalarField>& D
+        PtrList<volScalarField>& D,
+        const bool debug,
+        OFstream& os
     );
 
     void correct_D_from_Dij

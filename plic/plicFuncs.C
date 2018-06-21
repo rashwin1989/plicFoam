@@ -9388,7 +9388,9 @@ void correct_thermo_trans_prop
     const volScalarField& T,
     volScalarField& v,
     volScalarField& mu,
-    PtrList<volScalarField>& D
+    PtrList<volScalarField>& D,
+    const bool debug,
+    OFstream& os
 )
 {
     int i, j, idx, bKijSet;    
@@ -9419,16 +9421,17 @@ void correct_thermo_trans_prop
             xTot += x_tmp[i];
         }
 
-        //if(xTot < 1)
-        //{
-            Info<< "Fatal Error!! Incorrect mole fractions in cell " << cellI << endl;
-            Info<< P << "  " << T_tmp << "  ";
+        
+        if(debug)
+        {
+            os<< "cell " << cellI << endl;
+            os<< P << "  " << T_tmp << "  ";
             for(i=0; i<n; i++)
             {
-                Info<< x_tmp[i] << "  " << endl;
+                os<< x_tmp[i] << "  ";
             }
-            Info<< endl;
-            //}
+            os<< endl;        
+        }
 
         MW_tmp = 0;
         for(i=0; i<n; i++)
@@ -9442,8 +9445,10 @@ void correct_thermo_trans_prop
         calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
 
         vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
-
+        
+        if(debug) os<< "Calculating Dij for cell " << cellI << "...";
         new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+        if(debug) os<< "Done calculating Dij for cell " << cellI << endl;
 
         vCells[cellI] = V;
         muCells[cellI] = vis;
@@ -9480,16 +9485,16 @@ void correct_thermo_trans_prop
                     xTot += x_tmp[i];
                 }
 
-                //if(xTot < 1)
-                //{
-                    Info<< "Patch " << patchNames[patchI] << "  Face " << fcI << endl;
-                    Info<< P << "  " << T_tmp << "  ";
+                if(debug)
+                {
+                    os<< "patch " << patchNames[patchI] << " face " << fcI << endl;
+                    os<< P << "  " << T_tmp << "  ";
                     for(i=0; i<n; i++)
                     {
-                        Info<< x_tmp[i] << "  " << endl;
+                        os<< x_tmp[i] << "  ";
                     }
-                    Info<< endl;
-                    //}
+                    os<< endl;
+                }
 
                 MW_tmp = 0;
                 for(i=0; i<n; i++)
@@ -9504,7 +9509,9 @@ void correct_thermo_trans_prop
 
                 vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
 
+                if(debug) os<< "Calculating Dij for patch " << patchNames[patchI] << " face " << fcI << "...";
                 new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+                if(debug) os<< "Done calculating Dij for patch " << patchNames[patchI] << " face " << fcI << endl;
 
                 pv[fcI] = V;            
                 pmu[fcI] = vis;

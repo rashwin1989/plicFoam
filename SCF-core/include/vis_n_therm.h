@@ -115,8 +115,8 @@ extern "C" {
         int    *tk,              // vector of BIP types
         double *coef_ab,         // vector of coef_ab
         double *MW,              // vector of molecular weights
-        double *Dij);            // matrix of binary mass diffusivity 
-    //   in vector form: idx = i + j*n
+        double *Dij);            // matrix of binary mass diffusivity
+                                 // in vector form: idx = i + j*n
                              
     void species_lle_( //
         double *P, //! pressure (Pa)         scalar

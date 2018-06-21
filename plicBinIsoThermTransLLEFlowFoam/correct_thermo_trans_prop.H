@@ -19,7 +19,9 @@ plicFuncs::correct_thermo_trans_prop
     T1,
     v1,    
     mu1_thermo,
-    Dij1
+    Dij1,
+    transProp_debug,
+    osTransProp
 );
 
 plicFuncs::correct_thermo_trans_prop
@@ -43,7 +45,9 @@ plicFuncs::correct_thermo_trans_prop
     T0,
     v0,    
     mu0_thermo,
-    Dij0
+    Dij0,
+    transProp_debug,
+    osTransProp
 );
 
 plicFuncs::correct_D_from_Dij(x1, Dij1, D1, n);

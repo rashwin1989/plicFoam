@@ -205,7 +205,19 @@ extern "C" {
         double *x, // ! vector of mass fractions
         int    *type_k, // ! vector of binary interaction types
         double *coef_ab,// vector of a, b coefficients
-        double *V);     // ! vector of log(fugacity coefficients) (output results)
+        double *V);     // ! molar volume (output results)
+
+    void molar_volume2_( //
+        double *P, // ! pressure (Unit: Pa)
+        double *T, // ! temperature (Unit: K)
+        int    *n, // ! number of species
+        double *Pc,// ! vector of critical pressures
+        double *Tc,// ! vector of critical temperatures
+        double *w, // ! vector of acentric factors
+        double *x, // ! vector of mass fractions
+        int    *type_k, // ! vector of binary interaction types
+        double *coef_ab,// ! vector of a, b coefficients
+        double *V);     // ! molar volume (output results)
 
     void pr_phase_( //
         double *P, // ! pressure (Unit: Pa)

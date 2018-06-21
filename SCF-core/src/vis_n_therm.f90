@@ -1463,7 +1463,7 @@ subroutine TLSM_diffusion_trace_new( &
     type_k,          & ! vector of binary interaction types
     coef_ab,         & ! vector of a, b coefficients
     MW,              & ! vector of molecular weights (g/mol)
-    Dij)               ! matrix of binary mass diffusivity 
+    Dij)               ! matrix of binary mass diffusivity
 !{
   implicit none
   real(8), intent(in) :: P ! (Pa) pressure
@@ -1540,7 +1540,18 @@ subroutine TLSM_diffusion_trace_new( &
         x = 0d0
         x(i) = 1d-4
         x(j) = .9999d0
-        call molar_volume(P,T,n,Pc,Tc,w,x,type_k,coef_ab,V)
+        
+        !open(unit=888,file="tlsm_dbg",action="write",position="append")
+        !write(888,*) "Dij(",i,",",j,") calculation"
+        !write(888,*) "Start molar volume calculation"
+        !close(888)
+
+        call molar_volume2(P,T,n,Pc,Tc,w,x,type_k,coef_ab,V)
+
+        !open(unit=888,file="tlsm_dbg",action="write",position="append")
+        !write(888,*) "Done molar volume calculation"
+        !close(888)
+
         rho1 = N_A/(V*1d6) ! 1/cm^3
 
         rho1_star = rho1*sigma_eff(j)**3 ! equation (2)
@@ -1602,7 +1613,15 @@ subroutine new_TLSM_diffusion_Krishna_model( &
   !(cm2/sec)diffusion coefficients and converted to m2/sec
   real(8), dimension(n,n) :: Dij, Dij_trace
 
+  !open(unit=888,file="tlsm_dbg",action="write",position="append")
+  !write(888,*) "Start tlsm model trace Dij calculation"
+  !close(888)
+
   call TLSM_diffusion_trace_new(P,T,n,Pc,Tc,Vc,w,type_k,coef_ab,MW,Dij_trace)
+
+  !open(unit=888,file="tlsm_dbg",action="write",position="append")
+  !write(888,*) "Done tlsm model trace Dij calculation"
+  !close(888)
 
   do i=1,n
     do j=1,n

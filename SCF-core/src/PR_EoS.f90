@@ -76,6 +76,68 @@ subroutine molar_volume( &
 !}
 end subroutine molar_volume
 
+subroutine molar_volume2( &
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    x, & ! vector of mass fractions
+    type_k, & ! vector of binary interaction types
+    coef_ab,& ! vector of a, b coefficients
+    V       & ! output molar volume
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: P,T,Pc(n),Tc(n),w(n),x(n)
+  integer :: type_k(n)
+  real(8) :: coef_ab(n)
+  real(8) :: delta(n,n)
+  real(8) :: V
+
+  integer :: i,j
+  real(8) :: a(n),b(n),am,bm
+  character :: state = 'm'
+
+  ! PR coefficients of pure components
+
+  !open(unit=888,file="tlsm_dbg",action="write",position="append")
+  !write(888,*) "molar volume calculation"
+  !write(888,*) "Start calculate_a_b"
+  !close(888)
+
+  call calculate_a_b(T,n,Pc,Tc,w,coef_ab,a,b)
+
+  !open(unit=888,file="tlsm_dbg",action="write",position="append")
+  !write(888,*) "Done calculate_a_b"
+  !write(888,*) "Start calculate_kij_from_table"
+  !close(888)
+
+  call calculate_kij_from_table(0,T,n,delta)
+
+  !open(unit=888,file="tlsm_dbg",action="write",position="append")
+  !write(888,*) "Done calculate_kij_from_table"
+  !close(888)
+
+  ! PR coefficients of the mixture
+  bm = 0d0
+  am = 0d0
+
+  do i=1,n
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+
+    do j=i+1,n
+      am    = am + 2.*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+    enddo
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)
+!}
+end subroutine molar_volume2
+
 subroutine fugacities_general( &
     P, & ! pressure (Unit: Pa)
     T, & ! temperature (Unit: K)
