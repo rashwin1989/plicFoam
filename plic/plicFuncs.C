@@ -10838,10 +10838,12 @@ void calc_Xs_Ys_Js_mS_alphaS
 }
 
 
-void calc_mS_limiter
+void calc_mS_limiter_eq
 (
     const List<scalar>& C1_0,
     const List<scalar>& C0_0,
+    const List<scalar>& Y1_0,
+    const List<scalar>& Y0_0,
     const List<scalar>& Ys1,
     const List<scalar>& Ys0,
     const List<scalar>& mS1,
@@ -10854,8 +10856,9 @@ void calc_mS_limiter
 )
 {
     int i;
-    scalar m1_0, m0_0, mTot_0, m1_eq, mS1Tot_eq, limiter;
+    scalar m1_0, m0_0, mTot_0, m1_eq, mS1Tot_eq, limiterTot;
     List<scalar> mS1_eq(n);
+    List<scalar> limiter(n);
 
     m1_0 = 0; m0_0 = 0;  
     for(i=0; i<n; i++)
@@ -10886,13 +10889,147 @@ void calc_mS_limiter
         for(i=0; i<n; i++) mS1_eq[i] = (m1_eq*Ys1[i] - C1_0[i])/dt;
     }
 
-    limiter_min = mag(mS1Tot_eq)/(max(mag(mS1Tot), SMALL));
+    limiterTot = mag(mS1Tot_eq)/(max(mag(mS1Tot), SMALL));
+    limiter_min = limiterTot;
     for(i=0; i<n; i++)
     {
-        limiter = mag(mS1_eq[i])/(max(mag(mS1[i]), SMALL));
-        limiter_min = min(limiter, limiter_min);
+        limiter[i] = mag(mS1_eq[i])/(max(mag(mS1[i]), SMALL));
+        limiter_min = min(limiter[i], limiter_min);
     }
     limiter_min = min(limiter_min, 1);
+
+    if(debug)
+    {
+        os<< "mTot_0 = " << mTot_0 << "  m1_0 = " << m1_0 << "  m0_0 = " << m0_0 << "  dt = " << dt << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "C1_0" << " " << setw(14) << "C0_0" << " " << setw(14) << "Y1_0" << " " << setw(14) << "Y0_0" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << C1_0[i] << " " << setw(14) << C0_0[i] << " " << setw(14) << Y1_0[i] << " " << setw(14) << Y0_0[i] << endl;
+        }
+        print_line(os,100);
+        os<< "m1_eq = " << m1_eq << "  mS1Tot_eq*dt = " << mS1Tot_eq*dt << "  mS1Tot*dt = " << mS1Tot*dt << "  limiterTot = " << limiterTot << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "mS1_eq*dt" << " " << setw(14) << "mS1*dt" << " " << setw(14) << "limiter" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << mS1_eq[i]*dt << " " << setw(14) << mS1[i]*dt << " " << setw(14) << limiter[i] << endl;
+        }
+        print_line(os,100);
+        os<< "m1_eq = " << m1_eq << "  mS1Tot_eq = " << mS1Tot_eq << "  mS1Tot = " << mS1Tot << "  limiterTot = " << limiterTot << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "mS1_eq" << " " << setw(14) << "mS1" << " " << setw(14) << "limiter" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << mS1_eq[i] << " " << setw(14) << mS1[i] << " " << setw(14) << limiter[i] << endl;
+        }
+        print_line(os,100);
+        os<< "limiter_min = " << limiter_min << endl;
+        print_line(os,100);
+        os<< endl;
+    }
+}
+
+
+void calc_mS_limiter
+(
+    const List<scalar>& C1_0,
+    const List<scalar>& C0_0,
+    const List<scalar>& Y1_0,
+    const List<scalar>& Y0_0,
+    const List<scalar>& Ys1,
+    const List<scalar>& Ys0,
+    const List<scalar>& mS1,
+    const scalar& mS1Tot,
+    const scalar& dt,    
+    int n,
+    scalar& limiter_min,
+    const bool debug,
+    OFstream& os
+)
+{
+    int i;
+    scalar m1_0, m0_0, limiterTot;    
+    List<scalar> limiter(n);
+
+    m1_0 = 0; m0_0 = 0;  
+    for(i=0; i<n; i++)
+    {
+        m1_0 += C1_0[i];
+        m0_0 += C0_0[i];
+    }    
+
+    if(mS1Tot > 0)
+    {
+        limiterTot = m0_0/dt/max(mS1Tot, SMALL);
+    }
+    else if(mS1Tot < 0)
+    {
+        limiterTot = m1_0/dt/max(-mS1Tot, SMALL);
+    }
+    else
+    {
+        limiterTot = 1;
+    }
+
+    limiter_min = limiterTot;
+
+    for(i=0; i<n; i++)
+    {
+        if(mS1[i] > 0)
+        {
+            limiter[i] = C0_0[i]/dt/max(mS1[i], SMALL);
+        }
+        else if(mS1[i] < 0)
+        {
+            limiter[i] = C1_0[i]/dt/max(-mS1[i], SMALL);
+        }
+        else
+        {
+            limiter[i] = 1;
+        }
+
+        limiter_min = min(limiter[i], limiter_min);
+    }
+
+    limiter_min = min(limiter_min, 1);
+
+    if(debug)
+    {
+        os<< "m1_0 = " << m1_0 << "  m0_0 = " << m0_0 << "  dt = " << dt << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "C1_0" << " " << setw(14) << "C0_0" << " " << setw(14) << "Y1_0" << " " << setw(14) << "Y0_0" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << C1_0[i] << " " << setw(14) << C0_0[i] << " " << setw(14) << Y1_0[i] << " " << setw(14) << Y0_0[i] << endl;
+        }
+        print_line(os,100);
+        os<< "mS1Tot*dt = " << mS1Tot*dt << "  limiterTot = " << limiterTot << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "mS1*dt" << " " << setw(14) << "limiter" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << mS1[i]*dt << " " << setw(14) << limiter[i] << endl;
+        }
+        print_line(os,100);
+        os<< "mS1Tot = " << mS1Tot << "  limiterTot = " << limiterTot << endl;
+        print_line(os,100);
+        os<< setw(8) << "Species" << " " << setw(14) << "mS1" << " " << setw(14) << "limiter" << endl;
+        print_line(os,100);
+        for(i=0; i<n; i++)
+        {
+            os<< setw(14) << i << " " << setw(14) << mS1[i] << " " << setw(14) << limiter[i] << endl;
+        }
+        print_line(os,100);
+        os<< "limiter_min = " << limiter_min << endl;
+        print_line(os,100);
+        os<< endl;
+    }
 }
 
 
@@ -11022,15 +11159,26 @@ void calc_mS_alphaS
                 }
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
-                        
+            if(debug)
+            {
+                print_line(os, 100);
+                print_line(os, 100);
+                os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+                print_line(os, 100);
+                os<< "mS limiter calculation" << endl;
+                print_line(os, 100);
+            }
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);       
+     
             for(i=0; i<n; i++)
             {                                
-                mS1_cellI[i] = limiter*(mS1Tot_cellI_tmp*Ys1_cellI[i] + Js1_cellI[i]);                
+                mS1_cellI[i] = limiter*mS1_cellI[i];                
 
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
                 mS0[i].internalField()[cellI] = -mS1_cellI[i];
             }
+            
             mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
             mS1TotCells[cellI] = mS1Tot_cellI;
@@ -11045,11 +11193,18 @@ void calc_mS_alphaS
                 print_line(os, 100);
                 os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[cellI] << "  " << setw(12) << C0[i].internalField()[cellI] << "  " << setw(12) << Js1[i].internalField()[cellI] << "  " << setw(12) << Js0[i].internalField()[cellI] << "  " << setw(12) << mS1[i].internalField()[cellI] << "  " << setw(12) << mS0[i].internalField()[cellI] << endl;
+                    os<< setw(7) << i << "  " << setw(14) << C1[i].internalField()[cellI] << "  " << setw(14) << C0[i].internalField()[cellI] << "  " << setw(14) << Y1[i].internalField()[cellI] << "  " << setw(14) << Y0[i].internalField()[cellI] << endl;
+                }
+                print_line(os, 100);
+                os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(7) << i << "  " << setw(14) << Js1[i].internalField()[cellI] << "  " << setw(14) << Js0[i].internalField()[cellI] << "  " << setw(14) << mS1[i].internalField()[cellI] << "  " << setw(14) << mS0[i].internalField()[cellI] << endl;
                 }
                 print_line(os, 100);
                 os<< "limiter = " << limiter << nl
@@ -11142,7 +11297,18 @@ void calc_mS_alphaS
                 C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+            if(debug)
+            {
+                print_line(os, 100);
+                print_line(os, 100);
+                os<< "Face: " << faceI
+                    << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
+                print_line(os, 100);
+                os<< "mS limiter calculation" << endl;
+                print_line(os, 100);
+            }
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
             
             mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
@@ -11200,11 +11366,18 @@ void calc_mS_alphaS
                 print_line(os, 100);
                 os<< "Own" << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceOwn] << "  " << setw(14) << C0[i].internalField()[faceOwn] << "  " << setw(14) << Y1[i].internalField()[faceOwn] << "  " << setw(14) << Y0[i].internalField()[faceOwn] << endl;
+                }
+                print_line(os, 100);
+                os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
                 os<< "limiter = " << limiter << nl
@@ -11214,11 +11387,18 @@ void calc_mS_alphaS
                 print_line(os, 100);
                 os<< "Nei" << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceNei] << "  " << setw(12) << C0[i].internalField()[faceNei] << "  " << setw(12) << Js1[i].internalField()[faceNei] << "  " << setw(12) << Js0[i].internalField()[faceNei] << "  " << setw(12) << mS1[i].internalField()[faceNei] << "  " << setw(12) << mS0[i].internalField()[faceNei] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceNei] << "  " << setw(14) << C0[i].internalField()[faceNei] << "  " << setw(14) << Y1[i].internalField()[faceNei] << "  " << setw(14) << Y0[i].internalField()[faceNei] << endl;
+                }
+                print_line(os, 100);
+                os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceNei] << "  " << setw(14) << Js0[i].internalField()[faceNei] << "  " << setw(14) << mS1[i].internalField()[faceNei] << "  " << setw(14) << mS0[i].internalField()[faceNei] << endl;
                 }
                 print_line(os, 100);
                 os<< "limiter = " << limiter << nl
@@ -11282,7 +11462,18 @@ void calc_mS_alphaS
                 C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+            if(debug)
+            {
+                print_line(os, 100);
+                print_line(os, 100);
+                os<< "Face: " << faceI
+                    << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
+                print_line(os, 100);
+                os<< "mS limiter calculation" << endl;
+                print_line(os, 100);
+            }
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
 
             mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
@@ -11340,11 +11531,18 @@ void calc_mS_alphaS
                 print_line(os, 100);
                 os<< "Own" << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceOwn] << "  " << setw(14) << C0[i].internalField()[faceOwn] << "  " << setw(14) << Y1[i].internalField()[faceOwn] << "  " << setw(14) << Y0[i].internalField()[faceOwn] << endl;
+                }
+                print_line(os, 100);
+                os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
                 os<< "limiter = " << limiter << nl
@@ -11354,14 +11552,22 @@ void calc_mS_alphaS
                 print_line(os, 100);
                 os<< "Nei" << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceNei] << "  " << setw(12) << C0[i].internalField()[faceNei] << "  " << setw(12) << Js1[i].internalField()[faceNei] << "  " << setw(12) << Js0[i].internalField()[faceNei] << "  " << setw(12) << mS1[i].internalField()[faceNei] << "  " << setw(12) << mS0[i].internalField()[faceNei] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceNei] << "  " << setw(14) << C0[i].internalField()[faceNei] << "  " << setw(14) << Y1[i].internalField()[faceNei] << "  " << setw(14) << Y0[i].internalField()[faceNei] << endl;
                 }
                 print_line(os, 100);
-                os<< "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
+                os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceNei] << "  " << setw(14) << Js0[i].internalField()[faceNei] << "  " << setw(14) << mS1[i].internalField()[faceNei] << "  " << setw(14) << mS0[i].internalField()[faceNei] << endl;
+                }
+                print_line(os, 100);
+                os<< "limiter = " << limiter << nl
+                    << "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
                     << "rho1 = " << rho1Nei << "  rho0 = " << rho0Nei << nl
                     << "alphaS1 = " << alphaS1Cells[faceNei] << "  alphaS0 = " << alphaS0Cells[faceNei] << endl;
                 print_line(os, 100);
@@ -11487,7 +11693,18 @@ void calc_mS_alphaS
                         C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
                     }
 
-                    calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+                    if(debug)
+                    {
+                        print_line(os, 100);
+                        print_line(os, 100);
+                        os<< "Face: " << faceI
+                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
+                        print_line(os, 100);
+                        os<< "mS limiter calculation" << endl;
+                        print_line(os, 100);
+                    }
+
+                    calc_mS_limiter(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
             
                     mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
@@ -11531,15 +11748,22 @@ void calc_mS_alphaS
                         print_line(os, 100);
                         print_line(os, 100);
                         os<< "Face: " << faceI
-                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << endl;
+                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
                         print_line(os, 100);
                         os<< "Own" << endl;
                         print_line(os, 100);
-                        os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                        os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                         print_line(os, 100);
                         for(i=0; i<n; i++)
                         {
-                            os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
+                            os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceOwn] << "  " << setw(14) << C0[i].internalField()[faceOwn] << "  " << setw(14) << Y1[i].internalField()[faceOwn] << "  " << setw(14) << Y0[i].internalField()[faceOwn] << endl;
+                        }
+                        print_line(os, 100);
+                        os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                        print_line(os, 100);
+                        for(i=0; i<n; i++)
+                        {
+                            os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                         }
                         print_line(os, 100);
                         os<< "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
@@ -11606,7 +11830,18 @@ void calc_mS_alphaS
                         C0_cellI[i] = VOwn*C0Own[i] + VNei*C0Nei[i];
                     }
 
-                    calc_mS_limiter(C1_cellI, C0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+                    if(debug)
+                    {
+                        print_line(os, 100);
+                        print_line(os, 100);
+                        os<< "Face: " << faceI
+                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
+                        print_line(os, 100);
+                        os<< "mS limiter calculation" << endl;
+                        print_line(os, 100);
+                    }
+
+                    calc_mS_limiter(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
 
                     mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
 
@@ -11650,15 +11885,22 @@ void calc_mS_alphaS
                         print_line(os, 100);
                         print_line(os, 100);
                         os<< "Face: " << faceI
-                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << endl;
+                            << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
                         print_line(os, 100);
                         os<< "Own" << endl;
                         print_line(os, 100);
-                        os<< setw(7) << "Species" << "  " << setw(12) << "C1" << "  " << setw(12) << "C0" << "  " << setw(12) << "Js1" << "  " << setw(12) << "Js0" << "  " << setw(12) << "mS1" << "  " << setw(12) << "mS0" << endl;
+                        os<< setw(8) << "Species" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << "  " << setw(14) << "Y1" << "  " << setw(14) << "Y0" << endl;
                         print_line(os, 100);
                         for(i=0; i<n; i++)
                         {
-                            os<< setw(7) << i << "  " << setw(12) << C1[i].internalField()[faceOwn] << "  " << setw(12) << C0[i].internalField()[faceOwn] << "  " << setw(12) << Js1[i].internalField()[faceOwn] << "  " << setw(12) << Js0[i].internalField()[faceOwn] << "  " << setw(12) << mS1[i].internalField()[faceOwn] << "  " << setw(12) << mS0[i].internalField()[faceOwn] << endl;
+                            os<< setw(8) << i << "  " << setw(14) << C1[i].internalField()[faceOwn] << "  " << setw(14) << C0[i].internalField()[faceOwn] << "  " << setw(14) << Y1[i].internalField()[faceOwn] << "  " << setw(14) << Y0[i].internalField()[faceOwn] << endl;
+                        }
+                        print_line(os, 100);
+                        os<< setw(8) << "Species" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << "  " << setw(14) << "mS0" << endl;
+                        print_line(os, 100);
+                        for(i=0; i<n; i++)
+                        {
+                            os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                         }
                         print_line(os, 100);
                         os<< "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl

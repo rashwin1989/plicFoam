@@ -32,7 +32,7 @@ plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_
 
 //------------------------------------------------------------------//
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, dt, ist_debug2, osIst);
+plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, dt, ist_debug, osIst);
 //Done calculate interfacial species transfer source terms and alpha source terms
 //------------------------------------------------------------------//
 
@@ -63,11 +63,37 @@ for(faceI=0; faceI<nIntFaces; faceI++)
     label faceOwn = own[faceI];
     label faceNei = nei[faceI];
 
-    if((alpha1Cells[faceOwn] > ALPHA_2PH_MAX_IST && alpha1Cells[faceNei] < ALPHA_2PH_MIN_IST) || (alpha1Cells[faceNei] > ALPHA_2PH_MAX_IST && alpha1Cells[faceOwn] < ALPHA_2PH_MIN_IST))
+    if((alpha1Cells[faceOwn] >= ALPHA_2PH_MAX_IST && alpha1Cells[faceNei] <= ALPHA_2PH_MIN_IST) || (alpha1Cells[faceNei] >= ALPHA_2PH_MAX_IST && alpha1Cells[faceOwn] <= ALPHA_2PH_MIN_IST))
     {
         calc_ist_for_cell[faceOwn] = 1;
         calc_ist_for_cell[faceNei] = 1;
     } 
+}
+
+const polyBoundaryMesh& patches = mesh.boundaryMesh();
+
+forAll(alpha1.boundaryField(), patchI)
+{
+    const polyPatch& pp = patches[patchI];
+    const fvPatchScalarField& pAlpha1 = alpha1.boundaryField()[patchI];
+
+    if(pp.coupled())
+    {
+        faceI = pp.start();
+        const scalarField& alpha1NeiFld = alpha1.boundaryField()[patchI].patchNeighbourField();
+
+        forAll(pAlpha1, fcI)
+        {
+            label faceOwn = own[faceI];
+            scalar alpha1Own = alpha1Cells[faceOwn];
+            scalar alpha1Nei = alpha1NeiFld[fcI];
+            
+            if((alpha1Own >= ALPHA_2PH_MAX_IST && alpha1Nei <= ALPHA_2PH_MIN_IST) || (alpha1Nei >= ALPHA_2PH_MAX_IST && alpha1Own <= ALPHA_2PH_MIN_IST))
+            {
+                calc_ist_for_cell[faceOwn] = 1;
+            }
+        }
+    }
 }
 
 forAll(alpha1Cells, cellI)
@@ -121,6 +147,14 @@ forAll(alpha1Cells, cellI)
     //ph-1
     //volume fraction
     alpha1_cellI = alpha1Cells[cellI] + alphaS1Cells[cellI]*dt;
+    if(alpha1_cellI < 0)
+    {
+        osIst<< "alpha1 undershoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+    }
+    if(alpha1_cellI > 1)
+    {
+        osIst<< "alpha1 overshoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+    }
     alpha1_cellI = max(alpha1_cellI, 0.0);
     alpha1Cells[cellI] = alpha1_cellI;
 
@@ -129,10 +163,14 @@ forAll(alpha1Cells, cellI)
     for(i=0; i<n; i++)
     {
         C1i_cellI = C1[i].internalField()[cellI] + mS1[i].internalField()[cellI]*dt;
+        if(C1i_cellI < 0)
+        {
+            osIst<< "C1[" << i << "] -ve in cell " << cellI << "  C1[" << i << "] = " << C1i_cellI << endl;
+        }        
         C1i_cellI = max(C1i_cellI, 0.0);
         C1[i].internalField()[cellI] = C1i_cellI;
         C1Tot_cellI += C1i_cellI;
-        //C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;              
+        //C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;
     }
 
     if(C1Tot_cellI < SMALL)
@@ -166,6 +204,14 @@ forAll(alpha1Cells, cellI)
     //ph-0
     //volume fraction
     alpha0_cellI = alpha0Cells[cellI] + alphaS0Cells[cellI]*dt;
+    if(alpha0_cellI < 0)
+    {
+        osIst<< "alpha0 undershoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+    }
+    if(alpha0_cellI > 1)
+    {
+        osIst<< "alpha0 overshoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+    }
     alpha0_cellI = max(alpha0_cellI, 0.0);
     alpha0Cells[cellI] = alpha0_cellI;
     //alpha0Cells[cellI] = scalar(1.0) - alpha1Cells[cellI];
@@ -175,6 +221,10 @@ forAll(alpha1Cells, cellI)
     for(i=0; i<n; i++)
     {
         C0i_cellI = C0[i].internalField()[cellI] + mS0[i].internalField()[cellI]*dt;
+        if(C0i_cellI < 0)
+        {
+            osIst<< "C0[" << i << "] -ve in cell " << cellI << "  C0[" << i << "] = " << C0i_cellI << endl;
+        }
         C0i_cellI = max(C0i_cellI, 0.0);
         C0[i].internalField()[cellI] = C0i_cellI;
         C0Tot_cellI += C0i_cellI;        
