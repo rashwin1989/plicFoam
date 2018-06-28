@@ -11142,7 +11142,14 @@ void calc_mS_alphaS
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
             if(mS1Tot_cellI_tmp > 0)
             {
-                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0_cellI[0]);
+                if((Ys1_cellI[0] - Y0_cellI[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0_cellI[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
@@ -11151,11 +11158,18 @@ void calc_mS_alphaS
             }
             else
             {
-                mS1Tot_cellI_tmp /= (Y1_cellI[0] - Ys0_cellI[0]);
+                if((Y1_cellI[0] - Ys0_cellI[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Y1_cellI[0] - Ys0_cellI[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
-                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1_cellI[i] + Js1_cellI[i];
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys0_cellI[i] + Js0_cellI[i];
                 }
             }
 
@@ -11274,7 +11288,14 @@ void calc_mS_alphaS
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
             if(mS1Tot_cellI_tmp > 0)
             {
-                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+                if((Ys1_cellI[0] - Y0Nei[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
@@ -11283,11 +11304,18 @@ void calc_mS_alphaS
             }
             else
             {
-                mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+                if((Y1Own[0] - Ys0_cellI[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
-                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Own[i] + Js1_cellI[i];
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys0_cellI[i] + Js0_cellI[i];
                 }
             }
 
@@ -11439,7 +11467,14 @@ void calc_mS_alphaS
             mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
             if(mS1Tot_cellI_tmp > 0)
             {
-                mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+                if((Ys1_cellI[0] - Y0Own[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
@@ -11448,11 +11483,18 @@ void calc_mS_alphaS
             }
             else
             {
-                mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+                if((Y1Nei[0] - Ys0_cellI[0]) > 0)
+                {
+                    mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+                }
+                else
+                {
+                    mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                }
 
                 for(i=0; i<n; i++)
                 {                                
-                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Nei[i] + Js1_cellI[i];
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Ys0_cellI[i] + Js0_cellI[i];
                 }
             }
 
@@ -11670,7 +11712,14 @@ void calc_mS_alphaS
                     mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
                     if(mS1Tot_cellI_tmp > 0)
                     {
-                        mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+                        if((Ys1_cellI[0] - Y0Nei[0]) > 0)
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Nei[0]);
+                        }
+                        else
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                        }
 
                         for(i=0; i<n; i++)
                         {                                
@@ -11679,11 +11728,18 @@ void calc_mS_alphaS
                     }
                     else
                     {
-                        mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+                        if((Y1Own[0] - Ys0_cellI[0]) > 0)
+                        {
+                            mS1Tot_cellI_tmp /= (Y1Own[0] - Ys0_cellI[0]);
+                        }
+                        else
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                        }
 
                         for(i=0; i<n; i++)
                         {                                
-                            mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Own[i] + Js1_cellI[i];
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Ys0_cellI[i] + Js0_cellI[i];
                         }
                     }
 
@@ -11807,7 +11863,14 @@ void calc_mS_alphaS
                     mS1Tot_cellI_tmp = Js0_cellI[0] - Js1_cellI[0];
                     if(mS1Tot_cellI_tmp > 0)
                     {
-                        mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+                        if((Ys1_cellI[0] - Y0Own[0]) > 0)
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Y0Own[0]);
+                        }
+                        else
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                        }
 
                         for(i=0; i<n; i++)
                         {                                
@@ -11816,11 +11879,18 @@ void calc_mS_alphaS
                     }
                     else
                     {
-                        mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+                        if((Y1Nei[0] - Ys0_cellI[0]) > 0)
+                        {
+                            mS1Tot_cellI_tmp /= (Y1Nei[0] - Ys0_cellI[0]);
+                        }
+                        else
+                        {
+                            mS1Tot_cellI_tmp /= (Ys1_cellI[0] - Ys0_cellI[0]);
+                        }
 
                         for(i=0; i<n; i++)
                         {                                
-                            mS1_cellI[i] = mS1Tot_cellI_tmp*Y1Nei[i] + Js1_cellI[i];
+                            mS1_cellI[i] = mS1Tot_cellI_tmp*Ys0_cellI[i] + Js0_cellI[i];
                         }
                     }
 
