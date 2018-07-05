@@ -11244,14 +11244,14 @@ void calc_mS_alphaS
             alphaS0Cells[cellI] = 0;
         }        
     }
-
+    /*
     if(debug)
     {
         print_line(os, 100);
         os<< "Internal faces" << endl;
         print_line(os, 100);
     }
-
+    
     for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
     {
         faceOwn = own[faceI];
@@ -11986,7 +11986,7 @@ void calc_mS_alphaS
             }
         }
     }
-
+        */
     if(debug)
     {
         print_line(os, 100);
