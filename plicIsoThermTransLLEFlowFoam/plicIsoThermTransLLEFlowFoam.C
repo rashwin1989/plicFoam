@@ -105,19 +105,58 @@ int main(int argc, char *argv[])
         {
             Info<< "Outer corrector " << iOCorr+1 << endl;
 
-            Info<< "Calculating two-phase advective fluxes" << endl;
+            #include "ist.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+            #include "curvature.H"
+
             dt = deltaT;
+            /*
+            #include "correctRho.H"
+
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+                */
+            rho = alpha1*rho1 + alpha0*rho0;
+            rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
+
+            #include "UEqn.H"
+
+            for(iPCorr=0; iPCorr<nPCorr; iPCorr++)
+            {
+                Info<< "Pressure corrector " << iPCorr+1 << endl;
+
+                #include "pEqn.H"
+                
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << endl; 
+            }
+
+            dt = deltaT;
+            Info<< "Calculating two-phase advective fluxes" << endl;
             interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << endl; 
+                << " s" << endl;            
 
-            #include "alpha1Eqn.H"        
+            #include "alpha1Eqn.H"
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << nl << endl;             
+                << " s" << nl << endl;
             
             #include "YAdvEqn.H"
 
@@ -125,7 +164,8 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
             
-            interface.intfc_correct();                            
+            interface.intfc_correct();
+            Info<< "Done interface reconstruction" << endl;
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -147,63 +187,7 @@ int main(int argc, char *argv[])
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-            
-            #include "ist.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            interface.intfc_correct();                
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "correct_thermo_trans_prop.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "diff_grad_interp.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "YDiffEqn.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            #include "curvature.H"
-
-            dt = deltaT;
-
-            #include "correctRho.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-            rho = alpha1*rho1 + (scalar(1) - alpha1)*rho0;
-            rhoPhi = phiAlpha1*(rho1f - rho0f) + phi*rho0f;
-
-            #include "UEqn.H"
-
-            for(iPCorr=0; iPCorr<nPCorr; iPCorr++)
-            {
-                Info<< "Pressure corrector " << iPCorr+1 << endl;
-
-                #include "pEqn.H"
-                
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << endl; 
-            }
+                << " s" << nl << endl;            
         }
 
         for(i=0; i<n; i++)
