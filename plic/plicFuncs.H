@@ -1273,6 +1273,8 @@ namespace plicFuncs
         const scalar& mS1Tot,
         const scalar& dt,    
         int n,
+        scalar& limiterTot,
+        List<scalar>& limiterY,
         scalar& limiter_min,
         const bool debug,
         OFstream& os

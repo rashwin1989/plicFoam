@@ -10946,14 +10946,15 @@ void calc_mS_limiter
     const scalar& mS1Tot,
     const scalar& dt,    
     int n,
+    scalar& limiterTot,
+    List<scalar>& limiterY,
     scalar& limiter_min,
     const bool debug,
     OFstream& os
 )
 {
     int i;
-    scalar m1_0, m0_0, limiterTot;    
-    List<scalar> limiter(n);
+    scalar m1_0, m0_0;    
 
     m1_0 = 0; m0_0 = 0;  
     for(i=0; i<n; i++)
@@ -10981,18 +10982,18 @@ void calc_mS_limiter
     {
         if(mS1[i] > 0)
         {
-            limiter[i] = C0_0[i]/dt/max(mS1[i], SMALL);
+            limiterY[i] = C0_0[i]/dt/max(mS1[i], SMALL);
         }
         else if(mS1[i] < 0)
         {
-            limiter[i] = C1_0[i]/dt/max(-mS1[i], SMALL);
+            limiterY[i] = C1_0[i]/dt/max(-mS1[i], SMALL);
         }
         else
         {
-            limiter[i] = 1;
+            limiterY[i] = 1;
         }
 
-        limiter_min = min(limiter[i], limiter_min);
+        limiter_min = min(limiterY[i], limiter_min);
     }
 
     limiter_min = min(limiter_min, 1);
@@ -11014,7 +11015,7 @@ void calc_mS_limiter
         print_line(os,100);
         for(i=0; i<n; i++)
         {
-            os<< setw(14) << i << " " << setw(14) << mS1[i]*dt << " " << setw(14) << limiter[i] << endl;
+            os<< setw(14) << i << " " << setw(14) << mS1[i]*dt << " " << setw(14) << limiterY[i] << endl;
         }
         print_line(os,100);
         os<< "mS1Tot = " << mS1Tot << "  limiterTot = " << limiterTot << endl;
@@ -11023,7 +11024,7 @@ void calc_mS_limiter
         print_line(os,100);
         for(i=0; i<n; i++)
         {
-            os<< setw(14) << i << " " << setw(14) << mS1[i] << " " << setw(14) << limiter[i] << endl;
+            os<< setw(14) << i << " " << setw(14) << mS1[i] << " " << setw(14) << limiterY[i] << endl;
         }
         print_line(os,100);
         os<< "limiter_min = " << limiter_min << endl;
@@ -11063,7 +11064,7 @@ void calc_mS_alphaS
     int n, i;
     label faceI, bndFaceI, nBnd, faceOwn, faceNei;
     n = nSpecies;
-    scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, limiter;
+    scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, limiterTot, limiter_min;
     scalar alpha1Own, alpha1Nei, VOwn, VNei, rho1Own, rho0Own, rho1Nei, rho0Nei, mS1TotOwn, mS1TotNei;
     List<scalar> mS1_cellI(n);
     List<scalar> Js1_cellI(n);
@@ -11086,6 +11087,7 @@ void calc_mS_alphaS
     List<scalar> mS1Nei(n);
     List<scalar> mS0Own(n);
     List<scalar> mS0Nei(n);
+    List<scalar> limiterY(n);
 
     nBnd = mesh.nFaces() - mesh.nInternalFaces();
     List<scalar> VNeiFld(nBnd);
@@ -11183,17 +11185,21 @@ void calc_mS_alphaS
                 print_line(os, 100);
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);       
+            limiterTot = 1;
+            limiter_min = 1;
+            for(i=0; i<n; i++) limiterY[i] = 1;
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);       
      
             for(i=0; i<n; i++)
             {                                
-                mS1_cellI[i] = limiter*mS1_cellI[i];                
+                mS1_cellI[i] = limiter_min*mS1_cellI[i];                
 
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
                 mS0[i].internalField()[cellI] = -mS1_cellI[i];
             }
             
-            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
             mS1TotCells[cellI] = mS1Tot_cellI;
             mS0TotCells[cellI] = -mS1Tot_cellI;
@@ -11221,7 +11227,7 @@ void calc_mS_alphaS
                     os<< setw(7) << i << "  " << setw(14) << Js1[i].internalField()[cellI] << "  " << setw(14) << Js0[i].internalField()[cellI] << "  " << setw(14) << mS1[i].internalField()[cellI] << "  " << setw(14) << mS0[i].internalField()[cellI] << endl;
                 }
                 print_line(os, 100);
-                os<< "limiter = " << limiter << nl
+                os<< "limiter_min = " << limiter_min << nl
                     << "mS1Tot = " << mS1TotCells[cellI] << "  mS0Tot = " << mS0TotCells[cellI] << nl
                     << "rho1 = " << rho1_cellI << "  rho0 = " << rho0_cellI << nl
                     << "alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << endl;
@@ -11332,19 +11338,19 @@ void calc_mS_alphaS
                 os<< "Face: " << faceI
                     << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
                 print_line(os, 100);
-                os<< "mS limiter calculation" << endl;
+                os<< "mS limiter_min calculation" << endl;
                 print_line(os, 100);
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
             
-            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
             if(mS1Tot_cellI_tmp > 0)
             {
                 for(i=0; i<n; i++)
                 {
-                    mS1Own[i] = limiter*Js1_cellI[i];
+                    mS1Own[i] = limiter_min*Js1_cellI[i];
                     mS1Nei[i] = mS1Tot_cellI*Ys1_cellI[i];
 
                     mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
@@ -11361,7 +11367,7 @@ void calc_mS_alphaS
             {
                 for(i=0; i<n; i++)
                 {
-                    mS0Nei[i] = -limiter*Js0_cellI[i];
+                    mS0Nei[i] = -limiter_min*Js0_cellI[i];
                     mS0Own[i] = -mS1Tot_cellI*Ys0_cellI[i];
 
                     mS1[i].internalField()[faceOwn] = (-mS0Own[i] - mS0Nei[i])/VOwn;
@@ -11408,7 +11414,7 @@ void calc_mS_alphaS
                     os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
-                os<< "limiter = " << limiter << nl
+                os<< "limiter_min = " << limiter_min << nl
                     << "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
                     << "rho1 = " << rho1Own << "  rho0 = " << rho0Own << nl
                     << "alphaS1 = " << alphaS1Cells[faceOwn] << "  alphaS0 = " << alphaS0Cells[faceOwn] << endl;
@@ -11429,7 +11435,7 @@ void calc_mS_alphaS
                     os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceNei] << "  " << setw(14) << Js0[i].internalField()[faceNei] << "  " << setw(14) << mS1[i].internalField()[faceNei] << "  " << setw(14) << mS0[i].internalField()[faceNei] << endl;
                 }
                 print_line(os, 100);
-                os<< "limiter = " << limiter << nl
+                os<< "limiter_min = " << limiter_min << nl
                     << "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
                     << "rho1 = " << rho1Nei << "  rho0 = " << rho0Nei << nl
                     << "alphaS1 = " << alphaS1Cells[faceNei] << "  alphaS0 = " << alphaS0Cells[faceNei] << endl;
@@ -11511,19 +11517,19 @@ void calc_mS_alphaS
                 os<< "Face: " << faceI
                     << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << faceNei << "  alpha1Nei = " << alpha1Nei << endl;
                 print_line(os, 100);
-                os<< "mS limiter calculation" << endl;
+                os<< "mS limiter_min calculation" << endl;
                 print_line(os, 100);
             }
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
 
-            mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
             if(mS1Tot_cellI_tmp > 0)
             {
                 for(i=0; i<n; i++)
                 {
-                    mS1Nei[i] = limiter*Js1_cellI[i];
+                    mS1Nei[i] = limiter_min*Js1_cellI[i];
                     mS1Own[i] = mS1Tot_cellI*Ys1_cellI[i];
 
                     mS1[i].internalField()[faceNei] = mS1Nei[i]/VNei;
@@ -11540,7 +11546,7 @@ void calc_mS_alphaS
             {
                 for(i=0; i<n; i++)
                 {
-                    mS0Own[i] = -limiter*Js0_cellI[i];
+                    mS0Own[i] = -limiter_min*Js0_cellI[i];
                     mS0Nei[i] = -mS1Tot_cellI*Ys0_cellI[i];
 
                     mS1[i].internalField()[faceNei] = (-mS0Own[i] - mS0Nei[i])/VNei;
@@ -11587,7 +11593,7 @@ void calc_mS_alphaS
                     os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceOwn] << "  " << setw(14) << Js0[i].internalField()[faceOwn] << "  " << setw(14) << mS1[i].internalField()[faceOwn] << "  " << setw(14) << mS0[i].internalField()[faceOwn] << endl;
                 }
                 print_line(os, 100);
-                os<< "limiter = " << limiter << nl
+                os<< "limiter_min = " << limiter_min << nl
                     << "mS1Tot = " << mS1TotCells[faceOwn] << "  mS0Tot = " << mS0TotCells[faceOwn] << nl
                     << "rho1 = " << rho1Own << "  rho0 = " << rho0Own << nl
                     << "alphaS1 = " << alphaS1Cells[faceOwn] << "  alphaS0 = " << alphaS0Cells[faceOwn] << endl;
@@ -11608,7 +11614,7 @@ void calc_mS_alphaS
                     os<< setw(8) << i << "  " << setw(14) << Js1[i].internalField()[faceNei] << "  " << setw(14) << Js0[i].internalField()[faceNei] << "  " << setw(14) << mS1[i].internalField()[faceNei] << "  " << setw(14) << mS0[i].internalField()[faceNei] << endl;
                 }
                 print_line(os, 100);
-                os<< "limiter = " << limiter << nl
+                os<< "limiter_min = " << limiter_min << nl
                     << "mS1Tot = " << mS1TotCells[faceNei] << "  mS0Tot = " << mS0TotCells[faceNei] << nl
                     << "rho1 = " << rho1Nei << "  rho0 = " << rho0Nei << nl
                     << "alphaS1 = " << alphaS1Cells[faceNei] << "  alphaS0 = " << alphaS0Cells[faceNei] << endl;
@@ -11630,7 +11636,7 @@ void calc_mS_alphaS
 
     //--------------------------------------------------------------//
     //Need volume of cell neighbour on neighbouring processor for 
-    //each coupled patch face in order to calculate flux limiter
+    //each coupled patch face in order to calculate flux limiter_min
     //for that face    
     forAll(patches, patchI)
     {
@@ -11756,19 +11762,19 @@ void calc_mS_alphaS
                         os<< "Face: " << faceI
                             << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
                         print_line(os, 100);
-                        os<< "mS limiter calculation" << endl;
+                        os<< "mS limiter_min calculation" << endl;
                         print_line(os, 100);
                     }
 
-                    calc_mS_limiter(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
             
-                    mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+                    mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
                     if(mS1Tot_cellI_tmp > 0)
                     {
                         for(i=0; i<n; i++)
                         {
-                            mS1Own[i] = limiter*Js1_cellI[i];
+                            mS1Own[i] = limiter_min*Js1_cellI[i];
                             mS1Nei[i] = mS1Tot_cellI*Ys1_cellI[i];
 
                             mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
@@ -11782,7 +11788,7 @@ void calc_mS_alphaS
                     {
                         for(i=0; i<n; i++)
                         {
-                            mS0Nei[i] = -limiter*Js0_cellI[i];
+                            mS0Nei[i] = -limiter_min*Js0_cellI[i];
                             mS0Own[i] = -mS1Tot_cellI*Ys0_cellI[i];
 
                             mS1[i].internalField()[faceOwn] = (-mS0Own[i] - mS0Nei[i])/VOwn;
@@ -11907,19 +11913,19 @@ void calc_mS_alphaS
                         os<< "Face: " << faceI
                             << "  own: " << faceOwn << "  alpha1Own = " << alpha1Own << "  nei: " << -1 << "  alpha1Nei = " << alpha1Nei << endl;
                         print_line(os, 100);
-                        os<< "mS limiter calculation" << endl;
+                        os<< "mS limiter_min calculation" << endl;
                         print_line(os, 100);
                     }
 
-                    calc_mS_limiter(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter, debug, os);
+                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
 
-                    mS1Tot_cellI = limiter*mS1Tot_cellI_tmp;
+                    mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
                     if(mS1Tot_cellI_tmp > 0)
                     {
                         for(i=0; i<n; i++)
                         {
-                            mS1Nei[i] = limiter*Js1_cellI[i];
+                            mS1Nei[i] = limiter_min*Js1_cellI[i];
                             mS1Own[i] = mS1Tot_cellI*Ys1_cellI[i];                  
 
                             mS1[i].internalField()[faceOwn] = mS1Own[i]/VOwn;
@@ -11933,7 +11939,7 @@ void calc_mS_alphaS
                     {
                         for(i=0; i<n; i++)
                         {
-                            mS0Own[i] = -limiter*Js0_cellI[i];
+                            mS0Own[i] = -limiter_min*Js0_cellI[i];
                             mS0Nei[i] = -mS1Tot_cellI*Ys0_cellI[i];                            
 
                             mS1[i].internalField()[faceOwn] = 0;
