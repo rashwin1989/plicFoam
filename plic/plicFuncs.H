@@ -925,6 +925,16 @@ namespace plicFuncs
 
     double calc_CvIG_from_CpIG(int n, double *x, double *CpIG);
 
+    void calc_kij_from_table
+    (
+        double T,
+        double Ta,
+        double Tb,
+        int nT,
+        double *kij_T,
+        double *kij
+    );
+
     void calc_rho
     (
         int n,

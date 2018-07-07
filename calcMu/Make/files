@@ -1,0 +1,3 @@
+calcMu.C
+
+EXE = $(FOAM_APPBIN)/calcMu

@@ -113,6 +113,18 @@ extern "C" {
         double *coef_ab,// ! vector of a, b coefficients
         double *rho);// ! density (Unit: kg/m^3) (OUTPUT)
 
+    void density_pr_eos2_( //
+        double *P,   // ! pressure (Unit: Pa) 
+        double *T,   // ! temperature (Unit: K)
+        int    *n,   // ! number of species
+        double *Pc,  // ! vector of critical pressures
+        double *Tc,  // ! vector of critical temperatures
+        double *w,   // ! vector of acentric factors
+        double *kij, // ! matrix of BIPs
+        double *M,   // ! vector of molecular weights
+        double *x,   // ! vector of mass fractions        
+        double *rho);// ! density (Unit: kg/m^3) (OUTPUT)
+
     // ONLY FOR Binary LLE
     void findequilibrium_fugacity_( 
         double *P, // ! pressure (Unit: Pa)
@@ -214,9 +226,8 @@ extern "C" {
         double *Pc,// ! vector of critical pressures
         double *Tc,// ! vector of critical temperatures
         double *w, // ! vector of acentric factors
+        double *kij, // ! matrix of BIPs
         double *x, // ! vector of mass fractions
-        int    *type_k, // ! vector of binary interaction types
-        double *coef_ab,// ! vector of a, b coefficients
         double *V);     // ! molar volume (output results)
 
     void pr_phase_( //

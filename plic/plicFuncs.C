@@ -8885,6 +8885,48 @@ double calc_CvIG_from_CpIG(int n, double *x, double *CpIG)
 }
 
 
+void calc_kij_from_table
+(
+    double T,
+    int n,
+    double Ta,
+    double Tb,
+    int nT,
+    double *kij_T,
+    double *kij
+)
+{
+    int i, j, idT, idx;
+    double dT, T1;
+
+    dT = (Tb - Ta)/(nT - 1);
+
+    if(T > Ta && T < Tb)
+    {
+        idT = floor((T - Ta)/dT);
+    }
+    else if(T <= Ta)
+    {
+        idT = 0;
+    }
+    else
+    {
+        idT = nT - 1;
+    }
+
+    T1 = Ta + idT*dT;
+
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            idx = i*n + j;
+            kij[idx] = kij_T[idT*n*n + idx] + (kij_T[(idT+1)*n*n + idx] - kij_T[idT*n*n + idx])*(T - T1)/dT;
+        }
+    }
+}
+
+
 void calc_rho
 (
     int n,

@@ -83,18 +83,15 @@ subroutine molar_volume2( &
     Pc,& ! vector of critical pressures
     Tc,& ! vector of critical temperatures
     w, & ! vector of acentric factors
+    kij, & ! matrix of BIPs
     x, & ! vector of mass fractions
-    type_k, & ! vector of binary interaction types
-    coef_ab,& ! vector of a, b coefficients
-    V       & ! output molar volume
+    V  & ! output molar volume
     )
 !{
   implicit none
   integer :: n
-  real(8) :: P,T,Pc(n),Tc(n),w(n),x(n)
-  integer :: type_k(n)
-  real(8) :: coef_ab(n)
-  real(8) :: delta(n,n)
+  real(8) :: P,T,Pc(n),Tc(n),w(n),x(n)  
+  real(8) :: kij(n,n)
   real(8) :: V
 
   integer :: i,j
@@ -103,23 +100,7 @@ subroutine molar_volume2( &
 
   ! PR coefficients of pure components
 
-  !open(unit=888,file="tlsm_dbg",action="write",position="append")
-  !write(888,*) "molar volume calculation"
-  !write(888,*) "Start calculate_a_b"
-  !close(888)
-
-  call calculate_a_b(T,n,Pc,Tc,w,coef_ab,a,b)
-
-  !open(unit=888,file="tlsm_dbg",action="write",position="append")
-  !write(888,*) "Done calculate_a_b"
-  !write(888,*) "Start calculate_kij_from_table"
-  !close(888)
-
-  call calculate_kij_from_table(0,T,n,delta)
-
-  !open(unit=888,file="tlsm_dbg",action="write",position="append")
-  !write(888,*) "Done calculate_kij_from_table"
-  !close(888)
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)
 
   ! PR coefficients of the mixture
   bm = 0d0
@@ -130,7 +111,7 @@ subroutine molar_volume2( &
     am      = am + x(i)**2*a(i)
 
     do j=i+1,n
-      am    = am + 2.*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+      am    = am + 2.*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
     enddo
   enddo  
 
@@ -337,6 +318,63 @@ subroutine density_PR_EoS( &
 
 !}
 end subroutine density_PR_EoS
+
+!***************************************************************************
+!***************************************************************************
+subroutine density_PR_EoS2( &
+    P,   & ! pressure (Unit: Pa) 
+    T,   & ! temperature (Unit: K)
+    n,   & ! number of species
+    Pc,  & ! vector of critical pressures
+    Tc,  & ! vector of critical temperatures
+    w,   & ! vector of acentric factors
+    kij, & ! matrix of BIPs
+    M,   & ! vector of molecular weights
+    x,   & ! vector of mass fractions    
+    rho  & ! density (Unit: kg/m^3) (OUTPUT)
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: rho,P,T,Pc(n),Tc(n),w(n),M(n),x(n)
+  real(8) :: kij(n,n)
+
+  real(8) :: a(n), b(n)
+  real(8) :: am, bm, Tr, kappa, alpha, V
+
+  integer :: i,j
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  ! PR coefficients of pure components
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)
+
+  rho = 0.0d0
+  do i=1,n
+    rho = rho + x(i) * M(i)
+  enddo
+
+  ! PR coefficients of the mixture
+  bm = 0d0
+  am = 0d0
+
+  do i=1,n
+    bm = bm + x(i)*b(i)
+    am = am + x(i)**2*a(i)
+
+    do j=i+1,n
+      am = am + 2.*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
+    enddo
+  enddo  
+
+  !P = R_gas*T/(V-bm) - am/(V*V+2d0*bm*V-bm*bm)
+  call PR_vol(P,T,am,bm,V,state)
+
+  rho = rho*1d-3/V
+  !print *,"V,rho=",V,rho
+
+!}
+end subroutine density_PR_EoS2
 
 !***************************************************************************
 subroutine findEquilibrium_Fugacity( &
@@ -894,6 +932,86 @@ subroutine calculate_a_b_and_dadT( &
   end do
 !}
 end subroutine calculate_a_b_and_dadT
+!************************************************************************
+!************************************************************************
+! INTERNAL CALLS
+subroutine calculate_a_b2( &
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    a, & ! vector of a (OUTPUT)
+    b  & ! vector of b (OUTPUT)
+    )
+!{
+  implicit none
+  integer :: n,i
+  real(8) :: T,Pc(n),Tc(n),w(n),a(n),b(n)
+
+  real(8) :: Tr, kappa, alpha, alpha2, cc
+  real(8) :: R_gas = 8.3144621d0
+
+  do i=1,n
+    b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
+
+    Tr = T/Tc(i)
+    
+    if (w(i) .le. 0.491d0) then
+       kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
+    else
+       kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
+    endif
+
+    alpha = 1d0+kappa*(1d0-dsqrt(Tr))
+    alpha2= alpha**2
+
+    cc = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i)
+
+    a(i)  =  cc*alpha2
+  end do
+!}
+end subroutine calculate_a_b2
+subroutine calculate_a_b_and_dadT2( &
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    a, & ! vector of a (OUTPUT)
+    b, & ! vector of b (OUTPUT)
+    dadT & ! vector of dadT (OUTPUT)
+    )
+!{
+  implicit none
+  integer :: n, i
+  real(8) :: T,Pc(n),Tc(n),w(n),a(n),b(n),dadT(n)
+
+  real(8) :: Tr, kappa, alpha, alpha2, cc
+  real(8) :: R_gas = 8.3144621d0
+
+  do i=1,n
+    b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
+
+    Tr = T/Tc(i)
+
+    if (w(i) .le. 0.491d0) then
+       kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
+    else
+       kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
+    endif
+
+    alpha = 1d0+kappa*(1d0-dsqrt(Tr))
+    alpha2= alpha**2
+
+    cc = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i)
+
+    a(i)  =  cc*alpha2
+
+    dadT(i) = -cc*kappa/(dsqrt(Tc(i)*T))*alpha
+  end do
+!}
+end subroutine calculate_a_b_and_dadT2
 !************************************************************************
 subroutine calculate_kij( &
     bSet, & ! >=1 then set every thing, <=0 then just get values restored
