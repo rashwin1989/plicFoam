@@ -10459,12 +10459,13 @@ void calc_Xs_Ys_Js_mS_alphaS
     label curCell_had_intfc;
     double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
-    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1, mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
+    double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1;
+    scalar mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
     scalar limiterTot, limiter_min;
     vector nf, C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];    
-    double *xeff1, *xeff0, *C1_cellI, *C0_cellI;
-    double *x1_cellI, *x0_cellI, *y1_cellI, *y0_cellI;
+    double *xeff1, *xeff0;//, *C1_cellI, *C0_cellI;
+    double *x1_cellI, *x0_cellI;//, *y1_cellI, *y0_cellI;
     double *xs1, *xs0, *ys1, *ys0, *flux_m_1, *flux_m_0, *Js1_cellI, *Js0_cellI, *hs1;
     double *mS1_cellI, *limiter_mS1;
 
@@ -10472,12 +10473,12 @@ void calc_Xs_Ys_Js_mS_alphaS
 
     _NNEW_(xeff1, double, n);
     _NNEW_(xeff0, double, n);
-    _NNEW_(C1_cellI, double, n);
-    _NNEW_(C0_cellI, double, n);
+    //_NNEW_(C1_cellI, double, n);
+    //_NNEW_(C0_cellI, double, n);
     _NNEW_(x1_cellI, double, n);
     _NNEW_(x0_cellI, double, n);
-    _NNEW_(y1_cellI, double, n);
-    _NNEW_(y0_cellI, double, n);
+    //_NNEW_(y1_cellI, double, n);
+    //_NNEW_(y0_cellI, double, n);
     _NNEW_(xs1, double, n);
     _NNEW_(xs0, double, n);
     _NNEW_(ys1, double, n);
@@ -10491,7 +10492,12 @@ void calc_Xs_Ys_Js_mS_alphaS
     _NNEW_(hs1, double, n);
 
     List<scalar> limiterY(n);
-    
+    List<scalar> C1_cellI(n);
+    List<scalar> C0_cellI(n);
+    List<scalar> Y1_cellI(n);
+    List<scalar> Y0_cellI(n);
+    List<scalar> mS1_cellI(n);
+
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
     /*
@@ -10554,8 +10560,10 @@ void calc_Xs_Ys_Js_mS_alphaS
                 C0_cellI[i] = C0[i].internalField()[cellI];
                 x1_cellI[i] = X1[i].internalField()[cellI];
                 x0_cellI[i] = X0[i].internalField()[cellI];
-                y1_cellI[i] = Y1[i].internalField()[cellI];
-                y0_cellI[i] = Y0[i].internalField()[cellI];
+                //y1_cellI[i] = Y1[i].internalField()[cellI];
+                //y0_cellI[i] = Y0[i].internalField()[cellI];
+                Y1_cellI[i] = Y1[i].internalField()[cellI];
+                Y0_cellI[i] = Y0[i].internalField()[cellI];
             }
             curCell_had_intfc = cell_had_intfc[cellI];
 
@@ -10602,37 +10610,26 @@ void calc_Xs_Ys_Js_mS_alphaS
                 Js0_cellI[i] = -A_intfc_cellI*flux_m_0[i]/V_cellI;                
             }
             mS1Tot_cellI_tmp = -A_intfc_cellI*JsTot_cellI/V_cellI;
-            JsTotCells[cellI] = mS1Tot_cellI_tmp*V_cellI;
+
+            for(i=0; i<n; i++)
+            {
+                mS1_cellI[i] = mS1Tot_cellI_tmp*ys1[i] + Js1_cellI[i];
+            }            
 
             limiterTot = 1;
             limiter_min = 1;
             for(i=0; i<n; i++) limiterY[i] = 1;
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);
 
-            //calculate the interfacial mass transfer source terms
-            //from above fluxes. Involves limiter step for total phase change
-            //mass source term and each species interfacial mass transfer source
-            //term. Calculate alpha1 and alpha0 source terms using mass source term 
-            //and phase densities
             for(i=0; i<n; i++)
-            {
-                mS1i_cellI = mS1Tot_cellI_tmp*ys1[i] + Js1_cellI[i];
-
-                if(mS1i_cellI > 0)
-                {
-                    max_mSi = C0[i].internalField()[cellI]/dt;
-                    mS1i_cellI = min(max_mSi, mS1i_cellI);
-                }
-                else
-                {
-                    max_mSi = C1[i].internalField()[cellI]/dt;
-                    mS1i_cellI = -min(max_mSi, -mS1i_cellI);
-                }
-
-                mS1_cellI[i] = mS1i_cellI;
-                mS1Tot_cellI += mS1i_cellI;                
-            }            
+            {                                
+                mS1_cellI[i] = limiter_min*mS1_cellI[i];                
+            }
+            
+            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
+            mS1TotCells[cellI] = mS1Tot_cellI;
+            JsTotCells[cellI] = mS1Tot_cellI*V_cellI;
 
             //calculate the interfacial enthalpy transfer
             Qs_cellI = -A_intfc_cellI*conds1*(Teff1 - Ts_cellI)/dn1/V_cellI;
@@ -10643,7 +10640,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             
             //assign the calculated values to corresponding fields
             TsCells[cellI] = Ts_cellI;
-            mS1TotCells[cellI] = mS1Tot_cellI;
+            
             for(i=0; i<n; i++)
             {                
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
@@ -10933,8 +10930,8 @@ void calc_Xs_Ys_Js_mS_alphaS
 
     _DDELETE_(xeff1);
     _DDELETE_(xeff0);
-    _DDELETE_(C1_cellI);
-    _DDELETE_(C0_cellI);
+    //_DDELETE_(C1_cellI);
+    //_DDELETE_(C0_cellI);
     _DDELETE_(x1_cellI);
     _DDELETE_(x0_cellI);
     _DDELETE_(y1_cellI);
@@ -11062,9 +11059,7 @@ void calc_mS_limiter
     const List<scalar>& C1_0,
     const List<scalar>& C0_0,
     const List<scalar>& Y1_0,
-    const List<scalar>& Y0_0,
-    const List<scalar>& Ys1,
-    const List<scalar>& Ys0,
+    const List<scalar>& Y0_0,    
     const List<scalar>& mS1,
     const scalar& mS1Tot,
     const scalar& dt,    
