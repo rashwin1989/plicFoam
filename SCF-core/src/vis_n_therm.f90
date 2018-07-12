@@ -748,6 +748,132 @@ END subroutine calc_v_CvIG_Cp_hpar
 !***************************************************************************
 
 !***************************************************************************
+subroutine calc_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij &
+                                 hpar)
+!{
+  implicit none
+
+  integer :: n
+  integer :: i,j
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n),kij(n,n)
+  real(8) :: hpar(n)
+  real(8) :: V,dadT(n),am,dadTm,bm,Tr,kappa,alpha,Vterm
+  real(8) :: apar(n),bpar(n),Hdep(n),Vpar(n),dapardT(n)
+  real(8) :: CP_IG(n),H_IG(n)
+  real(8) :: ac(n),a(n),b(n)
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  ! PR coefficients of pure components and their derivatives
+  do i=1,n
+  !{
+    Tr = T/Tc(i)
+    if (w(i) .le. 0.491d0) then
+      kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
+    else
+      kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
+    endif
+    alpha = (1d0+kappa*(1d0-dsqrt(Tr)))**2
+
+    ac(i) = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i) 
+    b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
+
+    a(i)      =  ac(i)*alpha
+    dadT(i)   = -ac(i)*kappa/dsqrt(T*Tc(i))*alpha
+  !}
+  enddo
+
+  ! PR coefficients of the mixture and its derivatives
+
+  bm = 0d0
+  am = 0d0
+  dadTm = 0d0
+
+  do i=1,n
+  !{
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+    dadTm   = dadTm + x(i)**2*dadT(i)
+    !kij_d (i,i) = 0.0d0
+    !kij_d2(i,i) = 0.0d0
+
+    do j=i+1,n
+
+      !kij_d (i,j) = 0.0d0
+      !kij_d (j,i) = 0.0d0
+      !kij_d2(i,j) = 0.0d0
+      !kij_d2(j,i) = 0.0d0
+
+      am      = am + 2.d0*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
+
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-kij(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  !&
+              !+ 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*kij_d(i,j)      
+    enddo
+  !}
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)  
+  
+  Vterm = (V**2+2.*V*bm-bm**2)
+  
+  ! adding the ideal gass specific heats
+  do i=1,n
+    call IG_CP_H(Tb(i),Tc(i),SG(i),H_8(i),MW(i),T,H_IG(i),CP_IG(i))
+  enddo
+
+  ! calculating partial molar volumes and enthalpies
+  do i=1, n
+  !{
+    ! Equation (15)
+    bpar(i) = 1.*(b(i) - bm)
+    apar(i) = 0d0
+    dapardT(i) = 0d0
+    do j=1, n
+      apar(i) = apar(i) + x(j)*(1.-kij(i,j))*dsqrt(a(j))
+      dapardT(i) = dapardT(i) + x(j)*(1.-kij(i,j))/2. &
+                   *( dsqrt(a(j)/a(i))*dadT(i)+dsqrt(a(i)/a(j))*dadT(j) ) !&
+                 !+ x(j)* dsqrt(a(j)*a(i))*(-1.)*kij_d(i,j)
+    enddo
+    apar(i) = 2.*( -am + dsqrt(a(i))*apar(i) )
+
+    dapardT(i) = 2.*( -dadTm + dapardT(i) )
+
+    Vpar(i) = ( R_gas*T*bpar(i)/(V-bm)**2 - apar(i)/Vterm &
+               + am*2.*(V-bm)*bpar(i)/Vterm**2 ) &
+            / ( R_gas*T/(V-bm)**2 - am*2.*(V+bm)/Vterm**2 )
+
+    Vpar(i) = Vpar(i) +  V
+
+    ! Equation (16)
+    Hdep(i) = P*Vpar(i) - R_gas*T + 1./2./sqr2/bm * ( -am+T*dadTm ) &     
+                           * dlog((V+(1.+sqr2)*bm)/(V+(1.-sqr2)*bm)) &     
+                           *( 1. - bpar(i)/bm                       &     
+                             +(-apar(i)+T*dapardT(i))/(-am +T*dadTm)&     
+                             - 2.*sqr2*(bm*Vpar(i)-V*b   (i))/Vterm &     
+                               /dlog((V+(1.+sqr2)*bm)/(V+(1.-sqr2)*bm)) )  
+!   A mistake is here for Guang's original code
+!   bpar(i) should be b(i) in the following line
+!                            - 2.*sqr2*(bm*Vpar(i)-V*bpar(i))/Vterm &     
+!   correction has been made in the above Hpar(i) equation
+!   CORRECT ONE IN THE FOLLOWING
+!                            - 2.*sqr2*(bm*Vpar(i)-V*b   (i))/Vterm &     
+
+    ! Compare Guang's Eq. with Ashwin's Eq.
+!   Vpar(i) = H_IG(i) + P*Vpar(i) - R_gas*T &
+!           + (am-T*dadTm)*(Vpar(i)-V*(bpar(i)+bm)/bm)/Vterm &
+!           - 1./2./sqr2/bm*dlog((V+(1.+sqr2)*bm)/(V+(1.-sqr2)*bm)) &     
+!           *(apar(i)+2.*am-T*(dapardT(i)+2.*dadTm)-(bpar(i)+bm)/bm*(am-T*dadTm))
+
+    ! adding partial enthalpy of the ideal gas                            
+    hpar(i) = Hdep(i) + H_IG(i)                                           !
+  !}
+  enddo
+!}
+END subroutine calc_hpar
+!***************************************************************************
+
+!***************************************************************************
 subroutine calc_v_CvIG(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                        V,CvIG)
 !{

@@ -2654,8 +2654,8 @@ subroutine findEquilibrium_new2( &
   enddo
 
   ! evaluate the equilibrium criteria
-  call fugacities(P,T,n,Pc,Tc,w,x1,type_k,coef_ab,fuga_a,G_a,delta)
-  call fugacities(P,T,n,Pc,Tc,w,x2,type_k,coef_ab,fuga_b,G_b,delta)
+  call fugacities2(P,T,n,Pc,Tc,w,kij,x1,fuga_a,G_a)
+  call fugacities2(P,T,n,Pc,Tc,w,kij,x2,fuga_b,G_b)
   !print *, 'df',x1*fuga_a-x2*fuga_b
   s = 0
   do j=1,n

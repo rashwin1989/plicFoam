@@ -48,6 +48,11 @@ extern "C" {
     double *Tb,double *SG,double *H8,double *kij,            // INPUT
     double *V,double *CvIG, double *Cp,double *hpar);        // OUTPUT
 
+    void calc_hpar_(double *P,double *T,double *x, // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW,       // INPUT
+    double *Tb,double *SG,double *H8,double *kij,            // INPUT
+    double *hpar);                                           // OUTPUT
+
     void calc_v_cvig_(double *P,double *T,double *x,   // INPUT
     int *n,double *Pc,double *Tc,double *w,double *MW, // INPUT
     double *Tb,double *SG,double *H8,double *kij,      // INPUT

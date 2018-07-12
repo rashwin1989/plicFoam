@@ -218,7 +218,7 @@ extern "C" {
         double *Pc,// ! vector of critical pressures
         double *Tc,// ! vector of critical temperatures
         double *w, // ! vector of acentric factors
-        int    *type_k, // ! vector of binary interaction types
+        double *kij, // ! matrix of BIPs
         double *x_a, // ! vector of mass fractions: alpha phase
         double *x_b, // ! vector of mass fractions: beta phase
         double *s_min);// ! minimum evaluation value
@@ -232,8 +232,7 @@ extern "C" {
         double *Pc,// ! vector of critical pressures
         double *Tc,// ! vector of critical temperatures
         double *w, // ! vector of acentric factors
-        int    *type_k, // ! vector of binary interaction types
-        double *coef_ab,// ! vector of a, b coefficients
+        double *kij, // ! matrix of BIPs
         double *x_a, // ! vector of mass fractions: alpha phase
         double *x_b, // ! vector of mass fractions: beta phase
         double *s_min);// ! minimum evaluation value

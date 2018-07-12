@@ -20,10 +20,10 @@ extern "C" {
     double *Vc, \
     double *w,  \
     double *MW, \
-    int *type_k,\
     double *Tb, \
     double *SG, \
     double *H8, \
+    double *kij, \
     \
     int n_flux_type, \
     double dL,  \
@@ -62,7 +62,7 @@ void transport_LLE2_core(
     double *Pc, // critical pressure (Pa)
     double *Tc, // critical temperature (K)
     double *w,  // acentric factor
-    int *type_k,// index for BIP
+    double *kij,// matrix of BIPs
     double *x_1,// oil-rich phase
     double *x_2 // water-rich phase
     );
@@ -85,7 +85,7 @@ void transport_LLE_core(
     double *Pc, // critical pressure (Pa)
     double *Tc, // critical temperature (K)
     double *w,  // acentric factor
-    int *type_k,// index for BIP
+    double *kij,// matrix of BIPs
     double *x_1,// oil-rich phase
     double *x_2 // water-rich phase
     );

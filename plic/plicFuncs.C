@@ -9830,11 +9830,17 @@ void calc_intfc_transLLE
         x2y(n,MW,xs1,ys1);
         x2y(n,MW,xs0,ys0);
 
-        //phase 1 thermal conductivity
+        //phase 1 
+        //thermal conductivity
         calc_mu_lambda(P,Ts_tmp,ys1,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,cond1,vis);
+        //partial molar enthalpies
+        calc_hpar_(&P,&Ts_tmp,xs1,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,h1);
 
-        //phase 0 thermal conductivity
+        //phase 0 
+        //thermal conductivity
         calc_mu_lambda(P,Ts_tmp,ys0,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,cond0,vis);
+        //partial molar enthalpies
+        calc_hpar_(&P,&Ts_tmp,xs0,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,h0);
 
         //calculate the total ph-1 to ph-0 phase change mass flux 
         //from ph-1 and ph-0 diffusive fluxes
@@ -10383,13 +10389,16 @@ void calc_Xs_Ys_Js_mS_alphaS
     double* Vc,
     double *w,
     double *MW,
-    int *tk,
-    double *coef_ab,
     double *Tb,
     double *SG,
     double *H8,
     double *k,
     double *dm,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     const labelListList& cellStencil,
     const List<List<scalar> >& x1_flatFld,
     const List<List<scalar> >& x0_flatFld,
@@ -10523,7 +10532,7 @@ void calc_Xs_Ys_Js_mS_alphaS
         alpha1_cellI = alpha1Cells[cellI];
         A_intfc_cellI = A_intfcCells[cellI];
 
-        if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX && A_intfc_cellI > A_INTFC_2PH_MIN)
+        if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
         {
             V_cellI = V[cellI];
             nf = nHatCells[cellI];
@@ -10579,7 +10588,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             x2y(n, MW, xs1, ys1);
             x2y(n, MW, xs0, ys0);
 
-            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, tk, coef_ab, Tb, SG, H8, k, dm, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
+            calc_intfc_transLLE(P_cellI, Ts_cellI, n, Pc, Tc, Vc, w, MW, Tb, SG, H8, k, dm, kij_T, Ta_kij, Tb_kij, nT_kij, kij, dn1, dn0, xeff1, xeff0, Teff1, Teff0, xs1, xs0, ys1, ys0, JsTot_cellI, flux_m_1, flux_m_0, conds1, hs1, iLLE, iTs, n_flux_type, flux_umf, Ts_TOL, MAX_ITERS_Ts, MASS_FRAC_TOL, debug, os);
             
             mS1Tot_cellI = 0; mS1Tot_cellI_tmp = 0;
 
