@@ -399,20 +399,20 @@ end subroutine density_PR_EoS
 subroutine density_PR_EoS2( &
     P,   & ! pressure (Unit: Pa) 
     T,   & ! temperature (Unit: K)
+    x,   & ! vector of mass fractions
     n,   & ! number of species
     Pc,  & ! vector of critical pressures
     Tc,  & ! vector of critical temperatures
     w,   & ! vector of acentric factors
-    kij, & ! matrix of BIPs
     M,   & ! vector of molecular weights
-    x,   & ! vector of mass fractions    
+    kij, & ! matrix of BIPs
     rho  & ! density (Unit: kg/m^3) (OUTPUT)
     )
 !{
   implicit none
   integer :: n
-  real(8) :: rho,P,T,Pc(n),Tc(n),w(n),M(n),x(n)
-  real(8) :: kij(n,n)
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),M(n),kij(n,n)
+  real(8) :: rho
 
   real(8) :: a(n), b(n)
   real(8) :: am, bm, Tr, kappa, alpha, V

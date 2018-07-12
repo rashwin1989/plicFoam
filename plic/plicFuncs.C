@@ -6384,7 +6384,7 @@ void calc_T_from_h
 
     for(iter=0; iter<MAX_ITER_T; iter++)
     {        
-        calc_kij_from_table(TOld, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+        calc_kij_from_table(TOld, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
         calc_v_cp_h_(&P, &TOld, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &Cp_tmp, &h_tmp);    
 
         F = h_tmp - hm;
@@ -6436,7 +6436,7 @@ void calc_h_from_T
     }
     MW_tmp *= 1e-3;
     
-    calc_kij_from_table(T, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+    calc_kij_from_table(T, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
     calc_v_h_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
 
     h = h_tmp/MW_tmp;
@@ -6512,7 +6512,7 @@ void calc_diffFlux_limiter_T
 
         for(iter=0; iter<MAX_ITER_T; iter++)
         {
-            calc_kij_from_table(TOld, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            calc_kij_from_table(TOld, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 
             calc_v_cp_h_(&P, &TOld, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
 
@@ -6538,9 +6538,9 @@ void calc_diffFlux_limiter_T
             if(TOwn > TNei)
             {
                 diffFlux_max_1 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
-                calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
-                calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMAX, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
 
                 diffFlux_max_2 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
@@ -6557,9 +6557,9 @@ void calc_diffFlux_limiter_T
             if(TOwn < TNei)
             {
                 diffFlux_max_1 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
-                calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
-                calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMIN, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
                 diffFlux_max_2 = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
                 diffFlux_max_3 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
@@ -6635,13 +6635,13 @@ void calc_diffFlux_limiter2_T
 
         if(diffFlux > 0)
         {
-            calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);                
             diffFlux_max = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
         }
         else
         {
-            calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
             diffFlux_max = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
         }        
@@ -8133,7 +8133,8 @@ void calc_cell_intfcGrad_coeffs
         scalar magnf;
         magnf = mag(nf);
         */
-        scalar min_dn = mag(mesh.C()[curCell_lbl] - mesh.C()[curCellsAll[1]]);
+		scalar cellVol = mesh.V()[curCell_lbl];
+        scalar min_dn = pow(cellVol, 1.0/3.0);
         /*
         if(magt1 < min_dn)
         {
@@ -8980,7 +8981,7 @@ void calc_rho
 {
     double rho_tmp;
 
-    density_pr_eos2_(&P,&T,&n,Pc,Tc,w,MW,x,kij,&rho_tmp);    
+    density_pr_eos2_(&P,&T,x,&n,Pc,Tc,w,MW,kij,&rho_tmp);    
     rho = rho_tmp;
 }
 
@@ -9112,7 +9113,7 @@ void correct_rho
             x_tmp[i] = X[i].internalField()[cellI];
         }
         
-        if(calcKij) calc_kij_from_table(T_tmp, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+        if(calcKij) calc_kij_from_table(T_tmp, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 
         calc_rho(P,T_tmp,x_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
      
@@ -9132,7 +9133,7 @@ void correct_rho
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
             
-            if(calcKij) calc_kij_from_table(T_tmp, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            if(calcKij) calc_kij_from_table(T_tmp, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 
             calc_rho(P,T_tmp,x_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 
@@ -10317,7 +10318,8 @@ void calc_cell_intfcGrad_coeffs
         scalar magnf;
         magnf = mag(nf);
         */
-        scalar min_dn = mag(mesh.C()[curCell_lbl] - mesh.C()[curCellsAll[1]]);
+		scalar cellVol = mesh.V()[curCell_lbl];
+        scalar min_dn = pow(cellVol, 1.0/3.0);
         /*
         if(magt1 < min_dn)
         {
@@ -10643,7 +10645,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             for(i=0; i<n; i++)
             {                
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
-				mS0[i].internalField()[cellI] = mS0_cellI[i];
+				mS0[i].internalField()[cellI] = -mS1_cellI[i];
                 Js1[i].internalField()[cellI] = Js1_cellI[i];
                 Js0[i].internalField()[cellI] = Js0_cellI[i];
                 Xs1[i].internalField()[cellI] = xs1[i];

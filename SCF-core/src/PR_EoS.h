@@ -159,13 +159,13 @@ extern "C" {
     void density_pr_eos2_( //
         double *P,   // ! pressure (Unit: Pa) 
         double *T,   // ! temperature (Unit: K)
+        double *x,   // ! vector of mass fractions
         int    *n,   // ! number of species
         double *Pc,  // ! vector of critical pressures
         double *Tc,  // ! vector of critical temperatures
         double *w,   // ! vector of acentric factors
-        double *kij, // ! matrix of BIPs
         double *M,   // ! vector of molecular weights
-        double *x,   // ! vector of mass fractions        
+        double *kij, // ! matrix of BIPs
         double *rho);// ! density (Unit: kg/m^3) (OUTPUT)
 
     // ONLY FOR Binary LLE
