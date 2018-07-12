@@ -10627,9 +10627,7 @@ void calc_Xs_Ys_Js_mS_alphaS
                 mS1_cellI[i] = limiter_min*mS1_cellI[i];                
             }
             
-            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
-            mS1TotCells[cellI] = mS1Tot_cellI;
-            JsTotCells[cellI] = mS1Tot_cellI*V_cellI;
+            mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;            
 
             //calculate the interfacial enthalpy transfer
             Qs_cellI = -A_intfc_cellI*conds1*(Teff1 - Ts_cellI)/dn1/V_cellI;
@@ -10640,10 +10638,12 @@ void calc_Xs_Ys_Js_mS_alphaS
             
             //assign the calculated values to corresponding fields
             TsCells[cellI] = Ts_cellI;
-            
+            mS1TotCells[cellI] = mS1Tot_cellI;
+            JsTotCells[cellI] = mS1Tot_cellI*V_cellI;
             for(i=0; i<n; i++)
             {                
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
+				mS0[i].internalField()[cellI] = mS0_cellI[i];
                 Js1[i].internalField()[cellI] = Js1_cellI[i];
                 Js0[i].internalField()[cellI] = Js0_cellI[i];
                 Xs1[i].internalField()[cellI] = xs1[i];
