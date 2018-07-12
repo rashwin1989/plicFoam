@@ -10431,8 +10431,10 @@ void calc_Xs_Ys_Js_mS_alphaS
     PtrList<volScalarField>& Js1,
     PtrList<volScalarField>& Js0,
     PtrList<volScalarField>& mS1,
+    PtrList<volScalarField>& mS0,
     volScalarField& JsTot,
     volScalarField& mS1Tot,
+    volScalarField& mS0Tot,
     volScalarField& alphaS1,
     volScalarField& alphaS0,
     volScalarField& Qs,
@@ -10458,7 +10460,7 @@ void calc_Xs_Ys_Js_mS_alphaS
     double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
     double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1, mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
-    //double limiter_mS1Tot, limiter_min;
+    scalar limiterTot, limiter_min;
     vector nf, C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];    
     double *xeff1, *xeff0, *C1_cellI, *C0_cellI;
@@ -10487,6 +10489,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     _NNEW_(mS1_cellI, double, n);
     _NNEW_(limiter_mS1, double, n);
     _NNEW_(hs1, double, n);
+
+    List<scalar> limiterY(n);
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
@@ -10599,6 +10603,12 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
             mS1Tot_cellI_tmp = -A_intfc_cellI*JsTot_cellI/V_cellI;
             JsTotCells[cellI] = mS1Tot_cellI_tmp*V_cellI;
+
+            limiterTot = 1;
+            limiter_min = 1;
+            for(i=0; i<n; i++) limiterY[i] = 1;
+
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);
 
             //calculate the interfacial mass transfer source terms
             //from above fluxes. Involves limiter step for total phase change
@@ -11302,7 +11312,7 @@ void calc_mS_alphaS
             limiter_min = 1;
             for(i=0; i<n; i++) limiterY[i] = 1;
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);       
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);     
      
             for(i=0; i<n; i++)
             {                                
