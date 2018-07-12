@@ -8133,40 +8133,40 @@ void calc_cell_intfcGrad_coeffs
         scalar magnf;
         magnf = mag(nf);
         */
-		scalar cellVol = mesh.V()[curCell_lbl];
+	scalar cellVol = mesh.V()[curCell_lbl];
         scalar min_dn = pow(cellVol, 1.0/3.0);
         /*
-        if(magt1 < min_dn)
-        {
+            if(magt1 < min_dn)
+            {
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << ": curCell centroid too close to interface!" << nl 
-                << "Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
-                << endl;
+            << "Cell " << curCell_lbl << ": curCell centroid too close to interface!" << nl 
+            << "Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
+            << endl;
             if(magt1 < SMALL)
             {
-                magt1 += SMALL;
+            magt1 += SMALL;
             }
             t1 *= min_dn/magt1;
             magt1 = mag(t1);
-        }
-        if(magnf < SMALL)
-        {
+            }
+            if(magnf < SMALL)
+            {
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
-                << endl;
+            << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
+            << endl;
             magnf += SMALL;
-        }
-        scalar costheta1 = (nf & t1)/magt1/magnf;
-        if(costheta1 > 1)
-        {        
+            }
+            scalar costheta1 = (nf & t1)/magt1/magnf;
+            if(costheta1 > 1)
+            {        
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
-                << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
-                << "  costheta1 = " << costheta1 << nl 
-                << endl;
+            << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+            << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+            << "  costheta1 = " << costheta1 << nl 
+            << endl;
             costheta1 = 1;
-        }
-        */
+            }
+            */
         dn = min_dn;
         if(debug)
         {
@@ -8242,13 +8242,13 @@ void calc_Js
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Interfacial Species Flux Calculation" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << nl
-          << "-------------------------------------------------------------------------" << nl
-          << "Internal cells" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << endl;
+            << "Interfacial Species Flux Calculation" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << nl
+            << "-------------------------------------------------------------------------" << nl
+            << "Internal cells" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
 
     //Js for all interface cells
@@ -8365,9 +8365,9 @@ void calc_Js
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Internal faces" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << endl;
+            << "Internal faces" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
 
     //Js for cell faces that are almost a phase inteface
@@ -8570,9 +8570,9 @@ void calc_Js
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Boundary coupled faces step 1" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << endl;
+            << "Boundary coupled faces step 1" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
     const wordList& patchNames = patches.names();
@@ -8761,9 +8761,9 @@ void calc_Js
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
-          << "Boundary coupled faces step 2" << nl
-          << "-------------------------------------------------------------------------" << nl
-          << endl;
+            << "Boundary coupled faces step 2" << nl
+            << "-------------------------------------------------------------------------" << nl
+            << endl;
     }
 
     forAll(Js1[0].boundaryField(), patchI)
@@ -9304,7 +9304,7 @@ void correct_x_from_Y
 void correct_boundaryField_h_rhoh_H
 (
     double P,
-        const volScalarField& T,
+    const volScalarField& T,
     const PtrList<volScalarField>& X,
     const volScalarField& rho,
     const volScalarField& alpha,
@@ -10001,8 +10001,8 @@ void calc_cell_intfcGrad_coeffs
     if(debug)
     {
         os<< nl
-          << "Calculating cell intfc grad weights in cell " << curCell_lbl << nl
-          << endl;
+            << "Calculating cell intfc grad weights in cell " << curCell_lbl << nl
+            << endl;
     }
 
     scalar MAX_ALPHA_2PH = 1 - MIN_ALPHA_2PH;
@@ -10311,47 +10311,47 @@ void calc_cell_intfcGrad_coeffs
             << "Cell " << curCell_lbl << ": Cell in interface normal direction not found! Using curCell centroid" << nl
             << endl;
         /*
-        vector C1 = C[curCell_lbl];
-        vector t1 = C1 - Cp;
-        scalar magt1;    
-        magt1 = mag(t1);
-        scalar magnf;
-        magnf = mag(nf);
-        */
-		scalar cellVol = mesh.V()[curCell_lbl];
+            vector C1 = C[curCell_lbl];
+            vector t1 = C1 - Cp;
+            scalar magt1;    
+            magt1 = mag(t1);
+            scalar magnf;
+            magnf = mag(nf);
+            */
+	scalar cellVol = mesh.V()[curCell_lbl];
         scalar min_dn = pow(cellVol, 1.0/3.0);
         /*
-        if(magt1 < min_dn)
-        {
+            if(magt1 < min_dn)
+            {
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << ": curCell centroid too close to interface!" << nl 
-                << "Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
-                << endl;
+            << "Cell " << curCell_lbl << ": curCell centroid too close to interface!" << nl 
+            << "Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
+            << endl;
             if(magt1 < SMALL)
             {
-                magt1 += SMALL;
+            magt1 += SMALL;
             }
             t1 *= min_dn/magt1;
             magt1 = mag(t1);
-        }
-        if(magnf < SMALL)
-        {
+            }
+            if(magnf < SMALL)
+            {
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
-                << endl;
+            << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
+            << endl;
             magnf += SMALL;
-        }
-        scalar costheta1 = (nf & t1)/magt1/magnf;
-        if(costheta1 > 1)
-        {        
+            }
+            scalar costheta1 = (nf & t1)/magt1/magnf;
+            if(costheta1 > 1)
+            {        
             os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
-                << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
-                << "  costheta1 = " << costheta1 << nl 
-                << endl;
+            << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+            << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+            << "  costheta1 = " << costheta1 << nl 
+            << endl;
             costheta1 = 1;
-        }
-        */
+            }
+            */
         dn = min_dn;
         Teff = T[curCell_lbl];
         if(debug)
@@ -10503,12 +10503,12 @@ void calc_Xs_Ys_Js_mS_alphaS
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
     /*
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
+        const labelList& own = mesh.owner();
+        const labelList& nei = mesh.neighbour();
 
-    const surfaceVectorField& Sf = mesh.Sf();
-    const surfaceScalarField& magSf = mesh.magSf();
-    const surfaceVectorField& Cf = mesh.Cf();
+        const surfaceVectorField& Sf = mesh.Sf();
+        const surfaceScalarField& magSf = mesh.magSf();
+        const surfaceVectorField& Cf = mesh.Cf();
         */
 
     const scalarField& V = mesh.V();
@@ -10645,7 +10645,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             for(i=0; i<n; i++)
             {                
                 mS1[i].internalField()[cellI] = mS1_cellI[i];
-				mS0[i].internalField()[cellI] = -mS1_cellI[i];
+                mS0[i].internalField()[cellI] = -mS1_cellI[i];
                 Js1[i].internalField()[cellI] = Js1_cellI[i];
                 Js0[i].internalField()[cellI] = Js0_cellI[i];
                 Xs1[i].internalField()[cellI] = xs1[i];
@@ -11309,7 +11309,7 @@ void calc_mS_alphaS
             limiter_min = 1;
             for(i=0; i<n; i++) limiterY[i] = 1;
 
-            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);     
+            calc_mS_limiter(C1_cellI, C0_cellI, Y1_cellI, Y0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiterTot, limiterY, limiter_min, debug, os);     
      
             for(i=0; i<n; i++)
             {                                
@@ -11462,7 +11462,7 @@ void calc_mS_alphaS
                 print_line(os, 100);
             }
 
-            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
+            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
             
             mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
@@ -11641,7 +11641,7 @@ void calc_mS_alphaS
                 print_line(os, 100);
             }
 
-            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
+            calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
 
             mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
@@ -11886,7 +11886,7 @@ void calc_mS_alphaS
                         print_line(os, 100);
                     }
 
-                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
+                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Own, Y0Nei, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
             
                     mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
@@ -12037,7 +12037,7 @@ void calc_mS_alphaS
                         print_line(os, 100);
                     }
 
-                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, Ys1_cellI, Ys0_cellI, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
+                    calc_mS_limiter_min(C1_cellI, C0_cellI, Y1Nei, Y0Own, mS1_cellI, mS1Tot_cellI_tmp, dt, n, limiter_min, debug, os);
 
                     mS1Tot_cellI = limiter_min*mS1Tot_cellI_tmp;
 
