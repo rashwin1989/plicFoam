@@ -34,28 +34,17 @@ void transport_LLE2_core(
     double *Pc, // critical pressure (Pa)
     double *Tc, // critical temperature (K)
     double *w,  // acentric factor
-    int *type_k,// index for BIP
+    double *kij,// matrix of BIPs
     double *X_1,// oil-rich phase
     double *X_2 // water-rich phase
     )
-{
-  static int n1st=1;
-  static double *coef_ab; 
-
+{  
   int bprint=0, binit=0;
-  double s_min;
-
-  if (n1st) {
-    int j;
-    n1st=0;
-    _NEW_(coef_ab,double,n);
-    for (j=0;j<n;j++) coef_ab[j]=-1;
-  }
+  double s_min;  
 
   // fix x_1[i=3,...,n-2] (heavier oils in phase 1) and x_2[n-1] (water in phase 2)
   findequilibrium_fix_water_b_(&bprint,&binit,
-      &P,&T_s,&n,Pc,Tc,w,type_k,coef_ab,X_1,X_2,&s_min);
-
+      &P,&T_s,&n,Pc,Tc,w,kij,X_1,X_2,&s_min);
 }
 
 
@@ -68,24 +57,16 @@ double transport_LLE2_eval_func(
   double _tmp;
 
   static int n1st=1; 
-  static double *rhs_flux, *coef_ab, *y_1, *y_2, *dlnphi_1, *dlnphi_2,
-                *Cp_IG_tmp, *Vpar_tmp, *Hdep_1, *Hdep_2;
-  double V_1, V_2, Cp_tmp, Cv_tmp, dVdT_tmp, G_tmp, am_tmp, bm_tmp;
-  int G_only=0;
+  static double *rhs_flux, *y_1, *y_2, *dlnphi_1, *dlnphi_2;
+  double V_1, V_2;
 
   if (n1st){
     n1st=0;
     _NEW_(rhs_flux,double,n);
-    _NEW_(coef_ab, double,n);
     _NEW_(y_1,double,n);
     _NEW_(y_2,double,n);
-    _NEW_(Cp_IG_tmp,double,n);
-    _NEW_(Vpar_tmp,double,n);
-    _NEW_(Hdep_1,double,n);
-    _NEW_(Hdep_2,double,n);
     _NEW_(dlnphi_1,double,n*n);
     _NEW_(dlnphi_2,double,n*n);
-    for (j=0;j<n;j++) coef_ab[j]=-1;
   }
 
   // -1) latest, setup to search in positive domain
@@ -95,22 +76,17 @@ double transport_LLE2_eval_func(
   }
 
   // LLE
-  transport_LLE2_core(P,T_s,n,Pc,Tc,w,type_k,x_1,x_2);
+  transport_LLE2_core(P,T_s,n,Pc,Tc,w,kij,x_1,x_2);
 
   // properties
-  thermo_properties_(&P, &T_s,&n,Pc,Tc,w,MW,x_1,Tb,SG,H8,type_k,
-      &V_1,&Cp_tmp,&Cv_tmp,Cp_IG_tmp,H_1,Hdep_1,
-      Vpar_tmp,&dVdT_tmp,&G_tmp,lnphi_1,&am_tmp,&bm_tmp,&G_only);
-  fugacities_n_its_derivatives_(&P,&T_s,&n,Pc,Tc,w,x_1,type_k,
-      coef_ab,lnphi_1,dlnphi_1,&Cv_tmp);
-  new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,type_k,coef_ab,MW,x_1,Dij_1);
+  // phase-1  
+  fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_1,kij,lnphi_1,dlnphi_1,&V_1);
+  new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_1,Dij_1);
 
-  thermo_properties_(&P, &T_s,&n,Pc,Tc,w,MW,x_2,Tb,SG,H8,type_k,
-      &V_2,&Cp_tmp,&Cv_tmp,Cp_IG_tmp,H_2,Hdep_2,
-      Vpar_tmp,&dVdT_tmp,&G_tmp,lnphi_2,&am_tmp,&bm_tmp,&G_only);
-  fugacities_n_its_derivatives_(&P,&T_s,&n,Pc,Tc,w,x_2,type_k,
-      coef_ab,lnphi_2,dlnphi_2,&Cv_tmp);
-  new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,type_k,coef_ab,MW,x_2,Dij_2);
+  // phase-2  
+  fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_2,kij,lnphi_2,dlnphi_2,&V_2);
+  new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_2,Dij_2);
+
   x2y(n, MW, x_1, y_1);
   x2y(n, MW, x_2, y_2);
 
@@ -200,7 +176,7 @@ void transport_LLE_core(
     double *Pc, // critical pressure (Pa)
     double *Tc, // critical temperature (K)
     double *w,  // acentric factor
-    int *type_k,// index for BIP
+    double *kij,// matrix of BIPs
     double *x_1,// oil-rich phase
     double *x_2 // water-rich phase
     )
@@ -209,8 +185,7 @@ void transport_LLE_core(
   double s_min;
 
   k_fortran=k+1;
-  findequilibrium_new2_(&P,&T_s,&k_fortran,&n,Pc,Tc,w,type_k,x_1,x_2,&s_min);
-
+  findequilibrium_new2_(&P,&T_s,&k_fortran,&n,Pc,Tc,w,kij,x_1,x_2,&s_min);
 }
 
 // evaluation function: sum_i(sum_{j!=i}(Ri-Rj)^2)

@@ -419,18 +419,18 @@ END subroutine thermo_properties
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_Cp_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
+subroutine calc_v_Cp_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                        V,Cp,h)
 !{
   implicit none
 
   integer :: n
   integer :: i,j
-  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n), kij(n,n)
   real(8) :: V, Cp, h
   real(8) :: dadT(n),d2adT2(n), am, dadTm, d2adT2m, bm, Tr, kappa, alpha, Vterm, h_IG_m, Cp_IG_m, term1
   real(8) :: CP_IG(n), H_IG(n)  
-  real(8) :: ac(n), a(n), b(n), delta(n,n), delta_d(n,n), delta_d2(n,n)
+  real(8) :: ac(n), a(n), b(n)
   real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
   character :: state = 'm'  
 
@@ -452,10 +452,7 @@ subroutine calc_v_Cp_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     dadT(i)   = -ac(i)*kappa/dsqrt(T*Tc(i))*alpha
     d2adT2(i) =  ac(i)*kappa/dsqrt(T*Tc(i))/T/2.*(1.+kappa)
   !}
-  enddo
-
-  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
-  call calculate_kij_from_table(1,T,n,delta)
+  enddo  
 
   ! PR coefficients of the mixture and its derivatives
 
@@ -470,29 +467,29 @@ subroutine calc_v_Cp_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     am      = am + x(i)**2*a(i)
     dadTm   = dadTm + x(i)**2*dadT(i) 
     d2adT2m = d2adT2m + x(i)**2*d2adT2(i)
-    delta_d (i,i) = 0.0d0
-    delta_d2(i,i) = 0.0d0
+    !kij_d (i,i) = 0.0d0
+    !kij_d2(i,i) = 0.0d0
 
     do j=i+1,n
 
-      delta_d (i,j) = 0.0d0
-      delta_d (j,i) = 0.0d0
-      delta_d2(i,j) = 0.0d0
-      delta_d2(j,i) = 0.0d0
+      !kij_d (i,j) = 0.0d0
+      !kij_d (j,i) = 0.0d0
+      !kij_d2(i,j) = 0.0d0
+      !kij_d2(j,i) = 0.0d0
 
-      am      = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+      am      = am + 2.d0*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
 
-      dadTm   = dadTm + x(i)*x(j)*(1.d0-delta(i,j))  &
-                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  &
-              + 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*delta_d(i,j)
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-kij(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )
+              !+ 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*kij_d(i,j)
 
-      d2adT2m = d2adT2m + x(i)*x(j) * (1.d0-delta(i,j)) &
+      d2adT2m = d2adT2m + x(i)*x(j) * (1.d0-kij(i,j)) &
                 * ( dsqrt(a(i)/a(j)) * ( d2adT2(j)-0.5d0/a(j)*dadT(j)**2d0 ) + &
                     dsqrt(a(j)/a(i)) * ( d2adT2(i)-0.5d0/a(i)*dadT(i)**2d0 ) + &
-                    1.d0/dsqrt(a(i)*a(j))*dadT(i)*dadT(j) )  &
-              + 2.d0*x(i)*x(j)* ( (dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i)) &
-                               *(-1.)*delta_d(i,j) &
-                               + dsqrt(a(i)*a(j))*(-1.d0)*delta_d2(i,j))
+                    1.d0/dsqrt(a(i)*a(j))*dadT(i)*dadT(j) ) !&
+              !+ 2.d0*x(i)*x(j)* ( (dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i)) &
+                               !*(-1.)*kij_d(i,j) &
+                               !+ dsqrt(a(i)*a(j))*(-1.d0)*kij_d2(i,j))
     enddo
   !}
   enddo  
@@ -524,18 +521,18 @@ END subroutine calc_v_Cp_h
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
+subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                     V,h)
 !{
   implicit none
 
   integer :: n
   integer :: i,j
-  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n), SG(n), H_8(n)
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n),kij(n,n)
   real(8) :: V, Cp, h
   real(8) :: dadT(n), am, dadTm, bm, Tr, kappa, alpha, Vterm, h_IG_m, term1
   real(8) :: CP_IG(n), H_IG(n)  
-  real(8) :: ac(n), a(n), b(n), delta(n,n), delta_d(n,n)
+  real(8) :: ac(n), a(n), b(n)
   real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
   character :: state = 'm'
 
@@ -558,9 +555,6 @@ subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
   !}
   enddo
 
-  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
-  call calculate_kij_from_table(1,T,n,delta)
-
   ! PR coefficients of the mixture and its derivatives
 
   bm = 0d0
@@ -572,18 +566,18 @@ subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     bm      = bm + x(i)*b(i)
     am      = am + x(i)**2*a(i)
     dadTm   = dadTm + x(i)**2*dadT(i)
-    delta_d (i,i) = 0.0d0
+    !kij_d (i,i) = 0.0d0
 
     do j=i+1,n
 
-      delta_d (i,j) = 0.0d0
-      delta_d (j,i) = 0.0d0      
+      !kij_d (i,j) = 0.0d0
+      !kij_d (j,i) = 0.0d0      
 
-      am      = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+      am      = am + 2.d0*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
 
-      dadTm   = dadTm + x(i)*x(j)*(1.d0-delta(i,j))  &
-                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  &
-              + 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*delta_d(i,j)
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-kij(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  !&
+              !+ 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*kij_d(i,j)
     enddo
   !}
   enddo  
@@ -607,19 +601,19 @@ END subroutine calc_v_h
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
+subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij &
                                V,CvIG,Cp,hpar)
 !{
   implicit none
 
   integer :: n
   integer :: i,j
-  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n)
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n),kij(n,n)
   real(8) :: V,CvIG,Cp,hpar(n)
   real(8) :: dadT(n),d2adT2(n),am,dadTm,d2adT2m,bm,Tr,kappa,alpha,Vterm,Cp_IG_m,term1
   real(8) :: apar(n),bpar(n),Hdep(n),Vpar(n),dapardT(n)
   real(8) :: CP_IG(n),H_IG(n)
-  real(8) :: ac(n),a(n),b(n),delta(n,n),delta_d(n,n),delta_d2(n,n)
+  real(8) :: ac(n),a(n),b(n)
   real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
   character :: state = 'm'  
 
@@ -643,9 +637,6 @@ subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
   !}
   enddo
 
-  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
-  call calculate_kij_from_table(1,T,n,delta)
-
   ! PR coefficients of the mixture and its derivatives
 
   bm = 0d0
@@ -659,29 +650,29 @@ subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     am      = am + x(i)**2*a(i)
     dadTm   = dadTm + x(i)**2*dadT(i) 
     d2adT2m = d2adT2m + x(i)**2*d2adT2(i)
-    delta_d (i,i) = 0.0d0
-    delta_d2(i,i) = 0.0d0
+    !kij_d (i,i) = 0.0d0
+    !kij_d2(i,i) = 0.0d0
 
     do j=i+1,n
 
-      delta_d (i,j) = 0.0d0
-      delta_d (j,i) = 0.0d0
-      delta_d2(i,j) = 0.0d0
-      delta_d2(j,i) = 0.0d0
+      !kij_d (i,j) = 0.0d0
+      !kij_d (j,i) = 0.0d0
+      !kij_d2(i,j) = 0.0d0
+      !kij_d2(j,i) = 0.0d0
 
-      am      = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+      am      = am + 2.d0*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
 
-      dadTm   = dadTm + x(i)*x(j)*(1.d0-delta(i,j))  &
-                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  &
-              + 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*delta_d(i,j)
+      dadTm   = dadTm + x(i)*x(j)*(1.d0-kij(i,j))  &
+                * ( dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i) )  !&
+              !+ 2.d0*x(i)*x(j)* dsqrt(a(i)*a(j))*(-1.d0)*kij_d(i,j)
 
-      d2adT2m = d2adT2m + x(i)*x(j) * (1.d0-delta(i,j)) &
+      d2adT2m = d2adT2m + x(i)*x(j) * (1.d0-kij(i,j)) &
                 * ( dsqrt(a(i)/a(j)) * ( d2adT2(j)-0.5d0/a(j)*dadT(j)**2d0 ) + &
                     dsqrt(a(j)/a(i)) * ( d2adT2(i)-0.5d0/a(i)*dadT(i)**2d0 ) + &
-                    1.d0/dsqrt(a(i)*a(j))*dadT(i)*dadT(j) )  &
-              + 2.d0*x(i)*x(j)* ( (dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i)) &
-                               *(-1.)*delta_d(i,j) &
-                               + dsqrt(a(i)*a(j))*(-1.d0)*delta_d2(i,j))
+                    1.d0/dsqrt(a(i)*a(j))*dadT(i)*dadT(j) )  !&
+              !+ 2.d0*x(i)*x(j)* ( (dsqrt(a(i)/a(j))*dadT(j)+dsqrt(a(j)/a(i))*dadT(i)) &
+                               !*(-1.)*kij_d(i,j) &
+                               !+ dsqrt(a(i)*a(j))*(-1.d0)*kij_d2(i,j))
     enddo
   !}
   enddo  
@@ -713,10 +704,10 @@ subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     apar(i) = 0d0
     dapardT(i) = 0d0
     do j=1, n
-      apar(i) = apar(i) + x(j)*(1.-delta(i,j))*dsqrt(a(j))
-      dapardT(i) = dapardT(i) + x(j)*(1.-delta(i,j))/2. &
-                   *( dsqrt(a(j)/a(i))*dadT(i)+dsqrt(a(i)/a(j))*dadT(j) ) &
-                 + x(j)* dsqrt(a(j)*a(i))*(-1.)*delta_d(i,j)
+      apar(i) = apar(i) + x(j)*(1.-kij(i,j))*dsqrt(a(j))
+      dapardT(i) = dapardT(i) + x(j)*(1.-kij(i,j))/2. &
+                   *( dsqrt(a(j)/a(i))*dadT(i)+dsqrt(a(i)/a(j))*dadT(j) ) !&
+                 !+ x(j)* dsqrt(a(j)*a(i))*(-1.)*kij_d(i,j)
     enddo
     apar(i) = 2.*( -am + dsqrt(a(i))*apar(i) )
 
@@ -757,18 +748,18 @@ END subroutine calc_v_CvIG_Cp_hpar
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_CvIG(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
+subroutine calc_v_CvIG(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                        V,CvIG)
 !{
   implicit none
 
   integer :: n
   integer :: i,j
-  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n)
+  real(8) :: P,T,x(n),Pc(n),Tc(n),w(n),MW(n),Tb(n),SG(n),H_8(n),kij(n,n)
   real(8) :: V,CvIG
   real(8) :: am,bm,Tr,kappa,alpha,Cp_IG_m
   real(8) :: CP_IG(n),H_IG(n)
-  real(8) :: ac(n),a(n),b(n),delta(n,n)
+  real(8) :: ac(n),a(n),b(n)
   real(8) :: R_gas = 8.3144621d0
   character :: state = 'm'
 
@@ -789,9 +780,6 @@ subroutine calc_v_CvIG(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
   !}
   enddo
 
-  !call calculate_kij(1,T,n,Pc,Tc,w,type_k,delta)
-  call calculate_kij_from_table(1,T,n,delta)
-
   ! PR coefficients of the mixture and its derivatives
 
   bm = 0d0
@@ -802,7 +790,7 @@ subroutine calc_v_CvIG(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8, &
     bm      = bm + x(i)*b(i)
     am      = am + x(i)**2*a(i)    
     do j=i+1,n
-      am = am + 2.d0*x(i)*x(j)*(1.-delta(i,j))*dsqrt(a(i)*a(j))
+      am = am + 2.d0*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
     enddo
   !}
   enddo  
@@ -1459,10 +1447,9 @@ subroutine TLSM_diffusion_trace_new( &
     Pc,              & ! vector of Pc (Pa)
     Tc,              & ! vector of Tc (K)
     Vc,              & ! vector of Vc (cm^3/mol)
-    w,               & ! vector of acentric factors
-    type_k,          & ! vector of binary interaction types
-    coef_ab,         & ! vector of a, b coefficients
+    w,               & ! vector of acentric factors    
     MW,              & ! vector of molecular weights (g/mol)
+    kij,             & ! matrix of BIPs  
     Dij)               ! matrix of binary mass diffusivity
 !{
   implicit none
@@ -1472,10 +1459,9 @@ subroutine TLSM_diffusion_trace_new( &
   real(8), intent(in), dimension(n):: Tc! (K) 
   real(8), intent(in), dimension(n):: Pc! (Pa)
   real(8), intent(in), dimension(n):: Vc! (cm^3/mol)
-  real(8), intent(in), dimension(n):: w!  acentric factor
-  integer, intent(in), dimension(n):: type_k
-  real(8), intent(in), dimension(n):: coef_ab
+  real(8), intent(in), dimension(n):: w!  acentric factor  
   real(8), intent(in), dimension(n):: MW ! (g/mol) molecular masses
+  real(8), intent(in), dimension(n,n):: kij! BIPs
 
   real(8), dimension(n):: sigma ! (cm) molecular diameter, 
   real(8), dimension(n):: sigma_eff ! (cm) molecular diameter, 
@@ -1541,17 +1527,8 @@ subroutine TLSM_diffusion_trace_new( &
         x(i) = 1d-4
         x(j) = .9999d0
         
-        !open(unit=888,file="tlsm_dbg",action="write",position="append")
-        !write(888,*) "Dij(",i,",",j,") calculation"
-        !write(888,*) "Start molar volume calculation"
-        !close(888)
-
-        call molar_volume2(P,T,n,Pc,Tc,w,x,type_k,coef_ab,V)
-
-        !open(unit=888,file="tlsm_dbg",action="write",position="append")
-        !write(888,*) "Done molar volume calculation"
-        !close(888)
-
+        call molar_volume2(P,T,n,Pc,Tc,w,kij,x,V)
+        
         rho1 = N_A/(V*1d6) ! 1/cm^3
 
         rho1_star = rho1*sigma_eff(j)**3 ! equation (2)
@@ -1590,10 +1567,9 @@ subroutine new_TLSM_diffusion_Krishna_model( &
     Pc,              & ! vector of Pc (Pa)
     Tc,              & ! vector of Tc (K)
     Vc,              & ! vector of Vc (cm^3/mol)
-    w,               & ! vector of acentric factor
-    type_k,          & ! vector of BIP types
-    coef_ab,         & ! vector of a, b coefficients
+    w,               & ! vector of acentric factor    
     MW,              & ! vector of molecular weights
+    kij,             & ! matrix of BIPs
     x,               & ! vector of molar fractions
     Dij)               ! matrix of binary mass diffusivity 
 !{
@@ -1605,23 +1581,14 @@ subroutine new_TLSM_diffusion_Krishna_model( &
   real(8), intent(in), dimension(n):: Pc! (Pa)
   real(8), intent(in), dimension(n):: Tc! (K) 
   real(8), intent(in), dimension(n):: Vc! (cm^3/mol)
-  real(8), intent(in), dimension(n):: w!  acentric factors
-  integer, intent(in), dimension(n):: type_k
-  real(8), intent(in), dimension(n):: coef_ab
+  real(8), intent(in), dimension(n):: w!  acentric factors  
   real(8), intent(in), dimension(n):: MW ! (g/mol) molecular masses
+  real(8), intent(in), dimension(n,n):: kij! BIPs
   real(8), intent(in), dimension(n):: x!  molar fractions
   !(cm2/sec)diffusion coefficients and converted to m2/sec
   real(8), dimension(n,n) :: Dij, Dij_trace
 
-  !open(unit=888,file="tlsm_dbg",action="write",position="append")
-  !write(888,*) "Start tlsm model trace Dij calculation"
-  !close(888)
-
-  call TLSM_diffusion_trace_new(P,T,n,Pc,Tc,Vc,w,type_k,coef_ab,MW,Dij_trace)
-
-  !open(unit=888,file="tlsm_dbg",action="write",position="append")
-  !write(888,*) "Done tlsm model trace Dij calculation"
-  !close(888)
+  call TLSM_diffusion_trace_new(P,T,n,Pc,Tc,Vc,w,MW,kij,Dij_trace)
 
   do i=1,n
     do j=1,n

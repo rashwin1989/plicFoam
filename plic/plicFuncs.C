@@ -4772,8 +4772,12 @@ void calc_MS_flux
     double *Tc,
     double *w,
     double *MW,
-    int *tk,
-    double *coef_ab,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    bool calcKij,
+    double *kij,
     double *lnphi,
     double *dlnphi_dxj,
     double *grad_x,
@@ -4784,30 +4788,27 @@ void calc_MS_flux
     double *flux_m
 )
 {
-    int idx, bKijSet;
-    double Z; double V_tmp;
-    double *kij_tmp;
-
-    _NNEW_(kij_tmp, double, n*n);
+    int i, j, idx;
+    double Z;
 
     Z = P*V/(R_gas*T);
 
-    bKijSet = 1;
-    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
-    fugacities_n_its_derivatives_(&P,&T,&n,Pc,Tc,w,x,tk,coef_ab,lnphi,dlnphi_dxj,&V_tmp);
+    if(calcKij) calc_kij_from_table(T,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+    
+    fugacities_n_its_derivatives2_(&P,&T,&n,Pc,Tc,w,x,kij,lnphi,dlnphi_dxj);
 
     // rhs of Maxwell-Stefan equation
-    for(int i=0; i<n; i++)
+    for(i=0; i<n; i++)
     {
         rhs_flux[i] = -grad_x[i];
 
         if(n_flux_type > 0)
         {
-            for(int j=0; j<n; j++)
+            for(j=0; j<n; j++)
             {
                 if(x[j]<1e-9) continue;
 
-                idx = i + j*n;
+                idx = i*n + j;
                 rhs_flux[i] = -x[i]*dlnphi_dxj[idx]*grad_x[j];
             }
         }
@@ -4816,8 +4817,6 @@ void calc_MS_flux
     }
 
     Maxwell_Stefan_mass_flux(Z,n,MW,x,Dij,rhs_flux,flux_m,flux_umf);
-
-    _DDELETE_(kij_tmp);
 }
 
 
@@ -4835,8 +4834,12 @@ void calc_2ph_diffFluxes_Y_MS
     double *Tc,
     double *w,
     double *MW,
-    int *tk,
-    double *coef_ab,    
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    bool calcKij,
+    double *kij,
     const PtrList<surfaceScalarField>& Dij1f,
     const PtrList<surfaceScalarField>& Dij0f,
     const PtrList<surfaceScalarField>& x1f,
@@ -4959,7 +4962,7 @@ void calc_2ph_diffFluxes_Y_MS
 
             //ph-0
             init_MS_flux(faceI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-            calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+            calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
             for(i=0; i<n; i++)
             {
@@ -5021,7 +5024,7 @@ void calc_2ph_diffFluxes_Y_MS
             }
                 */
 
-            calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+            calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
             for(i=0; i<n; i++)
             {
@@ -5060,11 +5063,11 @@ void calc_2ph_diffFluxes_Y_MS
 
             //ph-1
             init_MS_flux(faceI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
-            calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+            calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
             //ph-0
             init_MS_flux(faceI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-            calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+            calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
             for(i=0; i<n; i++)
             {
@@ -5309,7 +5312,7 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-0
                     init_MS_flux(patchI,fcI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
                     for(i=0; i<n; i++)
                     {
@@ -5348,7 +5351,7 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-1
                     init_MS_flux(patchI,fcI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
                     for(i=0; i<n; i++)
                     {
@@ -5387,11 +5390,11 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-1
                     init_MS_flux(patchI,fcI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
                     //ph-0
                     init_MS_flux(patchI,fcI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
                     for(i=0; i<n; i++)
                     {
@@ -5583,7 +5586,7 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-0
                     init_MS_flux(patchI,fcI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
                     for(i=0; i<n; i++)
                     {
@@ -5622,7 +5625,7 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-1
                     init_MS_flux(patchI,fcI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
                     for(i=0; i<n; i++)
                     {
@@ -5661,11 +5664,11 @@ void calc_2ph_diffFluxes_Y_MS
 
                     //ph-1
                     init_MS_flux(patchI,fcI,x1f,gradf_x1,Dij1f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
+                    calc_MS_flux(P_tmp,T1_tmp,V1_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph1);
 
                     //ph-0
                     init_MS_flux(patchI,fcI,x0f,gradf_x0,Dij0f,n,x_tmp,grad_x_tmp,Dij_tmp);
-                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,tk,coef_ab,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
+                    calc_MS_flux(P_tmp,T0_tmp,V0_tmp,x_tmp,R_gas,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,lnphi_tmp,dlnphi_dxj_tmp,grad_x_tmp,Dij_tmp,n_flux_type,flux_umf,rhs_flux_tmp,flux_m_ph0);
 
                     for(i=0; i<n; i++)
                     {
@@ -5864,10 +5867,14 @@ void calc_2ph_diffFluxes_T
     double *Tc,
     double *w,
     double *MW,
-    int *tk,
     double *Tb,
     double *SG,
     double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     double P,
     const surfaceScalarField& lambda1f,
     const surfaceScalarField& lambda0f,
@@ -6000,7 +6007,7 @@ void calc_2ph_diffFluxes_T
         else if(curPhaseState == 0)
         {
             diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;            
-            calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
+            calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
             diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
 
             diffFlux_limiter_ph1_faceI = 1;
@@ -6009,7 +6016,7 @@ void calc_2ph_diffFluxes_T
         else if(curPhaseState == 1)
         {
             diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-            calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);
+            calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);
             diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
             diffFlux_limiter_ph0_faceI = 1;
@@ -6018,11 +6025,11 @@ void calc_2ph_diffFluxes_T
         else if(curPhaseState == 2)
         {
             diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-            calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);
+            calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);
             diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
             diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;            
-            calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
+            calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
             diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
         }
         else
@@ -6172,7 +6179,7 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 0)
                 {                    
                     diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;
-                    calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
+                    calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
                     diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
 
                     diffFlux_limiter_ph1_faceI = 1;
@@ -6181,7 +6188,7 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 1)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-                    calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
+                    calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
                     diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
                     diffFlux_limiter_ph0_faceI = 1;
@@ -6190,11 +6197,11 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 2)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-                    calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
+                    calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
                     diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
                     diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;            
-                    calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);            
+                    calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);            
                     diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
                 }
                 else
@@ -6266,7 +6273,7 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 0)
                 {                    
                     diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;
-                    calc_diffFlux_limiter2_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, T0MIN, T0MAX);            
+                    calc_diffFlux_limiter2_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, T0MIN, T0MAX);            
                     diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
 
                     diffFlux_limiter_ph1_faceI = 1;
@@ -6275,7 +6282,7 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 1)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-                    calc_diffFlux_limiter2_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, T1MIN, T1MAX);
+                    calc_diffFlux_limiter2_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, T1MIN, T1MAX);
                     diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
                     diffFlux_limiter_ph0_faceI = 1;
@@ -6284,11 +6291,11 @@ void calc_2ph_diffFluxes_T
                 if(curPhaseState == 2)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
-                    calc_diffFlux_limiter2_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, T1MIN, T1MAX);            
+                    calc_diffFlux_limiter2_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, T1MIN, T1MAX);            
                     diffFlux_T1_faceI *= min(diffFlux_limiter_ph1_faceI, 1);
 
                     diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;            
-                    calc_diffFlux_limiter2_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, T0MIN, T0MAX);            
+                    calc_diffFlux_limiter2_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, T0MIN, T0MAX);            
                     diffFlux_T0_faceI *= min(diffFlux_limiter_ph0_faceI, 1);
                 }
                 else
@@ -6348,6 +6355,11 @@ void calc_T_from_h
     double *Tb,
     double *SG,
     double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     double& T,
     const int& MAX_ITER_T,
     const double& T_TOL,
@@ -6371,8 +6383,9 @@ void calc_T_from_h
     TNew = T;
 
     for(iter=0; iter<MAX_ITER_T; iter++)
-    {
-        calc_v_cp_h_(&P, &TOld, x, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &Cp_tmp, &h_tmp);    
+    {        
+        calc_kij_from_table(TOld, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+        calc_v_cp_h_(&P, &TOld, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &Cp_tmp, &h_tmp);    
 
         F = h_tmp - hm;
         dF = Cp_tmp;
@@ -6404,6 +6417,11 @@ void calc_h_from_T
     double *Tb,
     double *SG,
     double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     double& h
 )
 {
@@ -6418,7 +6436,8 @@ void calc_h_from_T
     }
     MW_tmp *= 1e-3;
     
-    calc_v_h_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
+    calc_kij_from_table(T, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+    calc_v_h_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
 
     h = h_tmp/MW_tmp;
 }
@@ -6447,6 +6466,11 @@ void calc_diffFlux_limiter_T
     double *Tb,
     double *SG,
     double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     const scalar& dt,
     const scalar& diffFlux,
     scalar& diffFlux_limiter,
@@ -6488,9 +6512,11 @@ void calc_diffFlux_limiter_T
 
         for(iter=0; iter<MAX_ITER_T; iter++)
         {
-            calc_v_cp_h_(&P, &TOld, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
+            calc_kij_from_table(TOld, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 
-            calc_v_cp_h_(&P, &TOld, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vNei_tmp, &CpNei_tmp, &hNei_tmp);
+            calc_v_cp_h_(&P, &TOld, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
+
+            calc_v_cp_h_(&P, &TOld, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &CpNei_tmp, &hNei_tmp);
 
             F = VOwn*alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp + VNei*alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HOwn - HNei;
             dFOwn = VOwn*alphaOwn*rhoOwn*CpOwn_tmp/MWOwn_tmp;
@@ -6512,8 +6538,10 @@ void calc_diffFlux_limiter_T
             if(TOwn > TNei)
             {
                 diffFlux_max_1 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
-                calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vOwn_tmp, &hOwn_tmp);                
-                calc_v_h_(&P, &TMAX, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vNei_tmp, &hNei_tmp);
+                calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
+                calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_v_h_(&P, &TMAX, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
 
                 diffFlux_max_2 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
                 diffFlux_max_3 = mag(0.25*VNei*(alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HNei));
@@ -6529,8 +6557,10 @@ void calc_diffFlux_limiter_T
             if(TOwn < TNei)
             {
                 diffFlux_max_1 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
-                calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vOwn_tmp, &hOwn_tmp);
-                calc_v_h_(&P, &TMIN, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vNei_tmp, &hNei_tmp);
+                calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
+                calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+                calc_v_h_(&P, &TMIN, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
                 diffFlux_max_2 = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
                 diffFlux_max_3 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
                 diffFlux_max = min(diffFlux_max_1, min(diffFlux_max_2, diffFlux_max_3));
@@ -6570,6 +6600,11 @@ void calc_diffFlux_limiter2_T
     double *Tb,
     double *SG,
     double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     const scalar& dt,
     const scalar& diffFlux,
     scalar& diffFlux_limiter,
@@ -6599,13 +6634,15 @@ void calc_diffFlux_limiter2_T
         MWOwn_tmp *= 1e-3;
 
         if(diffFlux > 0)
-        {            
-            calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vOwn_tmp, &hOwn_tmp);                
+        {
+            calc_kij_from_table(TMIN, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);                
             diffFlux_max = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
         }
         else
         {
-            calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &vOwn_tmp, &hOwn_tmp);
+            calc_kij_from_table(TMAX, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+            calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
             diffFlux_max = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
         }        
 
@@ -8929,96 +8966,140 @@ void calc_kij_from_table
 
 void calc_rho
 (
+    double P,    
+    double T,
+    double *x,
     int n,
     double *Pc,
     double *Tc,
     double *w,
-    double *MW,
-    int *tk,
-    double *coef_ab,
-    double P,
-    double *x,
-    double T,
+    double *MW,    
+    double *kij,    
     double& rho
 )
 {
-    int bKijSet;
     double rho_tmp;
-    double *kij_tmp;
 
-    _NNEW_(kij_tmp, double, n*n);
-
-    bKijSet = 1;
-
-    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
-    density_pr_eos_(&P,&T,&n,Pc,Tc,w,MW,x,tk,coef_ab,&rho_tmp);    
+    density_pr_eos2_(&P,&T,&n,Pc,Tc,w,MW,x,kij,&rho_tmp);    
     rho = rho_tmp;
-
-    _DDELETE_(kij_tmp);
 }
 
 
 void calc_mu
 (
+    double P,
+    double T,
+    double *y,
     int n,
     double *Pc,
     double *Tc,
     double *Vc,
     double *w,
-    double *MW,
-    int *tk,
-    double *coef_ab,
+    double *MW,    
     double *Tb,
     double *SG,
-    double *H8,
+    double *H8,    
     double *k,
-    double *dm,
-    double P,
-    double *x,
-    double T,
+    double *dm,    
+    double *kij,    
     double& mu
 )
 {
-    int bKijSet;
+    int i, j;
     double vis, cond, V, CvIG;
-    double *kij_tmp;
+    double *x_tmp;
 
-    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(x_tmp, double, n);
 
-    bKijSet = 1;
+    mu = 0;
 
-    calculate_kij_from_table_(&bKijSet,&T,&n,kij_tmp);
-    calc_v_cvig_(&P,&T,x,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
-    vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x,&CvIG,&V,&cond,&vis);    
-    mu = vis;
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            if(j==i) x_tmp[j] = 1;
+            else x_tmp[j] = 0;
+        }
+        calc_v_cvig_(&P,&T,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG);
+        vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+        mu += y[i]*vis;
+    }
 
-    _DDELETE_(kij_tmp);
+    _DDELETE_(x_tmp);
+}
+
+
+void calc_mu_lambda
+(
+    double P,
+    double T,
+    double *y,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,    
+    double *Tb,
+    double *SG,
+    double *H8,    
+    double *k,
+    double *dm,
+    double *kij,    
+    double& mu,
+    double& lambda
+)
+{
+    int i, j;
+    double vis, cond, V, CvIG;
+    double *x_tmp;
+
+    _NNEW_(x_tmp, double, n);
+
+    mu = 0;
+    lambda = 0;
+
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            if(j==i) x_tmp[j] = 1;
+            else x_tmp[j] = 0;
+        }
+        calc_v_cvig_(&P,&T,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG);
+        vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+        mu += y[i]*vis;
+        lambda += y[i]*cond;
+    }
+
+    _DDELETE_(x_tmp);
 }
 
 
 void correct_rho
 (
+    double P,    
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
     int n,
     double *Pc,
     double *Tc,
     double *w,
     double *MW,
-    int *tk,
-    double *coef_ab,
-    double P,
-    const PtrList<volScalarField>& X,
-    const volScalarField& T,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    bool calcKij,
+    double *kij,
     volScalarField& rho
 )
 {
-    int i, bKijSet;
+    int i;
     double T_tmp, rho_tmp;
-    double *x_tmp; double *kij_tmp;
+    double *x_tmp;
 
     _NNEW_(x_tmp, double, n);
-    _NNEW_(kij_tmp, double, n*n);
-
-    bKijSet = 1;
 
     const scalarField& TCells = T.internalField();
     scalarField& rhoCells = rho.internalField();
@@ -9031,8 +9112,10 @@ void correct_rho
             x_tmp[i] = X[i].internalField()[cellI];
         }
         
-        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
-        density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
+        if(calcKij) calc_kij_from_table(T_tmp, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+
+        calc_rho(P,T_tmp,x_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+     
         rhoCells[cellI] = rho_tmp;
     }
 
@@ -9049,19 +9132,23 @@ void correct_rho
                 x_tmp[i] = X[i].boundaryField()[patchI][fcI];
             }
             
-            calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
-            density_pr_eos_(&P,&T_tmp,&n,Pc,Tc,w,MW,x_tmp,tk,coef_ab,&rho_tmp);
+            if(calcKij) calc_kij_from_table(T_tmp, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+
+            calc_rho(P,T_tmp,x_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+
             prho[fcI] = rho_tmp;
         }
     }
 
     _DDELETE_(x_tmp);
-    _DDELETE_(kij_tmp);
 }
 
 
 void correct_h
 (
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
     int n,
     double *Pc,
     double *Tc,
@@ -9070,9 +9157,11 @@ void correct_h
     double *Tb,
     double *SG,
     double *H8,
-    double P,
-    const PtrList<volScalarField>& X,
-    const volScalarField& T,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     volScalarField& h
 )
 {
@@ -9099,7 +9188,8 @@ void correct_h
         }
         MW_tmp *= 1e-3;
 
-        calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
+        calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+        calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
         hCells[cellI] = h_tmp/MW_tmp;
     }
 
@@ -9122,7 +9212,8 @@ void correct_h
             }
             MW_tmp *= 1e-3;
 
-            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
+            calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
             ph[fcI] = h_tmp/MW_tmp;
         }
     }
@@ -9211,6 +9302,11 @@ void correct_x_from_Y
 
 void correct_boundaryField_h_rhoh_H
 (
+    double P,
+        const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    const volScalarField& rho,
+    const volScalarField& alpha,
     int n,
     double *Pc,
     double *Tc,
@@ -9219,11 +9315,11 @@ void correct_boundaryField_h_rhoh_H
     double *Tb,
     double *SG,
     double *H8,
-    double P,
-    const PtrList<volScalarField>& X,
-    const volScalarField& T,
-    const volScalarField& rho,
-    const volScalarField& alpha,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,    
     volScalarField& h,
     volScalarField& rhoh,
     volScalarField& H
@@ -9254,6 +9350,7 @@ void correct_boundaryField_h_rhoh_H
                 MW_tmp += x_tmp[i]*MW[i];
             }
 
+            calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
             calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
             h_tmp /= MW_tmp;
 
@@ -9268,23 +9365,27 @@ void correct_boundaryField_h_rhoh_H
 
 void correct_thermo_trans_prop
 (
-    const fvMesh& mesh,    
+    const fvMesh& mesh,
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    const PtrList<volScalarField>& Y,
     int n,
     double *Pc,
     double *Tc,
     double *Vc,
     double *w,
-    double *MW,
-    int *tk,
-    double *coef_ab,
+    double *MW,    
     double *Tb,
     double *SG,
     double *H8,
     double *k,
     double *dm,
-    double P,
-    const PtrList<volScalarField>& X,
-    const volScalarField& T,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     volScalarField& v,
     PtrList<volScalarField>& hpar,
     volScalarField& lambda,
@@ -9293,16 +9394,14 @@ void correct_thermo_trans_prop
     PtrList<volScalarField>& D
 )
 {
-    int i, j, idx, bKijSet;
+    int i, j, idx;
     double T_tmp, V, MW_tmp, CvIG, Cp_tmp, cond, vis;     
-    double *x_tmp, *kij_tmp, *Dij, *h_tmp;
+    double *x_tmp, *y_tmp, *Dij, *h_tmp;
 
     _NNEW_(x_tmp, double, n);
-    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(y_tmp, double, n);
     _NNEW_(Dij, double, n*n);
     _NNEW_(h_tmp, double, n);
-
-    bKijSet = 1;
 
     const scalarField& TCells = T.internalField();
     scalarField& vCells = v.internalField();
@@ -9316,6 +9415,7 @@ void correct_thermo_trans_prop
         for(i=0; i<n; i++)
         {
             x_tmp[i] = X[i].internalField()[cellI];
+            y_tmp[i] = Y[i].internalField()[cellI];
         }
         MW_tmp = 0;
         for(i=0; i<n; i++)
@@ -9324,13 +9424,13 @@ void correct_thermo_trans_prop
         }
         MW_tmp *= 1e-3;
        
-        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+        calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
-        calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG,&Cp_tmp,h_tmp);
+        calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
 
-        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+        calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
 
-        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
         vCells[cellI] = V;
         lambdaCells[cellI] = cond;
@@ -9342,7 +9442,7 @@ void correct_thermo_trans_prop
             
             for(j=0; j<n; j++)
             {
-                idx = i + j*n;
+                idx = i*n + j;
                 D[idx].internalField()[cellI] = Dij[idx];
             }
         }
@@ -9368,6 +9468,7 @@ void correct_thermo_trans_prop
                 for(i=0; i<n; i++)
                 {
                     x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+                    y_tmp[i] = Y[i].boundaryField()[patchI][fcI];
                 }
                 MW_tmp = 0;
                 for(i=0; i<n; i++)
@@ -9376,13 +9477,13 @@ void correct_thermo_trans_prop
                 }
                 MW_tmp *= 1e-3;
         
-                calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+                calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
-                calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG,&Cp_tmp,h_tmp);
+                calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
 
-                vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+                calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
 
-                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
+                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
                 pv[fcI] = V;
                 plambda[fcI] = cond;
@@ -9394,7 +9495,7 @@ void correct_thermo_trans_prop
             
                     for(j=0; j<n; j++)
                     {
-                        idx = i + j*n;
+                        idx = i*n + j;
                         D[idx].boundaryField()[patchI][fcI] = Dij[idx];
                     }
                 }
@@ -9403,7 +9504,7 @@ void correct_thermo_trans_prop
     }
 
     _DDELETE_(x_tmp);
-    _DDELETE_(kij_tmp);
+    _DDELETE_(y_tmp);
     _DDELETE_(Dij);
     _DDELETE_(h_tmp);
 }
@@ -9411,23 +9512,23 @@ void correct_thermo_trans_prop
 
 void correct_thermo_trans_prop
 (
-    const fvMesh& mesh,    
+    const fvMesh& mesh,
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    const PtrList<volScalarField>& Y,    
     int n,
     double *Pc,
     double *Tc,
     double *Vc,
     double *w,
-    double *MW,
-    int *tk,
-    double *coef_ab,
+    double *MW,    
     double *Tb,
     double *SG,
     double *H8,
     double *k,
     double *dm,
-    double P,
-    const PtrList<volScalarField>& X,
-    const volScalarField& T,
+    double *kij,    
     volScalarField& v,
     volScalarField& mu,
     PtrList<volScalarField>& D,
@@ -9435,19 +9536,15 @@ void correct_thermo_trans_prop
     OFstream& os
 )
 {
-    int i, j, idx, bKijSet;    
-    double T_tmp, V, MW_tmp, xTot; 
+    int i, j, idx;
+    double T_tmp, V, MW_tmp; 
     double CvIG;    
     double cond, vis;
-    double *x_tmp;
-    double *kij_tmp; 
-    double *Dij;    
+    double *x_tmp, *y_tmp, *Dij;
 
     _NNEW_(x_tmp, double, n);
-    _NNEW_(kij_tmp, double, n*n);
+    _NNEW_(y_tmp, double, n);
     _NNEW_(Dij, double, n*n);
-
-    bKijSet = 1;
 
     const scalarField& TCells = T.internalField();
     scalarField& vCells = v.internalField();    
@@ -9456,41 +9553,25 @@ void correct_thermo_trans_prop
     forAll(TCells, cellI)
     {
         T_tmp = TCells[cellI];
-        xTot = 0;
+
         for(i=0; i<n; i++)
         {
             x_tmp[i] = X[i].internalField()[cellI];
-            xTot += x_tmp[i];
+            y_tmp[i] = Y[i].internalField()[cellI];            
         }
-
         
-        if(debug)
-        {
-            os<< "cell " << cellI << endl;
-            os<< P << "  " << T_tmp << "  ";
-            for(i=0; i<n; i++)
-            {
-                os<< x_tmp[i] << "  ";
-            }
-            os<< endl;        
-        }
-
         MW_tmp = 0;
         for(i=0; i<n; i++)
         {
             MW_tmp += x_tmp[i]*MW[i];
         }
-        MW_tmp *= 1e-3;
-        
-        calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
+        MW_tmp *= 1e-3;                
 
-        calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
+        calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG);
 
-        vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
-        
-        if(debug) os<< "Calculating Dij for cell " << cellI << "...";
-        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
-        if(debug) os<< "Done calculating Dij for cell " << cellI << endl;
+        calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
+
+        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
         vCells[cellI] = V;
         muCells[cellI] = vis;
@@ -9498,14 +9579,14 @@ void correct_thermo_trans_prop
         {            
             for(j=0; j<n; j++)
             {
-                idx = i + j*n;
+                idx = i*n + j;
                 D[idx].internalField()[cellI] = Dij[idx];
             }
         }
     }
 
     const polyBoundaryMesh& patches = mesh.boundaryMesh();
-    const wordList& patchNames = patches.names();
+    //const wordList& patchNames = patches.names();
     
     forAll(T.boundaryField(), patchI)
     {
@@ -9519,23 +9600,11 @@ void correct_thermo_trans_prop
             forAll(pT, fcI)
             {
                 T_tmp = pT[fcI];
-
-                xTot = 0;
+                
                 for(i=0; i<n; i++)
                 {
                     x_tmp[i] = X[i].boundaryField()[patchI][fcI];
-                    xTot += x_tmp[i];
-                }
-
-                if(debug)
-                {
-                    os<< "patch " << patchNames[patchI] << " face " << fcI << endl;
-                    os<< P << "  " << T_tmp << "  ";
-                    for(i=0; i<n; i++)
-                    {
-                        os<< x_tmp[i] << "  ";
-                    }
-                    os<< endl;
+                    y_tmp[i] = Y[i].boundaryField()[patchI][fcI];
                 }
 
                 MW_tmp = 0;
@@ -9544,16 +9613,12 @@ void correct_thermo_trans_prop
                     MW_tmp += x_tmp[i]*MW[i];
                 }
                 MW_tmp *= 1e-3;
-        
-                calculate_kij_from_table_(&bKijSet,&T_tmp,&n,kij_tmp);
 
-                calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,&V,&CvIG);
+                calc_v_cvig_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG);
 
-                vis_n_cond_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+                calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
 
-                if(debug) os<< "Calculating Dij for patch " << patchNames[patchI] << " face " << fcI << "...";
-                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,tk,coef_ab,MW,x_tmp,Dij);
-                if(debug) os<< "Done calculating Dij for patch " << patchNames[patchI] << " face " << fcI << endl;
+                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
                 pv[fcI] = V;            
                 pmu[fcI] = vis;
@@ -9561,7 +9626,7 @@ void correct_thermo_trans_prop
                 {
                     for(j=0; j<n; j++)
                     {
-                        idx = i + j*n;
+                        idx = i*n + j;
                         D[idx].boundaryField()[patchI][fcI] = Dij[idx];
                     }
                 }
@@ -9570,7 +9635,7 @@ void correct_thermo_trans_prop
     }
 
     _DDELETE_(x_tmp);
-    _DDELETE_(kij_tmp);
+    _DDELETE_(y_tmp);
     _DDELETE_(Dij);    
 }
 
@@ -9700,14 +9765,17 @@ void calc_intfc_transLLE
     double *Tc,
     double* Vc,
     double *w,
-    double *MW,
-    int *tk,
-    double *coef_ab,
+    double *MW,    
     double *Tb,
     double *SG,
     double *H8,
     double *k,
     double *dm,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
     double dn1,
     double dn0,
     double *xeff1,
@@ -9734,16 +9802,14 @@ void calc_intfc_transLLE
     OFstream& os
 )
 {
-    int i, bKijSet, num;    
+    int i, num;    
     double Ts_tmp, V1, V0; 
     double CvIG;
     double cond0, vis;
     double J1, J0, qs, TNum, TDen, Ts_err;
-    double *kij_tmp; 
     double *lnphi1; double *lnphi0; double *Dij1; double *Dij0; 
     double *h0;
 
-    _NNEW_(kij_tmp, double, n*n);
     _NNEW_(lnphi1, double, n);
     _NNEW_(lnphi0, double, n);    
     _NNEW_(Dij1, double, n*n);
@@ -9755,10 +9821,9 @@ void calc_intfc_transLLE
     for(iTs=0; iTs<MAX_ITERS_Ts; iTs++)
     {
         //calculate BIPs for current iteration interface temperature Ts_tmp
-        bKijSet = 1;
-        calculate_kij_from_table_(&bKijSet,&Ts_tmp,&n,kij_tmp);
+        calc_kij_from_table(Ts_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
-        iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,tk,Tb,SG,H8,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,h1,h0,flux_m_1,flux_m_0,flux_umf);
+        iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,Tb,SG,H8,kij,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,h1,h0,flux_m_1,flux_m_0,flux_umf);
 
         //calculate fluid properties on both sides of interface
         //convert the mole fractions to mass fractions
@@ -9766,12 +9831,10 @@ void calc_intfc_transLLE
         x2y(n,MW,xs0,ys0);
 
         //phase 1 thermal conductivity
-        calc_v_cvig_(&P,&Ts_tmp,xs1,&n,Pc,Tc,w,MW,Tb,SG,H8,&V1,&CvIG);
-        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs1,&CvIG,&V1,&cond1,&vis);
+        calc_mu_lambda(P,Ts_tmp,ys1,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,cond1,vis);
 
         //phase 0 thermal conductivity
-        calc_v_cvig_(&P,&Ts_tmp,xs0,&n,Pc,Tc,w,MW,Tb,SG,H8,&V0,&CvIG);
-        vis_n_cond_(&P,&Ts_tmp,&n,Pc,Tc,Vc,w,MW,k,dm,xs0,&CvIG,&V0,&cond0,&vis);
+        calc_mu_lambda(P,Ts_tmp,ys0,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,cond0,vis);
 
         //calculate the total ph-1 to ph-0 phase change mass flux 
         //from ph-1 and ph-0 diffusive fluxes
@@ -9830,7 +9893,6 @@ void calc_intfc_transLLE
         Ts = Ts_tmp;
     }    
 
-    _DDELETE_(kij_tmp);
     _DDELETE_(lnphi1);
     _DDELETE_(lnphi0);
     _DDELETE_(Dij1);

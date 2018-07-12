@@ -73,6 +73,35 @@ extern "C" {
         double *dam_dxi, 
         double *d2am_dxidxj);
 
+    void fugacities_n_its_derivatives2_
+    ( 
+        double *P,         // pressure (Unit: Pa)
+        double *T,         // temperature (Unit: K)
+        int    *n,         // number of species
+        double *Pc,        // vector of critical pressures
+        double *Tc,        // vector of critical temperatures
+        double *w,         // vector of acentric factors
+        double *x,         // vector of mole fractions
+        double *kij,       // matrix of BIPs
+        double *lnphi,     // vector of fugacity coefficients (output)
+        double *dlnphi_dxj // matrix of dlnphi_i/dx_j(i,j): (output)
+    );
+
+    void fugacities_n_its_derivatives3_
+    ( 
+        double *P,          // pressure (Unit: Pa)
+        double *T,          // temperature (Unit: K)
+        int    *n,          // number of species
+        double *Pc,         // vector of critical pressures
+        double *Tc,         // vector of critical temperatures
+        double *w,          // vector of acentric factors
+        double *x,          // vector of mole fractions
+        double *kij,        // matrix of BIPs
+        double *lnphi,      // vector of fugacity coefficients (output)
+        double *dlnphi_dxj, // matrix of dlnphi_i/dx_j(i,j): (output)
+        double *V           // molar volume (Unit: m3/mol) (output)
+    );
+
     void fugacities_( 
         double *P, // pressure (Unit: Pa)
         double *T, // temperature (Unit: K)

@@ -12,11 +12,11 @@
     optim->Tc, \
     optim->Vc, \
     optim->w,  \
-    optim->MW, \
-    optim->type_k,\
+    optim->MW, \    
     optim->Tb, \
     optim->SG, \
     optim->H8, \
+    optim->kij, \
     \
     optim->n_flux_type,   \
     optim->dL, optim->dR, \
@@ -41,10 +41,10 @@
     optim.Vc = Vc; \
     optim.w  = w;  \
     optim.MW = MW; \
-    optim.type_k = type_k;\
     optim.Tb = Tb; \
     optim.SG = SG; \
     optim.H8 = H8; \
+    optim.kij = kij; \
     \
     optim.n_flux_type = n_flux_type;   \
     optim.dL = dL; optim.dR = dR; \

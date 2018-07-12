@@ -1612,6 +1612,165 @@ subroutine fugacities_n_its_derivatives_general( &
   enddo
 !}
 end subroutine fugacities_n_its_derivatives_general
+
+subroutine fugacities_n_its_derivatives2( &
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    x, & ! vector of mole fractions
+    kij, & ! matrix of BIPs
+    lnphi, & ! vector of fugacity coefficients (output)
+    dlnphi_dxj & ! matrix of dlnphi_i/dx_j (output)
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: P,T,Pc(n),Tc(n),w(n),x(n),kij(n,n), lnphi(n),dlnphi_dxj(n,n)
+
+  integer :: i,j
+  real(8) :: a(n), b(n)
+  real(8) :: am, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
+  real(8) :: V, Z, Vs, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+  
+  ! PR coefficients of pure components
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)  
+
+  ! PR coefficients of the mixture
+  am = 0d0
+  bm = 0d0
+  dam_dxi = 0d0
+  d2am_dxidxj = 0d0
+  do i=1,n
+    bm      = bm + x(i)*b(i)
+    do j=1,n
+      tmp1             = 2d0*(1d0-kij(i,j))*dsqrt(a(i)*a(j))
+      am               = am + .5*x(i)*x(j)*tmp1
+      dam_dxi(i)       = dam_dxi(i) + x(j)*tmp1
+      d2am_dxidxj(i,j) = tmp1        
+    enddo
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)
+
+  Vs= V*V + 2d0*V*bm - bm*bm
+  tmp1 = 2d0*am*(V-bm)
+  tmp2 = ((Vs/(V-bm))**2)*R_gas*T
+  tmp3 = 1d0 / (2d0*am*(V+bm) - tmp2)
+  do i=1,n
+    dV_dxi(i) = ( Vs*dam_dxi(i) - (tmp1+tmp2)*b(i) ) * tmp3
+  end do
+
+  Z = P*V/R_gas/T
+  tmp1 = 1d0/(V-bm)
+  tmp2 = 1d0/(dsqrt(8d0)*bm*R_gas*T)
+  tmp3 = dlog((V+(1.+sqr2)*bm)/(V+(1.-sqr2)*bm))
+  tmp5 = 1.0/(bm*bm)
+  tmp6 = P/(bm*R_gas*T)
+  tmp7 = tmp2*dsqrt(8d0)
+  tmp8 = 1.0/(am*am)
+
+  do i=1,n
+  !{
+    tmp4 = dam_dxi(i)/am-b(i)/bm
+
+    lnphi(i) = - am*tmp2*tmp3*tmp4 - dlog(Z*(1.-bm/V)) + b(i)/bm*(Z-1.)
+
+    do j=1,n
+      dlnphi_dxj(i,j) = &
+        - tmp1*(dV_dxi(j)-b(j)) - b(i)*b(j)*tmp5*(Z-1.) + b(i)*tmp6*dV_dxi(j) &
+        - (dam_dxi(j) - am*b(j)/bm)*tmp2*tmp3*tmp4  &
+        - am*tmp7*tmp4/Vs*( V*b(j) - bm*dV_dxi(j) ) &
+        - am*tmp2*tmp3*( - dam_dxi(i)*dam_dxi(j)*tmp8 + d2am_dxidxj(i,j)/am + b(i)*b(j)*tmp5 )
+    enddo
+  !}
+  enddo
+!}
+end subroutine fugacities_n_its_derivatives2
+
+subroutine fugacities_n_its_derivatives3( &
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    x, & ! vector of mole fractions
+    kij, & ! matrix of BIPs
+    lnphi, & ! vector of fugacity coefficients (output)
+    dlnphi_dxj, & ! matrix of dlnphi_i/dx_j (output)
+    V  & ! molar volume (output)
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: P,T,Pc(n),Tc(n),w(n),x(n),kij(n,n), lnphi(n),dlnphi_dxj(n,n),V
+
+  integer :: i,j
+  real(8) :: a(n), b(n)
+  real(8) :: am, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
+  real(8) :: Z, Vs, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+  
+  ! PR coefficients of pure components
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)  
+
+  ! PR coefficients of the mixture
+  am = 0d0
+  bm = 0d0
+  dam_dxi = 0d0
+  d2am_dxidxj = 0d0
+  do i=1,n
+    bm      = bm + x(i)*b(i)
+    do j=1,n
+      tmp1             = 2d0*(1d0-kij(i,j))*dsqrt(a(i)*a(j))
+      am               = am + .5*x(i)*x(j)*tmp1
+      dam_dxi(i)       = dam_dxi(i) + x(j)*tmp1
+      d2am_dxidxj(i,j) = tmp1        
+    enddo
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)
+
+  Vs= V*V + 2d0*V*bm - bm*bm
+  tmp1 = 2d0*am*(V-bm)
+  tmp2 = ((Vs/(V-bm))**2)*R_gas*T
+  tmp3 = 1d0 / (2d0*am*(V+bm) - tmp2)
+  do i=1,n
+    dV_dxi(i) = ( Vs*dam_dxi(i) - (tmp1+tmp2)*b(i) ) * tmp3
+  end do
+
+  Z = P*V/R_gas/T
+  tmp1 = 1d0/(V-bm)
+  tmp2 = 1d0/(dsqrt(8d0)*bm*R_gas*T)
+  tmp3 = dlog((V+(1.+sqr2)*bm)/(V+(1.-sqr2)*bm))
+  tmp5 = 1.0/(bm*bm)
+  tmp6 = P/(bm*R_gas*T)
+  tmp7 = tmp2*dsqrt(8d0)
+  tmp8 = 1.0/(am*am)
+
+  do i=1,n
+  !{
+    tmp4 = dam_dxi(i)/am-b(i)/bm
+
+    lnphi(i) = - am*tmp2*tmp3*tmp4 - dlog(Z*(1.-bm/V)) + b(i)/bm*(Z-1.)
+
+    do j=1,n
+      dlnphi_dxj(i,j) = &
+        - tmp1*(dV_dxi(j)-b(j)) - b(i)*b(j)*tmp5*(Z-1.) + b(i)*tmp6*dV_dxi(j) &
+        - (dam_dxi(j) - am*b(j)/bm)*tmp2*tmp3*tmp4  &
+        - am*tmp7*tmp4/Vs*( V*b(j) - bm*dV_dxi(j) ) &
+        - am*tmp2*tmp3*( - dam_dxi(i)*dam_dxi(j)*tmp8 + d2am_dxidxj(i,j)/am + b(i)*b(j)*tmp5 )
+    enddo
+  !}
+  enddo
+!}
+end subroutine fugacities_n_its_derivatives3
 !***************************************************************************
 
 !***************************************************************************
@@ -2108,8 +2267,7 @@ subroutine findEquilibrium_fix_water_b( &
     Pc,& ! vector of critical pressures
     Tc,& ! vector of critical temperatures
     w, & ! vector of acentric factors
-    type_k, & ! vector of binary interaction types
-    coef_ab,& ! vector of a, b coefficients
+    kij, & ! matrix of BIPs
     x_a, & ! vector of mass fractions: alpha phase
     x_b, & ! vector of mass fractions: beta phase
     s_min& ! minimum evaluation value
@@ -2117,12 +2275,10 @@ subroutine findEquilibrium_fix_water_b( &
 !{
   implicit none
   integer :: n, bPrint, bInitial, bCloseToMiscible
-  integer :: type_k(n)
-  real(8) :: coef_ab(n), delta(n,n)
-  real(8) :: P,T,Pc(n),Tc(n),w(n),x_a(n),x_b(n),fuga_a(n),fuga_b(n),&
-             x_bo(n),x_ao(n),tmp(n),K(n)
-  real(8) :: G_a, G_b, s_min
-  integer :: i, j, opposite_phase, i1
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x_a(n),x_b(n),s_min
+  real(8) :: fuga_a(n),fuga_b(n),x_bo(n),x_ao(n),tmp(n),K(n)
+  real(8) :: G_a,G_b,
+  integer :: i,j,opposite_phase,i1
 
   ! Gex Method for equilibrium
   real(8) :: x1(n),x2(n),s1,s2,fixed1,fixed2
