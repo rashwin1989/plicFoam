@@ -204,6 +204,81 @@ subroutine fugacities_general( &
   enddo
 !}
 end subroutine fugacities_general
+
+subroutine fugacities2( &
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    kij, & ! matrix of BIPs
+    x, & ! vector of mole fractions
+    fuga, & ! vector of fugacity coefficients (output)
+    Gex  & ! value of excess Gibbs energy (output)
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x(n),fuga(n),Gex
+
+  real(8) :: a(n),b(n)
+  real(8) :: am,bm,Tr,kappa,alpha
+  real(8) :: lnphi(n),V,Z 
+  real(8) :: lnphip(n),vv(n),zi
+
+  integer :: i,j
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  ! PR coefficients of pure components
+
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)
+
+  ! PR coefficients of the mixture
+  bm = 0d0
+  am = 0d0
+
+  do i=1,n
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+
+    do j=i+1,n
+      am    = am + 2.*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
+    enddo
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)
+  do i=1,n
+    call PR_vol(P,T,a(i),b(i),vv(i),state)
+  enddo
+
+  Z = P*V/R_gas/T
+  Gex = 0.0d0
+  do i=1,n
+  !{
+    lnphi(i)=-b(i)/bm
+    do j=1,n
+      lnphi(i) = lnphi(i) +2d0*x(j)*dsqrt(a(i)*a(j))*(1.-kij(i,j))/am
+    enddo
+
+    lnphi(i) = - lnphi(i) * sqr2*.25d0 * am/bm/R_gas/T &
+                 *dlog( (V+bm*(1d0+sqr2))/(V+bm*(1d0-sqr2)) ) &
+             - dlog(Z-bm/V*Z) +b(i)/bm*(Z-1d0)
+
+    fuga(i) = dexp(lnphi(i))
+
+    zi = P*vv(i)/R_gas/T
+    lnphip(i) = - sqr2/4. * a(i)/b(i)/R_gas/T &
+                 *dlog( (vv(i)+b(i)*(1.+sqr2))/(vv(i)+b(i)*(1.-sqr2)) ) &
+             - dlog(zi-b(i)/vv(i)*zi) +(zi-1.)
+
+    Gex = Gex + x(i)*lnphi(i) - x(i)*lnphip(i)
+    if(x(i)>0) Gex = Gex + x(i)*dlog(x(i))
+  !}
+  enddo
+!}
+end subroutine fugacities2
 !***************************************************************************
 subroutine pressure_PR_EoS( &
     rho, & ! density (Unit: kg/m^3)
@@ -2337,8 +2412,8 @@ subroutine findEquilibrium_fix_water_b( &
     x_ao = x1
     x_bo = x2
 
-    call fugacities(P,T,n,Pc,Tc,w,x1,type_k,coef_ab,fuga_a,G_a,delta)
-    call fugacities(P,T,n,Pc,Tc,w,x2,type_k,coef_ab,fuga_b,G_b,delta)
+    call fugacities2(P,T,n,Pc,Tc,w,kij,x1,fuga_a,G_a)
+    call fugacities2(P,T,n,Pc,Tc,w,kij,x2,fuga_b,G_b)
 
     K = fuga_a/fuga_b
 
@@ -2409,8 +2484,8 @@ subroutine findEquilibrium_fix_water_b( &
   enddo
 
   ! evaluate the equilibrium criteria
-  call fugacities(P,T,n,Pc,Tc,w,x1,type_k,coef_ab,fuga_a,G_a,delta)
-  call fugacities(P,T,n,Pc,Tc,w,x2,type_k,coef_ab,fuga_b,G_b,delta)
+  call fugacities2(P,T,n,Pc,Tc,w,kij,x1,fuga_a,G_a)
+  call fugacities2(P,T,n,Pc,Tc,w,kij,x2,fuga_b,G_b)
   !print *, 'steps:', i
   !print *, x1*fuga_a
   !print *, x2*fuga_b
@@ -2440,26 +2515,23 @@ subroutine findEquilibrium_new2( &
     Pc,& ! vector of critical pressures
     Tc,& ! vector of critical temperatures
     w, & ! vector of acentric factors
-    type_k, & ! vector of binary interaction types
+    kij, & ! matrix of BIPs
     x_a, & ! vector of mass fractions: alpha phase
     x_b, & ! vector of mass fractions: beta phase
-    s_min& ! minimum evaluation value
+    s_min  & ! minimum evaluation value
     )
 !{
   implicit none
   integer :: n, k, bPrint
-  integer :: type_k(n)
-  real(8) :: coef_ab(n), delta(n,n)
-  real(8) :: P,T,Pc(n),Tc(n),w(n),x_a(n),x_b(n),fuga_a(n),fuga_b(n),&
-             x_bo(n),x_ao(n),tmp(n)
-  real(8) :: G_a, G_b, s_min
-  integer :: i, j, opposite_phase, i1, n_backward
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x_a(n),x_b(n),s_min
+  real(8) :: fuga_a(n),fuga_b(n),x_bo(n),x_ao(n),tmp(n)
+  real(8) :: G_a,G_b
+  integer :: i,j,opposite_phase,i1,n_backward
 
   ! Gex Method for equilibrium
   real(8) :: x10(n),x1(n),x2(n),s,s1,fixed
 
   bPrint = 0 ! 1: print debugging ; 0: do not print
-  coef_ab=-1 ! vector of a, b coefficients
 
   ! initialize the phases
   ! copy x_a & x_b to x1(oil phase) & x2(water phase)
@@ -2489,8 +2561,8 @@ subroutine findEquilibrium_new2( &
   ! converge the water phase
   n_backward = 0
   do i=1,100000
-    call fugacities(P,T,n,Pc,Tc,w,x1,type_k,coef_ab,fuga_a,G_a,delta)
-    call fugacities(P,T,n,Pc,Tc,w,x2,type_k,coef_ab,fuga_b,G_b,delta)
+    call fugacities2(P,T,n,Pc,Tc,w,kij,x1,fuga_a,G_a)
+    call fugacities2(P,T,n,Pc,Tc,w,kij,x2,fuga_b,G_b)
 
     if (bPrint>0) then
       print *,'x1',x1

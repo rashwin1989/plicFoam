@@ -43,6 +43,20 @@ extern "C" {
         double *kij        
     );
 
+    void fugacities2_
+    ( 
+        double *P,         // pressure (Unit: Pa)
+        double *T,         // temperature (Unit: K)
+        int    *n,         // number of species
+        double *Pc,        // vector of critical pressures
+        double *Tc,        // vector of critical temperatures
+        double *w,         // vector of acentric factors
+        double *x,         // vector of mole fractions
+        double *kij,       // matrix of BIPs
+        double *fuga,      // vector of fugacity coefficients (output)
+        double *Gex        // excess Gibbs free energy (output)
+    );
+
     void fugacities_n_its_derivatives_( 
         double *P,             // pressure (Unit: Pa)
         double *T,             // temperature (Unit: K)
