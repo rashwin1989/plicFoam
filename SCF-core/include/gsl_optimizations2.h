@@ -14,11 +14,11 @@ typedef struct
   double *Tc; /* vector of Tc (K)  */
   double *Vc; /* vector of Vc (cm3/mol) */
   double *w;  /* vector of acentric factor */
-  double *MW; /* vector of MW (g/mol) */
-  int *type_k;/* vector of PPR78 index */
+  double *MW; /* vector of MW (g/mol) */  
   double *Tb; /* vector of normal boiling point (C) */
   double *SG; /* vector of SG */
   double *H8; /* vector of Cp_IG index, see vis_n_cond.f90 */
+  double *kij; /* matrix of BIPs */
 
   int n_flux_type; /* flux type: 0 - ideal diffusion; 1 - non-ideal */
   double dL;       /* distance between interface and left side point */
@@ -57,10 +57,10 @@ T_GSL_OPTIM,*LPT_GSL_OPTIM;
     double *Vc, \
     double *w,  \
     double *MW, \
-    int *type_k,\
     double *Tb, \
     double *SG, \
     double *H8, \
+    double *kij, \
     \
     int n_flux_type, \
     double dL, \

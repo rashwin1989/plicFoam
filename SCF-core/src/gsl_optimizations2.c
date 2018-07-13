@@ -12,7 +12,7 @@
     optim->Tc, \
     optim->Vc, \
     optim->w,  \
-    optim->MW, \    
+    optim->MW, \
     optim->Tb, \
     optim->SG, \
     optim->H8, \

@@ -601,7 +601,7 @@ END subroutine calc_v_h
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij &
+subroutine calc_v_CvIG_Cp_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                                V,CvIG,Cp,hpar)
 !{
   implicit none
@@ -748,7 +748,7 @@ END subroutine calc_v_CvIG_Cp_hpar
 !***************************************************************************
 
 !***************************************************************************
-subroutine calc_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij &
+subroutine calc_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
                                  hpar)
 !{
   implicit none

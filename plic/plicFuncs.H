@@ -1160,10 +1160,10 @@ namespace plicFuncs
 
     void correct_D_from_Dij
     (
+        int n,
         const PtrList<volScalarField>& x,
         const PtrList<volScalarField>& Dij,
-        PtrList<volScalarField>& D,
-        int n
+        PtrList<volScalarField>& D
     );
 
     void calc_intfc_transLLE

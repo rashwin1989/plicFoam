@@ -279,6 +279,65 @@ subroutine fugacities2( &
   enddo
 !}
 end subroutine fugacities2
+
+subroutine fugacities3( &
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    kij, & ! matrix of BIPs
+    x, & ! vector of mole fractions
+    lnphi  & ! vector of fugacity coefficients (output)
+    )
+!{
+  implicit none
+  integer :: n
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x(n),lnphi(n)
+
+  real(8) :: a(n),b(n)
+  real(8) :: am,bm,Tr,kappa,alpha
+  real(8) :: V,Z
+
+  integer :: i,j
+  real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
+  character :: state = 'm'
+
+  ! PR coefficients of pure components
+
+  call calculate_a_b2(T,n,Pc,Tc,w,a,b)
+
+  ! PR coefficients of the mixture
+  bm = 0d0
+  am = 0d0
+
+  do i=1,n
+    bm      = bm + x(i)*b(i)
+    am      = am + x(i)**2*a(i)
+
+    do j=i+1,n
+      am    = am + 2.*x(i)*x(j)*(1.-kij(i,j))*dsqrt(a(i)*a(j))
+    enddo
+  enddo  
+
+  call PR_vol(P,T,am,bm,V,state)  
+
+  Z = P*V/R_gas/T
+  do i=1,n
+  !{
+    lnphi(i)=-b(i)/bm
+    do j=1,n
+      lnphi(i) = lnphi(i) +2d0*x(j)*dsqrt(a(i)*a(j))*(1.-kij(i,j))/am
+    enddo
+
+    lnphi(i) = - lnphi(i) * sqr2*.25d0 * am/bm/R_gas/T &
+                 *dlog( (V+bm*(1d0+sqr2))/(V+bm*(1d0-sqr2)) ) &
+             - dlog(Z-bm/V*Z) +b(i)/bm*(Z-1d0)    
+  !}
+  enddo
+!}
+end subroutine fugacities3
 !***************************************************************************
 subroutine pressure_PR_EoS( &
     rho, & ! density (Unit: kg/m^3)
@@ -1707,7 +1766,7 @@ subroutine fugacities_n_its_derivatives2( &
 
   integer :: i,j
   real(8) :: a(n), b(n)
-  real(8) :: am, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
+  real(8) :: am, bm, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
   real(8) :: V, Z, Vs, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8
   real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
   character :: state = 'm'
@@ -1787,7 +1846,7 @@ subroutine fugacities_n_its_derivatives3( &
 
   integer :: i,j
   real(8) :: a(n), b(n)
-  real(8) :: am, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
+  real(8) :: am, bm, dam_dxi(n), d2am_dxidxj(n,n), dV_dxi(n)
   real(8) :: Z, Vs, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8
   real(8) :: R_gas = 8.3144621d0, sqr2 = 1.414213562373095d0
   character :: state = 'm'
@@ -2352,7 +2411,7 @@ subroutine findEquilibrium_fix_water_b( &
   integer :: n, bPrint, bInitial, bCloseToMiscible
   real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x_a(n),x_b(n),s_min
   real(8) :: fuga_a(n),fuga_b(n),x_bo(n),x_ao(n),tmp(n),K(n)
-  real(8) :: G_a,G_b,
+  real(8) :: G_a,G_b
   integer :: i,j,opposite_phase,i1
 
   ! Gex Method for equilibrium
@@ -2674,6 +2733,489 @@ subroutine findEquilibrium_new2( &
                                                                                           
 !}
 end subroutine findEquilibrium_new2
+!***************************************************************************
+
+!***************************************************************************
+subroutine phase_stability_iteration2( &
+    stable, & ! OUTPUT: 1 - stable; 0 - unstable
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    kij, & ! matrix of BIPs
+    z, & ! vector of original phase mole fractions
+    h, & ! vector of original phase chemical potentials
+    Yi,& ! vector of inital guess
+    Ye,& ! vector of final results
+    y  & ! vector of final mole fractions
+    )
+!{
+  implicit none
+  ! input and output variables
+  integer :: n, stable
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),z(n),h(n),Yi(n),Ye(n),y(n)
+
+  ! local variables
+  ! used
+  integer :: i, j
+  real(8) :: lnphi_y(n), sumY, y1(n), y2(n), max_dy, max_dya, dy
+  real(8) :: sumY1, sumY2, one, g, beta, r, dgdY(n), dgdY_max
+
+  one = 1d0 + 1d-8
+
+  Ye = Yi
+
+  sumY = 0d0
+  do i=1,n
+    sumY = sumY + Ye(i)
+  end do
+  do i=1,n
+    y(i) = Ye(i)/sumY 
+    y1(i) = y(i)
+    y2(i) = y(i)
+  end do
+
+  sumY1 = sumY
+  sumY2 = sumY
+
+  do j=1,1008
+
+    !print *, 'phase stability iteration # ', j
+
+    call fugacities3(P,T,n,Pc,Tc,w,kij,y,lnphi_y)
+
+    g=1.0d0
+    beta=0.0d0
+    dgdY_max=0.0d0
+    do i=1,n
+       dgdY(i) = dlog( Ye(i) ) + lnphi_y(i) - h(i)
+       beta = beta + ( Ye(i) - z(i) )*dgdY(i)
+       g = g + Ye(i)*( dgdY(i) - 1.0d0 )
+       if (dabs(dgdY(i)) > dgdY_max) then
+          dgdY_max = dabs(dgdY(i))
+       end if
+    end do    
+
+    do i=1,n
+      Ye(i) = dexp( h(i) - lnphi_y(i) )
+    end do
+    
+    sumY = 0d0
+    do i=1,n
+      sumY = sumY + Ye(i)
+    end do
+    do i=1,n
+      y(i) = Ye(i)/sumY 
+    end do
+
+    !print *, 'dgdY max ', dgdY_max
+    if (j > 20) then
+       if (dgdY_max < 1.0d-8) then
+          exit
+       end if
+
+       r = 2.0d0*g/beta
+       !print *, 'r ', r
+       if (r > 0.8d0) then
+          Ye = z
+          sumY = 1.0d0       
+          exit
+       end if
+    end if
+
+    ! max_dy  = 0d0
+    ! max_dya = 0d0
+    ! do i=1,n
+
+    !   dy = dabs(y(i) - y1(i))
+    !   if (dy > max_dy) max_dy = dy
+
+    !   ! when oscillation occurs
+    !   ! two values are got alternately
+    !   dy = dabs(y(i) - y2(i))
+    !   if (dy > max_dya) max_dya = dy
+
+    ! end do    
+
+    ! if (j>20) then
+    !   if (max_dy < 1d-9 .or. max_dya < 1d-9) then
+    !     exit
+    !   end if
+    ! end if    
+
+    ! y2 = y1
+    ! y1 = y
+    ! sumY2 = sumY1
+    ! sumY1 = sumY
+
+  end do
+
+  stable = 1
+  if (sumY > one) stable = 0
+
+  !print *, 'stability test'
+  !print *, '# iterations ', j
+  !print *, j, stable,  sumY1, sumY2
+  !print *, 'y        z'
+  !do i=1,n
+  !   print *, y(i), '  ', z(i)
+  !end do
+  !print *
+!}
+end subroutine phase_stability_iteration2
+
+
+! test for phase stability and provides initial K values for LLE calculation
+subroutine phase_stability2( &
+    stable, & ! OUTPUT: 1 - stable; 0 - unstable
+    lnK, & ! initial lnK values for LLE (corresponding to test phase)
+    P, & ! pressure (Unit: Pa)
+    T, & ! temperature (Unit: K)
+    n, & ! number of species
+    Pc,& ! vector of critical pressures
+    Tc,& ! vector of critical temperatures
+    w, & ! vector of acentric factors
+    kij, & ! matrix of BIPs
+    z  & ! vector of inital mole fractions
+    )
+!{
+  implicit none
+  ! input and output variables
+  integer :: n, stable
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),z(n),lnK(n)
+
+  ! local variables
+  ! used
+  integer :: i, j, stablej 
+  real(8) :: lnphi_z(n), h(n), Ye(n), y(n), K(n), Yi(n,4)
+  real(8) :: lnphi_y(n), sumY, dGmin, dG
+
+  !print *, 'z', z
+
+  call fugacities3(P,T,n,Pc,Tc,w,kij,z,lnphi_z)
+
+  do i=1,n
+    h(i) = lnphi_z(i)
+    if (z(i) .gt. 1e-8) then
+      h(i) = h(i) + dlog( z(i) )
+    end if
+
+    K(i) = Pc(i)/P * dexp ( 5.42*(1-Tc(i)/T) )
+  end do
+  
+  do i=1,n
+     Yi(i,1) = K(i)*z(i)
+     Yi(i,2) = z(i)/K(i)
+     Yi(i,3) = dexp(h(i))
+     Yi(i,4) = (Yi(i,1) + Yi(i,2) + Yi(i,3))/3.0d0
+  end do
+                              
+  dGmin=1.0d0
+  stable=1
+  do j=1,4
+     call phase_stability_iteration2(stablej,P,T,n,Pc,Tc,w,kij,z,h,Yi(:,j),Ye,y)
+     if (stablej == 0) then
+        call fugacities3(P,T,n,Pc,Tc,w,kij,y,lnphi_y)
+        dG=0.0d0
+        do i=1,n
+           dG = dG + y(i)*(lnphi_y(i) + dlog( y(i) ) - h(i))
+        end do
+        if (dG < dGmin) then
+           lnK = lnphi_z - lnphi_y
+        end if
+     end if
+     stable = stable*stablej
+  end do
+
+  if (stable==1) then
+     lnK = 0.0d0
+  end if
+
+  print *, 'stable', stable
+  print *, 'lnK test phase'
+  do i=1,n
+     print *, lnK(i)
+  end do
+  print *
+!}
+end subroutine phase_stability2
+!***************************************************************************
+
+!***************************************************************************
+! Latest LLE solver based on Rachford-Rice method
+subroutine species_LLE4( &
+    P, &! pressure (Pa)
+    T, &! temperature (K)
+    n, &! # of species
+    Pc,& ! vector of Pc (Pa)
+    Tc,& ! vector of Tc (K)
+    w, & ! vector of acentric factor
+    kij, &! matrix of BIPs
+    xL,&! molar fractions of left  side of interface
+    xR,&! molar fractions of right side of interface
+    c1, c0, &! original mixing fractions: c1*xL+(1-c1)*xR resulting ==> c0*x1 + (1-c0)*x2
+    x1, &! equilibrium molar fractions for left side (OUTPUT)
+    x2, &! equilibrium molar fractions for right side (OUTPUT)
+    n_miscible &! >0: miscible; <=0: immiscible (OUTPUT)
+    )
+!{
+  implicit none
+  ! INPUT & OUTPUT
+  integer :: n, n_miscible
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),xL(n),xR(n),c1,c0,x1(n),x2(n)
+  ! local variables
+  real(8) :: lnphi1(n), lnphi2(n), lnK(n)
+  real(8) :: beta  ! mole fraction of phase 2, here R or water phase
+  real(8) :: lnK_old(n)  ! values of the last step
+  integer :: i, j, maxLoop=100000, stable
+  real(8) :: tol = 1d-7, K(n), xC(n)
+  real(8) :: x1j_tmp, err_lnK(n), err_norm_lnK        
+
+
+  do j=1,n                 
+    xC(j) = xL(j)*c1+xR(j)*(1-c1)
+  end do
+
+  call phase_stability2(stable,lnK,P,T,n,Pc,Tc,w,kij,xC)
+
+  if (stable == 1) then
+     n_miscible = 1
+     c0 = 0.0d0
+     x1 = xC
+     x2 = xC
+  else
+     n_miscible = -1
+     do i=1,maxLoop
+! Successive Substitution iterations
+        !print *, 'SSI # ', i
+        lnK_old = lnK
+        K = dexp(lnK)
+        call calc_beta_RR(beta,n,xC,K)
+        do j=1,n
+           x1(j) = xC(j)/(1.0d0 + beta*(K(j) - 1.0d0))
+           x2(j) = K(j)*x1(j)
+        end do
+        c0 = 1.0d0 - beta
+
+        call fugacities3(P,T,n,Pc,Tc,w,kij,x1,lnphi1)
+        call fugacities3(P,T,n,Pc,Tc,w,kij,x2,lnphi2)
+
+        lnK = lnphi1 - lnphi2
+        err_lnK = dabs(lnK - lnK_old)
+        err_norm_lnK = 0.0d0
+        do j=1,n
+           if (err_lnK(j) > err_norm_lnK) then
+              err_norm_lnK = err_lnK(j)
+           end if
+        end do
+        !print *, 'err_norm_lnK ', err_norm_lnK 
+        !print *
+        if (err_norm_lnK < tol) then
+           exit
+        end if
+     end do
+
+     ! check oil-rich and water-rich
+     if (x1(n)>x2(n)) then
+        do j=1,n
+           x1j_tmp = x1(j)
+           x1(j) = x2(j)
+           x2(j) = x1j_tmp          
+        end do
+        c0 = 1.0d0 - c0
+     end if     
+  end if  
+!}
+end subroutine species_LLE4
+
+
+!
+subroutine calc_beta_RR( &
+     beta, &! OUTPUT mole fraction of phase 2
+     n, &! # of species
+     xC, &! total mole numbers vector
+     K &! K-values vector
+     )
+!{
+  implicit none
+  ! INPUT & OUTPUT
+  integer :: n
+  real(8) :: xC(n),K(n),beta
+  ! local variables
+  integer :: i, j, MAX_BRENT_ITERS=1008
+  real(8) :: tol=1.0d-7, a, b, fa, fb, s1, s2, Km1(n), tmp
+  real(8) :: b_old, fb_old, b_tmp, fb_tmp
+
+  Km1 = K - 1.0d0
+
+  a = 0.0d0
+  fa = 0.0d0
+  do j=1,n     
+     fa = fa + xC(j)*Km1(j)/(1.0d0 + a*Km1(j))
+  end do
+
+  b = 1.0d0
+  fb = 0.0d0
+  do j=1,n     
+     fb = fb + xC(j)*Km1(j)/(1.0d0 + b*Km1(j))
+  end do
+
+  if (dabs(fa) < dabs(fb)) then
+     tmp = a
+     a = b
+     b = tmp
+     tmp = fa
+     fa = fb
+     fb = tmp
+  end if
+
+  b_old = a
+  fb_old = fa
+
+  do i=1,MAX_BRENT_ITERS
+
+     b_tmp = b
+     fb_tmp = fb
+
+     if (dabs(fb - fb_old) < tol) then
+        b = 0.5d0*(b + a)
+     else
+        s1 = b - fb*(b - b_old)/(fb - fb_old)
+        s2 = 0.5d0*(b + a)
+        if (dabs(b - s1) < dabs(b - s2)) then
+           b = s1
+        else
+           b = s2
+        end if
+     end if
+
+     fb = 0.0d0
+     do j=1,n     
+        fb = fb + xC(j)*Km1(j)/(1.0d0 + b*Km1(j))
+     end do
+
+     b_old = b_tmp
+     fb_old = fb_tmp
+     
+     if (fb*fa > 0) then
+        a = b_old
+        fa = fb_old
+     end if
+
+     if (dabs(fa) < dabs(fb)) then
+        tmp = a
+        a = b
+        b = tmp
+        tmp = fa
+        fa = fb
+        fb = tmp
+     end if
+
+     if (dabs(fb) < tol) then
+        exit
+     end if
+  end do
+
+  beta = b
+  !print *, 'Phase fraction (beta) calculation'
+  !print *, 'beta ', beta
+  !print *, '# Brent iterations ', i  
+  !print *, 'error f(beta) ', dabs(fb)
+!}
+end subroutine calc_beta_RR
+!***************************************************************************
+
+!***************************************************************************
+! binary LLE solver 
+subroutine binaryLLE( &
+    P, &! pressure (Pa)
+    T, &! temperature (K)
+    n, &! # of species
+    Pc,& ! vector of Pc (Pa)
+    Tc,& ! vector of Tc (K)
+    w, & ! vector of acentric factor
+    kij, & ! matrix of BIPs    
+    x1, & ! equilibrium molar fractions for oil phase (OUTPUT)
+    x2, & ! equilibrium molar fractions for water phase (OUTPUT)
+    n_miscible & ! >0: miscible; <=0: immiscible (OUTPUT)
+    )
+!{
+  implicit none
+  ! INPUT & OUTPUT
+  integer :: n, n_miscible
+  real(8) :: P,T,Pc(n),Tc(n),w(n),kij(n,n),x1(n),x2(n)
+  ! local variables
+  real(8) :: lnphi1(n), lnphi2(n), lnK(n), K(n), lnK_old(n)    
+  integer :: i, j, maxLoop=100008
+  real(8) :: tol=1.0d-7
+  real(8) :: x1j_tmp, err_lnK(n), err_norm_lnK        
+
+
+  n_miscible = -1
+  x1(2) = 1.0d-6
+  x1(1) = 1.0d0 - x1(2)
+  x2(1) = 1.0d-6
+  x2(2) = 1.0d0 - x2(1)  
+
+  call fugacities3(P,T,n,Pc,Tc,w,kij,x1,lnphi1)
+  call fugacities3(P,T,n,Pc,Tc,w,kij,x2,lnphi2)
+
+  lnK = lnphi1 - lnphi2
+
+  do i=1,maxLoop
+     ! Successive Substitution iterations
+     !print *, 'SSI # ', i
+     lnK_old = lnK
+     K = dexp(lnK)
+     
+     x1(1) = ( 1.0d0 - K(2) )/( K(1) - K(2) )
+     x2(1) = K(1)*x1(1)          
+     x1(2) = 1.0d0 - x1(1)
+     x2(2) = 1.0d0 - x2(1)
+
+     call fugacities3(P,T,n,Pc,Tc,w,kij,x1,lnphi1)
+     call fugacities3(P,T,n,Pc,Tc,w,kij,x2,lnphi2)
+
+     lnK = lnphi1 - lnphi2
+     err_lnK = dabs(lnK - lnK_old)
+     err_norm_lnK = 0.0d0
+     do j=1,n
+        if (err_lnK(j) > err_norm_lnK) then
+           err_norm_lnK = err_lnK(j)
+        end if
+     end do
+     !print *, 'err_norm_lnK ', err_norm_lnK 
+     !print *, 'x1 ', x1
+     !print *, 'x2 ', x2
+     if (err_norm_lnK < tol) then
+        exit
+     end if
+  end do
+
+  if (dabs( x1(n) - x2(n) ) < 1.0d-4) then
+     n_miscible = 1
+  end if
+
+  ! check oil-rich and water-rich
+  if (x1(n)>x2(n)) then
+     do j=1,n
+        x1j_tmp = x1(j)
+        x1(j) = x2(j)
+        x2(j) = x1j_tmp          
+     end do     
+  end if
+
+  print *, '------binaryLLE result-------'
+  print *, 'err_norm_lnK ', err_norm_lnK 
+  print *, 'x1 ', x1
+  print *, 'x2 ', x2
+  print *, 'n_miscible ', n_miscible
+  print *, '------binaryLLE result-------'
+  
+!}
+end subroutine binaryLLE
 !***************************************************************************
 
 !***************************************************************************

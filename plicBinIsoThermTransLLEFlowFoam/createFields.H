@@ -17,19 +17,22 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug, transProp_debug;
+//bool calcKij;
 //Temp variables
-int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI; //rho_tmp, mu_tmp;
+int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, idx, iread, n_miscible;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij;
+FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) arrays/pointers
 //Input and parameter arrays
-int *tk;
-double *Pc, *Tc, *Vc, *w, *MW, *coef_ab, *Tb, *SG, *H8, *k, *dm;
+double *Pc, *Tc, *Vc, *w, *MW, *Tb, *SG, *H8, *k, *dm;
+double *kij_T, *kij;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp;
+double *y_cellI_tmp, *x_cellI_tmp, *Dij1_tmp, *Dij0_tmp;
+double *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
 
@@ -132,8 +135,6 @@ _NNEW2_(Tc, double, n);
 _NNEW2_(Vc, double, n);
 _NNEW2_(w, double, n);
 _NNEW2_(MW, double, n);
-_NNEW2_(tk, int, n);
-_NNEW2_(coef_ab, double, n);
 _NNEW2_(Tb, double, n);
 _NNEW2_(SG, double, n);
 _NNEW2_(H8, double, n);
@@ -141,14 +142,43 @@ _NNEW2_(k, double, n);
 _NNEW2_(dm, double, n);
 _NNEW2_(y_cellI_tmp, double, n);
 _NNEW2_(x_cellI_tmp, double, n);
+_NNEW2_(Dij1_tmp, double, n*n);
+_NNEW2_(Dij0_tmp, double, n*n);
+_NNEW2_(xs1_tmp, double, n);
+_NNEW2_(xs0_tmp, double, n);
+_NNEW2_(ys1_tmp, double, n);
+_NNEW2_(ys0_tmp, double, n);
 //Done allocate memory for arrays
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
+//Read input parameters for BIP table from input file
+f = fopen("constant/kij_input.dat+", "r");
+iread = fscanf(f, "%lf %lf %d", &Ta_kij, &Tb_kij, &nT_kij);
+fclose(f);
+
+_NNEW2_(kij_T, double, nT_kij*n*n);
+_NNEW2_(kij, double, n*n);
+
+f = fopen("constant/kij_T.dat+", "r");
+for(iT=0; iT<nT_kij; iT++)
+{
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            idx = iT*n*n + i*n + j;
+            iread = fscanf(f, "%lf", &kij_T[idx]);
+        }
+    }
+}
+fclose(f);
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
 //Read thermo input parameters from files
-int n_species_db, iread;
+int n_species_db;
 char str_tmp[50];
-FILE *f;
 int n_pseudospecies_db, n_purespecies_db;
 int *idx_species, *idx_groups;
 
@@ -197,32 +227,13 @@ for (j=0;j<n;j++)
         double tmp;
         double xPNA[3];
 
-        //[x' y' Tb' Tc' Pc' w' MW' Vc' SG' H_8' xP' xN' xA'];
         iread=fscanf(f, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
         &tmp, &tmp, &Tb[j], &Tc[j], &Pc[j], &w[j], &MW[j], &Vc[j], 
         &SG[j], &H8[j], &xPNA[0], &xPNA[1], &xPNA[2]);
 
         if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
 
-        //tmp = 5.811+4.919*w[j];
-        //Vc[j] = 83.14*Tc[j]/Pc[j]/(3.72+.26*(tmp-7)); // cm^3/mol
-
-        Pc[j] *= 1e5;  // bar --> Pa
-
-        if (idx_groups[j]>=0) 
-        {
-            // the first condition
-            // we use PPR78 to calculate BIPs
-            tk[j] = -(n_pseudospecies_db*idx_groups[j]+i+1);
-        }
-        else 
-        {
-            // in the following
-            // Guang's BIPs are used
-            // NOTE that there are only 3 species
-            // water, toluene, n-decane
-            tk[j] = -idx_groups[j];
-        }
+        Pc[j] *= 1e5;  // bar --> Pa        
 
         //x1[j] *= xPNA[ idx_groups[j] ];
 
@@ -335,8 +346,6 @@ for (j=0;j<n;j++)
 }
 
 fclose(f);
-
-for (j=0;j<n;j++) coef_ab[j]=-1;
 //Done read thermo input parameters from files
 //------------------------------------------------------------------//
 
@@ -519,37 +528,40 @@ T_0 = T1.internalField()[0];
 
 //------------------------------------------------------------------//
 //Thermo and transport properties fields initialization
-Info<< "Reading transportProperties\n" << endl;
+Info<< "Initializing transportProperties\n" << endl;
 
-//initialization of values for phase densities
-const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
-//initialization of values for phase viscosities
-const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
-const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
-//initialization of values for thermal conductivities
-const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
-const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
-//initialization of values for specific heats
-const dimensionedScalar& Cp1_0 = transPropDict.lookup("Cp1");
-const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
-//initialization of values for mass diffusivities
-//const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
-//const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
+//Since isothermal case, calculate BIP matrix from input table once for T_0
+plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+//calcKij = false;
+Info<< "BIP matrix:  ";
+for(i=0; i<n*n; i++) Info<< kij[i] << "  ";
+Info<< endl;
 
-/*
+//phase-1
+//set pure oil phase initial mole fractions
 x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0;
-plicFuncs::calc_rho(n,Pc,Tc,w,MW,tk,coef_ab,P_thermo_tmp,x_cellI_tmp,T_0,rho_tmp);
+y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0;
+
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
-plicFuncs::calc_mu(n,Pc,Tc,Vc,w,MW,tk,coef_ab,Tb,SG,H8,k,dm,P_thermo_tmp,x_cellI_tmp,T_0,mu_tmp);
+
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
+
+//phase-0
+//set pure water phase initial mole fractions
 x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1;
-plicFuncs::calc_rho(n,Pc,Tc,w,MW,tk,coef_ab,P_thermo_tmp,x_cellI_tmp,T_0,rho_tmp);
+y_cellI_tmp[0] = 0; y_cellI_tmp[1] = 1;
+
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
-plicFuncs::calc_mu(n,Pc,Tc,Vc,w,MW,tk,coef_ab,Tb,SG,H8,k,dm,P_thermo_tmp,x_cellI_tmp,T_0,mu_tmp);
+
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
-    */
+
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
 
 volScalarField rho1
 (
@@ -672,62 +684,6 @@ volScalarField mu
 // Mixture viscosity at cell faces
 surfaceScalarField muf(alpha1f*mu1f + alpha0f*mu0f);
 
-volScalarField lambda1
-(
-    IOobject
-    (
-        "lambda1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    lambda1_0
-);
-
-volScalarField lambda0
-(
-    IOobject
-    (
-        "lambda0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    lambda0_0
-);
-
-volScalarField Cp1
-(
-    IOobject
-    (
-        "Cp1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    Cp1_0
-);
-
-volScalarField Cp0
-(
-    IOobject
-    (
-        "Cp0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    Cp0_0
-);
-
 // Mass flux
 surfaceScalarField rhoPhi
 (
@@ -766,7 +722,7 @@ for(i=0; i<n; i++)
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(fieldName)
+            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
         )
     );
 
@@ -777,7 +733,7 @@ for(i=0; i<n; i++)
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(fieldName)
+            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
         )
     );
 }
@@ -1198,7 +1154,7 @@ volScalarField Yt
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh
 );
@@ -1935,8 +1891,6 @@ for(i=0; i<n; i++)
     Y0_flatFld_ist[i] = Y_flatFld_ist;        
 }
 
-List<scalar> Ys1_0(n);
-List<scalar> Ys0_0(n);
 PtrList<volScalarField> Ys1(n);
 PtrList<volScalarField> Ys0(n);
 PtrList<volScalarField> Js1(n);
@@ -1944,12 +1898,26 @@ PtrList<volScalarField> Js0(n);
 PtrList<volScalarField> mS1(n);
 PtrList<volScalarField> mS0(n);
 
-for(i=0; i<n; i++)
-{
-    fieldName = "Ys1" + Foam::name(i);
-    Ys1_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);
-    fieldName = "Ys0" + Foam::name(i);
-    Ys0_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);
+// Binary LLE calculation to set equilibrium mass fractions
+n_miscible = 0;
+binarylle_(&P_thermo_tmp,&T_0,&n,Pc,Tc,w,kij,xs1_tmp,xs0_tmp,&n_miscible);
+
+plicFuncs::x2y(n,MW,xs1_tmp,ys1_tmp);
+plicFuncs::x2y(n,MW,xs0_tmp,ys0_tmp);
+
+Info<< "n_miscible = " << n_miscible << endl;
+Info<< "Equilibrium mass fractions: " << endl;
+Info<< "ys1:  ";
+for(i=0; i<n; i++) Info<< ys1_tmp[i] << "  ";
+Info<< endl;
+Info<< "ys0:  ";
+for(i=0; i<n; i++) Info<< ys0_tmp[i] << "  ";
+Info<< endl;
+
+if(n_miscible==1)
+{    
+    Info<< "FATAL ERROR: Fully miscible species pair at given T0..." << endl;
+    exit(-1);
 }
 
 for(i=0; i<n; i++)
@@ -1970,7 +1938,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar(fieldName+"_0", dimless, Ys1_0[i])
+            dimensionedScalar(fieldName+"_0", dimless, ys1_tmp[i])
         )
     );
 
@@ -1990,7 +1958,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionedScalar(fieldName+"_0", dimless, Ys0_0[i])
+            dimensionedScalar(fieldName+"_0", dimless, ys0_tmp[i])
         )
     );
 
@@ -2194,8 +2162,8 @@ scalarField& pSCells = pS.internalField();
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 
-//plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
-//plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);
+//plicFuncs::correct_rho(P_thermo_tmp,T1,x1,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,rho1);
+//plicFuncs::correct_rho(P_thermo_tmp,T0,x0,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,rho0);
 
 for(i=0; i<n; i++)
 {

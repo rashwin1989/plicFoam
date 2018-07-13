@@ -45,7 +45,6 @@ Description
 //#include "pimpleControl.H"
 #include "fixedFluxPressureFvPatchScalarField.H"
 
-
 #include <math.h>
 #include <time.h>
 #include <stdio.h>

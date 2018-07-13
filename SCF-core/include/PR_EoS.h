@@ -43,6 +43,33 @@ extern "C" {
         double *kij        
     );
 
+    void fugacities2_
+    ( 
+        double *P,         // pressure (Unit: Pa)
+        double *T,         // temperature (Unit: K)
+        int    *n,         // number of species
+        double *Pc,        // vector of critical pressures
+        double *Tc,        // vector of critical temperatures
+        double *w,         // vector of acentric factors
+        double *x,         // vector of mole fractions
+        double *kij,       // matrix of BIPs
+        double *fuga,      // vector of fugacity coefficients (output)
+        double *Gex        // excess Gibbs free energy (output)
+    );
+
+    void fugacities3_
+    ( 
+        double *P,         // pressure (Unit: Pa)
+        double *T,         // temperature (Unit: K)
+        int    *n,         // number of species
+        double *Pc,        // vector of critical pressures
+        double *Tc,        // vector of critical temperatures
+        double *w,         // vector of acentric factors
+        double *x,         // vector of mole fractions
+        double *kij,       // matrix of BIPs
+        double *lnphi      // vector of fugacity coefficients (output)
+    );
+
     void fugacities_n_its_derivatives_( 
         double *P,             // pressure (Unit: Pa)
         double *T,             // temperature (Unit: K)
@@ -72,6 +99,35 @@ extern "C" {
         double *dV_dxi, 
         double *dam_dxi, 
         double *d2am_dxidxj);
+
+    void fugacities_n_its_derivatives2_
+    ( 
+        double *P,         // pressure (Unit: Pa)
+        double *T,         // temperature (Unit: K)
+        int    *n,         // number of species
+        double *Pc,        // vector of critical pressures
+        double *Tc,        // vector of critical temperatures
+        double *w,         // vector of acentric factors
+        double *x,         // vector of mole fractions
+        double *kij,       // matrix of BIPs
+        double *lnphi,     // vector of fugacity coefficients (output)
+        double *dlnphi_dxj // matrix of dlnphi_i/dx_j(i,j): (output)
+    );
+
+    void fugacities_n_its_derivatives3_
+    ( 
+        double *P,          // pressure (Unit: Pa)
+        double *T,          // temperature (Unit: K)
+        int    *n,          // number of species
+        double *Pc,         // vector of critical pressures
+        double *Tc,         // vector of critical temperatures
+        double *w,          // vector of acentric factors
+        double *x,          // vector of mole fractions
+        double *kij,        // matrix of BIPs
+        double *lnphi,      // vector of fugacity coefficients (output)
+        double *dlnphi_dxj, // matrix of dlnphi_i/dx_j(i,j): (output)
+        double *V           // molar volume (Unit: m3/mol) (output)
+    );
 
     void fugacities_( 
         double *P, // pressure (Unit: Pa)
@@ -116,13 +172,13 @@ extern "C" {
     void density_pr_eos2_( //
         double *P,   // ! pressure (Unit: Pa) 
         double *T,   // ! temperature (Unit: K)
+        double *x,   // ! vector of mass fractions
         int    *n,   // ! number of species
         double *Pc,  // ! vector of critical pressures
         double *Tc,  // ! vector of critical temperatures
         double *w,   // ! vector of acentric factors
-        double *kij, // ! matrix of BIPs
         double *M,   // ! vector of molecular weights
-        double *x,   // ! vector of mass fractions        
+        double *kij, // ! matrix of BIPs
         double *rho);// ! density (Unit: kg/m^3) (OUTPUT)
 
     // ONLY FOR Binary LLE
@@ -175,7 +231,7 @@ extern "C" {
         double *Pc,// ! vector of critical pressures
         double *Tc,// ! vector of critical temperatures
         double *w, // ! vector of acentric factors
-        int    *type_k, // ! vector of binary interaction types
+        double *kij, // ! matrix of BIPs
         double *x_a, // ! vector of mass fractions: alpha phase
         double *x_b, // ! vector of mass fractions: beta phase
         double *s_min);// ! minimum evaluation value
@@ -189,11 +245,55 @@ extern "C" {
         double *Pc,// ! vector of critical pressures
         double *Tc,// ! vector of critical temperatures
         double *w, // ! vector of acentric factors
-        int    *type_k, // ! vector of binary interaction types
-        double *coef_ab,// ! vector of a, b coefficients
+        double *kij, // ! matrix of BIPs
         double *x_a, // ! vector of mass fractions: alpha phase
         double *x_b, // ! vector of mass fractions: beta phase
         double *s_min);// ! minimum evaluation value
+    
+    void phase_stability2_
+    (
+        int *stable,//! OUTPUT: 1 - stable; 0 - unstable
+        double *lnK,//! initial lnK values for LLE (corresponding to test phase)
+        double *P,//! pressure (Unit: Pa)
+        double *T,//! temperature (Unit: K)
+        int *n,//! number of species
+        double *Pc,//! vector of critical pressures
+        double *Tc,//! vector of critical temperatures
+        double *w,//! vector of acentric factors
+        double *kij,//! matrix of BIPs
+        double *z//! vector of inital mole fractions
+    );
+
+    void species_lle4_
+    ( 
+        double *P,// ! pressure (Pa)
+        double *T,// ! temperature (K)
+        int *n,// ! # of species
+        double *Pc,// ! vector of Pc (Pa)
+        double *Tc,// ! vector of Tc (K)
+        double *w,// ! vector of acentric factor
+        double *kij,// ! matrix of BIPs
+        double *xL,// ! specified initial mole fractions oil phase
+        double *xR,// ! specified initial mole fractions oil phase
+        double *c1,
+        double *c0,//! original mixing fractions: c1*xL+(1-c1)*xR resulting ==> c0*x1 + (1-c0)*x2
+        double *x1,//! equilibrium mole fractions oil phase (OUTPUT)
+        double *x2,//! equilibrium mole fractions water phase (OUTPUT)
+        int *n_miscible//! >0: miscible; <=0: immiscible (OUTPUT)
+    );
+
+    void binarylle_( 
+        double *P,//! pressure (Pa)
+        double *T,//! temperature (K)
+        int *n,//! # of species
+        double *Pc,// ! vector of Pc (Pa)
+        double *Tc,// ! vector of Tc (K)
+        double *w,// ! vector of acentric factor
+        double *kij,// ! matrix of BIPs
+        double *x1,//! equilibrium mole fractions oil phase (OUTPUT)
+        double *x2,//! equilibrium mole fractions water phase (OUTPUT)
+        int *n_miscible//! >0: miscible; <=0: immiscible (OUTPUT)
+    );
 
     void ln_fugacities_( //
         double *P, // ! pressure (Unit: Pa)

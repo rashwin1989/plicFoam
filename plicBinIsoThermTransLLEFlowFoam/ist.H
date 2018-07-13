@@ -88,7 +88,7 @@ forAll(alpha1.boundaryField(), patchI)
             scalar alpha1Own = alpha1Cells[faceOwn];
             scalar alpha1Nei = alpha1NeiFld[fcI];
             
-            if((alpha1Own >= ALPHA_2PH_MAX_IST && alpha1Nei <= ALPHA_2PH_MIN_IST) || (alpha1Nei >= ALPHA_2PH_MAX_IST && alpha1Own <= ALPHA_2PH_MIN_IST))
+            if(alpha1Own >= ALPHA_2PH_MAX_IST && alpha1Nei <= ALPHA_2PH_MIN_IST /*|| (alpha1Nei >= ALPHA_2PH_MAX_IST && alpha1Own <= ALPHA_2PH_MIN_IST)*/)
             {
                 calc_ist_for_cell[faceOwn] = 1;
             }

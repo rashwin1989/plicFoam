@@ -71,7 +71,7 @@ for(i=0; i<(n-1); i++)
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
-            Y1iCells[cellI] = 0;
+            Y1iCells[cellI] = 1;
         }
         else
         {

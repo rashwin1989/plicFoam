@@ -33,25 +33,30 @@ extern "C" {
     double *am, double *bm,                // OUTPUT vector: PR_EOS parameter a & b
     int *G_only);                          // INPUT: 1-onlyGibbs; 0-everything
 
-    void calc_v_cp_h_(double *P, double *T,double *x,           // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,          // INPUT
-    double *Tb,double *SG,double *H8,                           // INPUT
-    double *V,double *Cp,double *h);                            // OUTPUT
+    void calc_v_cp_h_(double *P,double *T,double *x,   // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW, // INPUT
+    double *Tb,double *SG,double *H8,double *kij,      // INPUT
+    double *V,double *Cp,double *h);                   // OUTPUT
 
-    void calc_v_h_(double *P,double *T,double *x,               // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,          // INPUT
-    double *Tb,double *SG,double *H8,                           // INPUT
-    double *V,double *h);                                       // OUTPUT
+    void calc_v_h_(double *P,double *T,double *x,      // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW, // INPUT
+    double *Tb,double *SG,double *H8,double *kij,      // INPUT
+    double *V,double *h);                              // OUTPUT
 
-    void calc_v_cvig_cp_hpar_(double *P, double *T,double *x,   // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,          // INPUT
-    double *Tb,double *SG,double *H8,                           // INPUT
-    double *V,double *CvIG, double *Cp,double *hpar);           // OUTPUT
+    void calc_v_cvig_cp_hpar_(double *P,double *T,double *x, // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW,       // INPUT
+    double *Tb,double *SG,double *H8,double *kij,            // INPUT
+    double *V,double *CvIG, double *Cp,double *hpar);        // OUTPUT
 
-    void calc_v_cvig_(double *P, double *T,double *x,           // INPUT
-    int *n,double *Pc,double *Tc,double *w,double *MW,          // INPUT
-    double *Tb,double *SG,double *H8,                           // INPUT
-    double *V,double *CvIG);                                    // OUTPUT
+    void calc_hpar_(double *P,double *T,double *x, // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW,       // INPUT
+    double *Tb,double *SG,double *H8,double *kij,            // INPUT
+    double *hpar);                                           // OUTPUT
+
+    void calc_v_cvig_(double *P,double *T,double *x,   // INPUT
+    int *n,double *Pc,double *Tc,double *w,double *MW, // INPUT
+    double *Tb,double *SG,double *H8,double *kij,      // INPUT
+    double *V,double *CvIG);                           // OUTPUT
 
     void tlsm_diffusion_ij_( 
         double *rho,             // density      scalar
@@ -89,35 +94,38 @@ extern "C" {
         double *x,               // vector of molar fractions
         double *Dij);            // matrix of binary mass diffusivity 
     //   in vector form: idx = i + j*n
-    void new_tlsm_diffusion_krishna_model_( 
-        double *P,               // pressure     scalar
-        double *T,               // temperature  scalar
-        int    *n,               // # of species scalar
-        double *Pc,              // vector of Pc (Pa)
-        double *Tc,              // vector of Tc (K)
-        double *Vc,              // vector of Vc (cm^3/mol)
-        double *w,               // vector of acentric factors
-        int    *tk,              // vector of BIP types
-        double *coef_ab,         // vector of coef_ab
-        double *MW,              // vector of molecular weights
-        double *x,               // vector of molar fractions
-        double *Dij);            // matrix of binary mass diffusivity 
-    //   in vector form: idx = i + j*n
+
+    void new_tlsm_diffusion_krishna_model_
+    ( 
+        double *P,   // pressure     scalar
+        double *T,   // temperature  scalar
+        int    *n,   // # of species scalar
+        double *Pc,  // vector of Pc (Pa)
+        double *Tc,  // vector of Tc (K)
+        double *Vc,  // vector of Vc (cm^3/mol)
+        double *w,   // vector of acentric factors        
+        double *MW,  // vector of molecular weights
+        double *kij, // matrix of BIPs
+        double *x,   // vector of molar fractions
+        double *Dij  // matrix of binary mass diffusivity 
+                     // in vector form: idx = i + j*n (OUTPUT)
+    );
                              
-    void tlsm_diffusion_trace_new_( 
-        double *P,               // pressure     scalar
-        double *T,               // temperature  scalar
-        int    *n,               // # of species scalar
-        double *Pc,              // vector of Pc (Pa)
-        double *Tc,              // vector of Tc (K)
-        double *Vc,              // vector of Vc (cm^3/mol)
-        double *w,               // vector of acentric factors
-        int    *tk,              // vector of BIP types
-        double *coef_ab,         // vector of coef_ab
-        double *MW,              // vector of molecular weights
-        double *Dij);            // matrix of binary mass diffusivity
-                                 // in vector form: idx = i + j*n
-                             
+    void tlsm_diffusion_trace_new_
+    ( 
+        double *P,   // pressure     scalar
+        double *T,   // temperature  scalar
+        int    *n,   // # of species scalar
+        double *Pc,  // vector of Pc (Pa)
+        double *Tc,  // vector of Tc (K)
+        double *Vc,  // vector of Vc (cm^3/mol)
+        double *w,   // vector of acentric factors        
+        double *MW,  // vector of molecular weights
+        double *kij, // matrix of BIPs                
+        double *Dij  // matrix of binary mass diffusivity
+                     // in vector form: idx = i + j*n (OUTPUT)
+    );
+            
     void species_lle_( //
         double *P, //! pressure (Pa)         scalar
         double *T, //! temperature (K)       scalar

@@ -9189,7 +9189,7 @@ void correct_h
         }
         MW_tmp *= 1e-3;
 
-        calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+        calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
         calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
         hCells[cellI] = h_tmp/MW_tmp;
     }
@@ -9213,7 +9213,7 @@ void correct_h
             }
             MW_tmp *= 1e-3;
 
-            calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+            calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
             calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
             ph[fcI] = h_tmp/MW_tmp;
         }
@@ -9351,8 +9351,8 @@ void correct_boundaryField_h_rhoh_H
                 MW_tmp += x_tmp[i]*MW[i];
             }
 
-            calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
-            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, &v_tmp, &h_tmp);
+            calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+            calc_v_h_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &h_tmp);
             h_tmp /= MW_tmp;
 
             ph[fcI] = h_tmp;
@@ -9425,7 +9425,7 @@ void correct_thermo_trans_prop
         }
         MW_tmp *= 1e-3;
        
-        calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+        calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
         calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
 
@@ -9478,7 +9478,7 @@ void correct_thermo_trans_prop
                 }
                 MW_tmp *= 1e-3;
         
-                calc_kij_from_table(T_tmp,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+                calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
                 calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
 
@@ -9643,10 +9643,10 @@ void correct_thermo_trans_prop
 
 void correct_D_from_Dij
 (
+    int n,
     const PtrList<volScalarField>& x,
     const PtrList<volScalarField>& Dij,
-    PtrList<volScalarField>& D,
-    int n
+    PtrList<volScalarField>& D
 )
 {
     int i, j, idx;
@@ -9804,8 +9804,7 @@ void calc_intfc_transLLE
 )
 {
     int i, num;    
-    double Ts_tmp, V1, V0; 
-    double CvIG;
+    double Ts_tmp;
     double cond0, vis;
     double J1, J0, qs, TNum, TDen, Ts_err;
     double *lnphi1; double *lnphi0; double *Dij1; double *Dij0; 
@@ -10462,14 +10461,14 @@ void calc_Xs_Ys_Js_mS_alphaS
     double alpha1_cellI, A_intfc_cellI, rho1_cellI, rho0_cellI, V_cellI; 
     double Ts_cellI, Ts_cellI_old, T1_cellI, T0_cellI, P_cellI;
     double dn1, dn0, Teff1, Teff0, JsTot_cellI, mS1Tot_cellI, Qs_cellI, conds1;
-    scalar mS1Tot_cellI_tmp, mS1i_cellI, max_mSi;
+    scalar mS1Tot_cellI_tmp;//, mS1i_cellI, max_mSi;
     scalar limiterTot, limiter_min;
     vector nf, C_intfc_cellI;
     labelList curCellsAll = cellStencil[0];    
     double *xeff1, *xeff0;//, *C1_cellI, *C0_cellI;
     double *x1_cellI, *x0_cellI;//, *y1_cellI, *y0_cellI;
     double *xs1, *xs0, *ys1, *ys0, *flux_m_1, *flux_m_0, *Js1_cellI, *Js0_cellI, *hs1;
-    double *mS1_cellI, *limiter_mS1;
+    //double *mS1_cellI, *limiter_mS1;
 
     n = nSpecies;
 
@@ -10489,8 +10488,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     _NNEW_(flux_m_0, double, n);
     _NNEW_(Js1_cellI, double, n);
     _NNEW_(Js0_cellI, double, n);
-    _NNEW_(mS1_cellI, double, n);
-    _NNEW_(limiter_mS1, double, n);
+    //_NNEW_(mS1_cellI, double, n);
+    //_NNEW_(limiter_mS1, double, n);
     _NNEW_(hs1, double, n);
 
     List<scalar> limiterY(n);
@@ -10674,7 +10673,7 @@ void calc_Xs_Ys_Js_mS_alphaS
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << y1_cellI[i] << "  " << setw(10) << y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
+                    os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << Y1_cellI[i] << "  " << setw(10) << Y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
                 }
                 print_line(os, 100);
                 os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << "  Teff1 = " << Teff1 << "  Teff0 = " << Teff0 << endl;
@@ -10936,8 +10935,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     //_DDELETE_(C0_cellI);
     _DDELETE_(x1_cellI);
     _DDELETE_(x0_cellI);
-    _DDELETE_(y1_cellI);
-    _DDELETE_(y0_cellI);
+    //_DDELETE_(y1_cellI);
+    //_DDELETE_(y0_cellI);
     _DDELETE_(xs1);
     _DDELETE_(xs0);
     _DDELETE_(ys1);
@@ -10946,8 +10945,8 @@ void calc_Xs_Ys_Js_mS_alphaS
     _DDELETE_(flux_m_0);
     _DDELETE_(Js1_cellI);
     _DDELETE_(Js0_cellI);
-    _DDELETE_(mS1_cellI);
-    _DDELETE_(limiter_mS1);
+    //_DDELETE_(mS1_cellI);
+    //_DDELETE_(limiter_mS1);
     _DDELETE_(hs1);
 
     if(debug)
@@ -11182,10 +11181,10 @@ void calc_mS_alphaS
 )
 {
     int n, i;
-    label faceI, bndFaceI, nBnd, faceOwn, faceNei;
+    //label faceI, bndFaceI, nBnd, faceOwn, faceNei;
     n = nSpecies;
     scalar alpha1_cellI, rho1_cellI, rho0_cellI, V_cellI, mS1Tot_cellI, mS1Tot_cellI_tmp, limiterTot, limiter_min;
-    scalar alpha1Own, alpha1Nei, VOwn, VNei, rho1Own, rho0Own, rho1Nei, rho0Nei, mS1TotOwn, mS1TotNei;
+    //scalar alpha1Own, alpha1Nei, VOwn, VNei, rho1Own, rho0Own, rho1Nei, rho0Nei, mS1TotOwn, mS1TotNei;
     List<scalar> mS1_cellI(n);
     List<scalar> Js1_cellI(n);
     List<scalar> Js0_cellI(n);
@@ -11195,6 +11194,8 @@ void calc_mS_alphaS
     List<scalar> Y0_cellI(n);
     List<scalar> C1_cellI(n);
     List<scalar> C0_cellI(n);
+    List<scalar> limiterY(n);
+    /*
     List<scalar> Y1Own(n);
     List<scalar> Y0Own(n);
     List<scalar> Y1Nei(n);
@@ -11207,17 +11208,17 @@ void calc_mS_alphaS
     List<scalar> mS1Nei(n);
     List<scalar> mS0Own(n);
     List<scalar> mS0Nei(n);
-    List<scalar> limiterY(n);
+        */    
 
-    nBnd = mesh.nFaces() - mesh.nInternalFaces();
-    List<scalar> VNeiFld(nBnd);
+    //nBnd = mesh.nFaces() - mesh.nInternalFaces();
+    //List<scalar> VNeiFld(nBnd);
 
     
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
     const scalarField& V = mesh.V();
 
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
+    //const labelList& own = mesh.owner();
+    //const labelList& nei = mesh.neighbour();
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const scalarField& rho1Cells = rho1.internalField();
