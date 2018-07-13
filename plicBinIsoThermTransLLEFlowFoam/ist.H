@@ -58,6 +58,7 @@ forAll(alpha1Cells, cellI)
         calc_ist_for_cell[cellI] = 0;
     }
 }
+/*
 for(faceI=0; faceI<nIntFaces; faceI++)
 {
     label faceOwn = own[faceI];
@@ -88,14 +89,14 @@ forAll(alpha1.boundaryField(), patchI)
             scalar alpha1Own = alpha1Cells[faceOwn];
             scalar alpha1Nei = alpha1NeiFld[fcI];
             
-            if(alpha1Own >= ALPHA_2PH_MAX_IST && alpha1Nei <= ALPHA_2PH_MIN_IST /*|| (alpha1Nei >= ALPHA_2PH_MAX_IST && alpha1Own <= ALPHA_2PH_MIN_IST)*/)
+            if((alpha1Own >= ALPHA_2PH_MAX_IST && alpha1Nei <= ALPHA_2PH_MIN_IST) || (alpha1Nei >= ALPHA_2PH_MAX_IST && alpha1Own <= ALPHA_2PH_MIN_IST))
             {
                 calc_ist_for_cell[faceOwn] = 1;
             }
         }
     }
 }
-
+*/
 forAll(alpha1Cells, cellI)
 {
     if(calc_ist_for_cell[cellI] == 1)
@@ -170,12 +171,12 @@ forAll(alpha1Cells, cellI)
         C1i_cellI = max(C1i_cellI, 0.0);
         C1[i].internalField()[cellI] = C1i_cellI;
         C1Tot_cellI += C1i_cellI;
-        //C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;
     }
 
     if(C1Tot_cellI < SMALL)
     {
         C1Tot_cellI += SMALL;
+        C1[0].internalField()[cellI] += SMALL;
     }
 
     Y1t_cellI = 0.0;
@@ -227,13 +228,13 @@ forAll(alpha1Cells, cellI)
         }
         C0i_cellI = max(C0i_cellI, 0.0);
         C0[i].internalField()[cellI] = C0i_cellI;
-        C0Tot_cellI += C0i_cellI;        
-        //C0[i].internalField()[cellI] += -mS1[i].internalField()[cellI]*dt;              
+        C0Tot_cellI += C0i_cellI;
     }
 
     if(C0Tot_cellI < SMALL)
     {
         C0Tot_cellI += SMALL;
+        C0[n-1].internalField()[cellI] += SMALL;
     }
 
     Y0t_cellI = 0.0;
@@ -262,10 +263,7 @@ forAll(alpha1Cells, cellI)
     if(calc_ist_for_cell[cellI] == 1)
     {
         if(ist_debug)
-        {    
-            plicFuncs::print_line(osIst, 100);
-            osIst<< "Cell " << cellI << endl;
-            plicFuncs::print_line(osIst, 100);
+        {            
             osIst<< "After interfacial species transfer" << endl;
             plicFuncs::print_line(osIst, 100);
             osIst<< setw(12) << "alpha1" << "  " << setw(12) << "alpha0" << "  " << setw(16) << "alpha1+alpha0" << "  " << setw(12) << "rho1" << "  " << setw(12) << "rho0" << endl;
@@ -309,33 +307,40 @@ for(i=0; i<n; i++)
     volScalarField& c1i = c1[i];
     volScalarField& c0i = c0[i];
     volScalarField& C1i = C1[i];
-    volScalarField& C0i = C0[i]; 
+    volScalarField& C0i = C0[i];
 
     Y1i.correctBoundaryConditions();
     plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
 
     Y0i.correctBoundaryConditions();
     plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
+}
+for(i=0; i<(n-1); i++)
+{
+    volScalarField& Y1i = Y1[i];
+    volScalarField& Y0i = Y0[i];
+    volScalarField& C1i = C1[i];
+    volScalarField& C0i = C0[i];
 
-    Info<< "Phase-1 C[" << i << "] = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
+    Info<< "C1[" << i << "]:  avg = "
+        << C1i.weightedAverage(mesh.V()).value()
+        << "  min = " << min(C1i).value()
+        << "  max = " << max(C1i).value()
         << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()
+        << "Y1[" << i << "]:"
+        << "  min = " << min(Y1i).value()
+        << "  max = " << max(Y1i).value()
         << endl;
 
-    Info<< "Phase-0 C[" << i << "] = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
+    Info<< "C0[" << i << "]:  avg = "
+        << C0i.weightedAverage(mesh.V()).value()
+        << "  min = " << min(C0i).value()
+        << "  max = " << max(C0i).value()
         << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << endl;        
+        << "Y0[" << i << "]:"
+        << "  min = " << min(Y0i).value()
+        << "  max = " << max(Y0i).value()
+        << endl;
 }
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 //-----------------------------------------------------------------------------------------------------------//

@@ -2223,6 +2223,30 @@ for(i=0; i<n; i++)
     C0min[i] = min(alpha0*rho0*Y0max[i]).value();
 }
 
+//------------------------------------------------------------------//
+//Clipping mass conservation errors
+scalar alpha1_avg;
+scalar alpha1_clip_avg;
+scalar alpha1_clip_err;
+scalar alpha1_clip_cum_err = 0;
+
+List<scalar> C1_avg(n);
+List<scalar> C1_clip_avg(n);
+List<scalar> C1_clip_err(n);
+List<scalar> C1_clip_cum_err(n);
+
+List<scalar> C0_avg(n);
+List<scalar> C0_clip_avg(n);
+List<scalar> C0_clip_err(n);
+List<scalar> C0_clip_cum_err(n);
+
+for(i=0; i<n; i++)
+{
+    C1_clip_cum_err[i] = 0;
+    C0_clip_cum_err[i] = 0;
+}
+//------------------------------------------------------------------//
+
 /*
 volScalarField p_rghEqnComp1 =
     fvc::ddt(rho1)

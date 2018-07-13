@@ -143,46 +143,42 @@ for(i=0; i<(n-1); i++)
         plicFuncs::print_line(osDiff, 80);
     }
 
-    Info<< "Phase-1 Ci = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
+    C1_avg[i] = (C1i).weightedAverage(mesh.V()).value();
+
+    Info<< "C1[" << i << "]:"
+        << "  avg = " << C1_avg[i]
+        << "  min = " << min(C1i).value()
+        << "  max = " << max(C1i).value()
         << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()
-        << nl
-        << "C1i undershoot = " << min((min(C1i).value() - C1min[i]), 0)
-        << "  C1i overshoot = " << max((max(C1i).value() - C1max[i]), 0)
-        << nl
-        << "Y1i undershoot = " << min((min(Y1i).value() - Y1min[i]), 0)
-        << "  Y1i overshoot = " << max((max(Y1i).value() - Y1max[i]), 0)
+        << "Y1[" << i << "]:"
+        << "  min = " << min(Y1i).value()
+        << "  max = " << max(Y1i).value()        
         << endl;    
 
     forAll(C1iCells,cellI)
     {        
         if(Y1iCells[cellI] < Y1min[i])
         {
-            Y1iCells[cellI] = Y1min[i];            
+            Y1iCells[cellI] = Y1min[i];
         }
         
         if(Y1iCells[cellI] > Y1max[i])
         {
-            Y1iCells[cellI] = Y1max[i];            
+            Y1iCells[cellI] = Y1max[i];
         }
 
-        C1iCells[cellI] = rho1Cells[cellI]*alpha1Cells[cellI]*Y1iCells[cellI];
         c1iCells[cellI] = rho1Cells[cellI]*Y1iCells[cellI];
+        C1iCells[cellI] = alpha1Cells[cellI]*c1iCells[cellI];
     }
 
-    Info<< "Phase-1 Ci after clipping = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()        
+    C1_clip_avg[i] = (C1i).weightedAverage(mesh.V()).value();
+    C1_clip_err[i] = mag(C1_clip_avg[i] - C1_avg[i]);
+    C1_clip_cum_err[i] += C1_clip_err[i];
+
+    Info<< "Clipped C1[" << i << "]:"        
+        << "  avg = " << C1_clip_avg[i]
+        << "  err = " << C1_clip_err[i]
+        << "  cum_err = " << C1_clip_cum_err[i]
         << endl;
 
     Y1i.correctBoundaryConditions();
@@ -230,21 +226,17 @@ for(i=0; i<(n-1); i++)
         plicFuncs::print_line(osDiff, 80);
     }
 
-    Info<< "Phase-0 Ci = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
+    C0_avg[i] = (C0i).weightedAverage(mesh.V()).value();
+
+    Info<< "C0[" << i << "]:"
+        << "  avg = " << C0_avg[i]
+        << "  min = " << min(C0i).value()
+        << "  max = " << max(C0i).value()
         << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << nl
-        << "C0i undershoot = " << min((min(C0i).value() - C0min[i]), 0)
-        << "  C0i overshoot = " << max((max(C0i).value() - C0max[i]), 0)
-        << nl
-        << "Y0i undershoot = " << min((min(Y0i).value() - Y0min[i]), 0)
-        << "  Y0i overshoot = " << max((max(Y0i).value() - Y0max[i]), 0)
-        << endl;    
+        << "Y0[" << i << "]:"
+        << "  min = " << min(Y0i).value()
+        << "  max = " << max(Y0i).value()        
+        << endl;
 
     forAll(C0iCells,cellI)
     {        
@@ -257,19 +249,19 @@ for(i=0; i<(n-1); i++)
         {
             Y0iCells[cellI] = Y0max[i];            
         }
-
-        C0iCells[cellI] = rho0Cells[cellI]*alpha0Cells[cellI]*Y0iCells[cellI];
+        
         c0iCells[cellI] = rho0Cells[cellI]*Y0iCells[cellI];
+        C0iCells[cellI] = alpha0Cells[cellI]*c0iCells[cellI];
     }
 
-    Info<< "Phase-0 Ci after clipping = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
-        << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()        
+    C0_clip_avg[i] = (C0i).weightedAverage(mesh.V()).value();
+    C0_clip_err[i] = mag(C0_clip_avg[i] - C0_avg[i]);
+    C0_clip_cum_err[i] += C0_clip_err[i];
+
+    Info<< "Clipped C0[" << i << "]:"        
+        << "  avg = " << C0_clip_avg[i]
+        << "  err = " << C0_clip_err[i]
+        << "  cum_err = " << C0_clip_cum_err[i]
         << endl;
 
     Y0i.correctBoundaryConditions();

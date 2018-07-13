@@ -20,16 +20,16 @@ for(i=0; i<D0.size(); i++)
     }    
 }
 
-surfaceScalarField DSfDelta(DMax*mesh.magSf()*mesh.magSf());
+surfaceScalarField DSfSf(DMax*mesh.magSf()*mesh.magSf());
 
-scalarField sumDSfDelta
+scalarField sumDSfSf
 (
-    fvc::surfaceSum(DSfDelta)().internalField()
+    fvc::surfaceSum(DSfSf)().internalField()
 );
 
-diffCoNum = gMax(sumDSfDelta/mesh.V().field()/mesh.V().field())*runTime.deltaTValue();
+diffCoNum = gMax(sumDSfSf/mesh.V().field()/mesh.V().field())*runTime.deltaTValue();
 
-meanDiffCoNum = (gSum(sumDSfDelta)/gSum(mesh.V().field())/gSum(mesh.V().field()))*runTime.deltaTValue();
+meanDiffCoNum = gSum(sumDSfSf/mesh.V().field())/gSum(mesh.V().field())*runTime.deltaTValue();
 
 Info<< "Diffusion Courant Number mean: " << meanDiffCoNum
     << " max: " << diffCoNum << endl;
