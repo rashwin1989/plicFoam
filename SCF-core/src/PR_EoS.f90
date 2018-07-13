@@ -2933,12 +2933,12 @@ subroutine phase_stability2( &
      lnK = 0.0d0
   end if
 
-  print *, 'stable', stable
-  print *, 'lnK test phase'
-  do i=1,n
-     print *, lnK(i)
-  end do
-  print *
+  ! print *, 'stable', stable
+  ! print *, 'lnK test phase'
+  ! do i=1,n
+  !    print *, lnK(i)
+  ! end do
+  ! print *
 !}
 end subroutine phase_stability2
 !***************************************************************************
@@ -3207,13 +3207,12 @@ subroutine binaryLLE( &
      end do     
   end if
 
-  print *, '------binaryLLE result-------'
-  print *, 'err_norm_lnK ', err_norm_lnK 
-  print *, 'x1 ', x1
-  print *, 'x2 ', x2
-  print *, 'n_miscible ', n_miscible
-  print *, '------binaryLLE result-------'
-  
+  ! print *, '------binaryLLE result-------'
+  ! print *, 'err_norm_lnK ', err_norm_lnK 
+  ! print *, 'x1 ', x1
+  ! print *, 'x2 ', x2
+  ! print *, 'n_miscible ', n_miscible
+  ! print *, '------binaryLLE result-------'  
 !}
 end subroutine binaryLLE
 !***************************************************************************
