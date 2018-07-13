@@ -196,7 +196,7 @@ if(alpha_debug)
 alpha1.max(0.0);
 alpha1.min(1.0);
 
-alpha1_clip_avg = (alpha1i).weightedAverage(mesh.V()).value();
+alpha1_clip_avg = (alpha1).weightedAverage(mesh.V()).value();
 alpha1_clip_err = mag(alpha1_clip_avg - alpha1_avg);
 alpha1_clip_cum_err += alpha1_clip_err;
 
