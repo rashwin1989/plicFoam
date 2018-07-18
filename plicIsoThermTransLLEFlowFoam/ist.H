@@ -92,7 +92,7 @@ plicFuncs::calc_Xs_Ys_Js_mS_alphaS
     n_flux_type, 
     &flux_umf, 
     nSpecies, 
-    ALPHA_2PH_MIN, 
+    ALPHA_2PH_MIN_IST, 
     A_INTFC_2PH_MIN, 
     Ts_TOL, 
     MAX_ITER_Ts, 
@@ -118,7 +118,7 @@ forAll(alpha1Cells, cellI)
 {
     alpha1_cellI = alpha1Cells[cellI];
     
-    if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
+    if(alpha1_cellI > ALPHA_2PH_MIN_IST && alpha1_cellI < ALPHA_2PH_MAX_IST)
     {        
         calc_ist_for_cell[cellI] = 1;
     }
@@ -177,25 +177,39 @@ forAll(alpha1Cells, cellI)
         }
     }
 
-  
+
     //ph-1
     //volume fraction
-    alpha1Cells[cellI] += alphaS1Cells[cellI]*dt;    
+    alpha1_cellI = alpha1Cells[cellI] + alphaS1Cells[cellI]*dt;
+    if(alpha1_cellI < 0)
+    {
+        osIst<< "alpha1 undershoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+    }
+    if(alpha1_cellI > 1)
+    {
+        osIst<< "alpha1 overshoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+    }
+    alpha1_cellI = max(alpha1_cellI, 0.0);
+    alpha1Cells[cellI] = alpha1_cellI;
 
     C1Tot_cellI = 0.0;
     //species
     for(i=0; i<n; i++)
     {
         C1i_cellI = C1[i].internalField()[cellI] + mS1[i].internalField()[cellI]*dt;
+        if(C1i_cellI < 0)
+        {
+            osIst<< "C1[" << i << "] -ve in cell " << cellI << "  C1[" << i << "] = " << C1i_cellI << endl;
+        }        
         C1i_cellI = max(C1i_cellI, 0.0);
         C1[i].internalField()[cellI] = C1i_cellI;
         C1Tot_cellI += C1i_cellI;
-        //C1[i].internalField()[cellI] += mS1[i].internalField()[cellI]*dt;              
     }
 
     if(C1Tot_cellI < SMALL)
     {
         C1Tot_cellI += SMALL;
+        C1[0].internalField()[cellI] += SMALL;
     }
 
     Y1t_cellI = 0.0;
@@ -223,22 +237,37 @@ forAll(alpha1Cells, cellI)
 
     //ph-0
     //volume fraction
-    alpha0Cells[cellI] += alphaS0Cells[cellI]*dt;    
+    alpha0_cellI = alpha0Cells[cellI] + alphaS0Cells[cellI]*dt;
+    if(alpha0_cellI < 0)
+    {
+        osIst<< "alpha0 undershoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+    }
+    if(alpha0_cellI > 1)
+    {
+        osIst<< "alpha0 overshoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+    }
+    alpha0_cellI = max(alpha0_cellI, 0.0);
+    alpha0Cells[cellI] = alpha0_cellI;
+    //alpha0Cells[cellI] = scalar(1.0) - alpha1Cells[cellI];
 
     C0Tot_cellI = 0.0;
     //species
     for(i=0; i<n; i++)
     {
-        C0i_cellI = C0[i].internalField()[cellI] - mS1[i].internalField()[cellI]*dt;
+        C0i_cellI = C0[i].internalField()[cellI] + mS0[i].internalField()[cellI]*dt;
+        if(C0i_cellI < 0)
+        {
+            osIst<< "C0[" << i << "] -ve in cell " << cellI << "  C0[" << i << "] = " << C0i_cellI << endl;
+        }
         C0i_cellI = max(C0i_cellI, 0.0);
         C0[i].internalField()[cellI] = C0i_cellI;
-        C0Tot_cellI += C0i_cellI;        
-        //C0[i].internalField()[cellI] += -mS1[i].internalField()[cellI]*dt;              
+        C0Tot_cellI += C0i_cellI;
     }
 
     if(C0Tot_cellI < SMALL)
     {
         C0Tot_cellI += SMALL;
+        C0[n-1].internalField()[cellI] += SMALL;
     }
 
     Y0t_cellI = 0.0;
@@ -298,35 +327,41 @@ for(i=0; i<n; i++)
     volScalarField& c1i = c1[i];
     volScalarField& c0i = c0[i];
     volScalarField& C1i = C1[i];
-    volScalarField& C0i = C0[i]; 
+    volScalarField& C0i = C0[i];
 
     Y1i.correctBoundaryConditions();
     plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
 
     Y0i.correctBoundaryConditions();
     plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
+}
+for(i=0; i<(n-1); i++)
+{
+    volScalarField& Y1i = Y1[i];
+    volScalarField& Y0i = Y0[i];
+    volScalarField& C1i = C1[i];
+    volScalarField& C0i = C0[i];
 
-    Info<< "Phase-1 C[" << i << "] = "
-        << (C1i).weightedAverage(mesh.Vsc()).value()
+    Info<< "C1[" << i << "]:  avg = "
+        << C1i.weightedAverage(mesh.V()).value()
+        << "  min = " << min(C1i).value()
+        << "  max = " << max(C1i).value()
         << nl
-        << "Min(C1i) = " << min(C1i).value()
-        << "  Max(C1i) = " << max(C1i).value()
-        << nl
-        << "Min(Y1i) = " << min(Y1i).value()
-        << "  Max(Y1i) = " << max(Y1i).value()
+        << "Y1[" << i << "]:"
+        << "  min = " << min(Y1i).value()
+        << "  max = " << max(Y1i).value()
         << endl;
 
-    Info<< "Phase-0 C[" << i << "] = "
-        << (C0i).weightedAverage(mesh.Vsc()).value()
+    Info<< "C0[" << i << "]:  avg = "
+        << C0i.weightedAverage(mesh.V()).value()
+        << "  min = " << min(C0i).value()
+        << "  max = " << max(C0i).value()
         << nl
-        << "Min(C0i) = " << min(C0i).value()
-        << "  Max(C0i) = " << max(C0i).value()
-        << nl
-        << "Min(Y0i) = " << min(Y0i).value()
-        << "  Max(Y0i) = " << max(Y0i).value()
-        << endl;        
+        << "Y0[" << i << "]:"
+        << "  min = " << min(Y0i).value()
+        << "  max = " << max(Y0i).value()
+        << endl;
 }
-
 //Done apply interfacial species transfer and alpha source terms, calculate source term for pressure equation
 //-----------------------------------------------------------------------------------------------------------//
 
