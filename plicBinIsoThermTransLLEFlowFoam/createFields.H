@@ -1454,7 +1454,6 @@ for(i=0; i<n; i++)
     Y1min[i] = 0;
     Y0min[i] = 0;
 }
-
 //Done max and min values for scalar fields
 //------------------------------------------------------------------//
 

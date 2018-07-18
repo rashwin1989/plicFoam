@@ -32,7 +32,7 @@ Description
 {
     volScalarField contErr(fvc::div(phi) - pS);
 
-    contErr += p_rghEqnComp;
+    //contErr += p_rghEqnComp;
 
     /*contErr += alpha1/rho1*(fvc::ddt(rho1)
     + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1));

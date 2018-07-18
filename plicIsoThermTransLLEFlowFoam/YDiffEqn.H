@@ -35,8 +35,8 @@ plicFuncs::calc_2ph_diffFluxes_Y_MS
     nT_kij,
     calcKij,
     kij,    
-    D1f,
-    D0f,
+    Dij1f,
+    Dij0f,
     x1f,
     x0f,
     gradf_x1,
@@ -102,11 +102,7 @@ for(i=0; i<(n-1); i++)
     word Y0iName = "Y0["+name(i)+"]";
 
     const surfaceScalarField& diffFlux_Y1i = diffFlux_Y1[i];
-    const surfaceScalarField& diffFlux_Y0i = diffFlux_Y0[i];
-    volScalarField& diffTerm_Y1i = diffTerm_Y1[i];
-    scalarField& diffTerm_Y1iCells = diffTerm_Y1i.internalField();
-    volScalarField& diffTerm_Y0i = diffTerm_Y0[i];
-    scalarField& diffTerm_Y0iCells = diffTerm_Y0i.internalField();
+    const surfaceScalarField& diffFlux_Y0i = diffFlux_Y0[i];    
 
     //--------------------------------------------------------------//
     //ph1
@@ -125,7 +121,6 @@ for(i=0; i<(n-1); i++)
 
     forAll(C1iCells,cellI)
     {
-        diffTerm_Y1iCells[cellI] += -surfInt_diffFlux_Y1iCells[cellI]*dt;
         C1iCells[cellI] += -surfInt_diffFlux_Y1iCells[cellI]*dt;
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YDIFF)
@@ -208,7 +203,6 @@ for(i=0; i<(n-1); i++)
 
     forAll(C0iCells,cellI)
     {
-        diffTerm_Y0iCells[cellI] += -surfInt_diffFlux_Y0iCells[cellI]*dt;
         C0iCells[cellI] += -surfInt_diffFlux_Y0iCells[cellI]*dt;
 
         if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YDIFF)

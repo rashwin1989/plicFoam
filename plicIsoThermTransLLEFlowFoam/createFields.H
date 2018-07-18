@@ -2,7 +2,7 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
 //Temp variables
 label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
 label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
@@ -17,11 +17,13 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug, transProp_debug;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, transProp_debug;
+bool calcKij;
 double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, iread, n_miscible;
 double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij;
+double x1Tot_0, x1Tot_00, MW1_0, MW0_0;
 FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -32,7 +34,7 @@ FILE *f;
 double *Pc, *Tc, *Vc, *w, *MW, *Tb, *SG, *H8, *k, *dm;
 double *kij_T, *kij;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp, *Dij1_tmp, *Dij0_tmp, *D1_tmp, *D0_tmp;
+double *y_cellI_tmp, *x_cellI_tmp, *Dij1_tmp, *Dij0_tmp, *D1_tmp, *D0_tmp, *x1_0, *x0_0, *y1_0, *y0_0;
 double *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
@@ -87,8 +89,8 @@ SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV
 MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
-ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
-ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
+//ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
+//ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 ALPHA_2PH_MIN_IST = transPropDict.lookupOrDefault("ALPHA_2PH_MIN_IST", 1E-06);
 ALPHA_2PH_MAX_IST = 1 - ALPHA_2PH_MIN_IST;
 A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
@@ -111,7 +113,7 @@ advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
 U_debug = transPropDict.lookupOrDefault("U_debug", false);
-interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
+//interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
 transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
 // int switches
 n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 0);
@@ -143,6 +145,10 @@ _NNEW2_(k, double, n);
 _NNEW2_(dm, double, n);
 _NNEW2_(y_cellI_tmp, double, n);
 _NNEW2_(x_cellI_tmp, double, n);
+_NNEW2_(x1_0, double, n);
+_NNEW2_(x0_0, double, n);
+_NNEW2_(y1_0, double, n);
+_NNEW2_(y0_0, double, n);
 _NNEW2_(Dij1_tmp, double, n*n);
 _NNEW2_(Dij0_tmp, double, n*n);
 _NNEW2_(D1_tmp, double, n);
@@ -537,6 +543,27 @@ T_0 = T1.internalField()[0];
 //Thermo and transport properties fields initialization
 Info<< "Initializing transportProperties\n" << endl;
 
+List<scalar> Y1_0(n);
+List<scalar> Y0_0(n);
+
+scalar Y1i_tmp, Y0i_tmp; 
+scalar Y1Tot_tmp = 0;
+scalar Y0Tot_tmp = 0;
+for(i=0; i<(n-1); i++)
+{    
+    fieldName = "Y1_0[" + Foam::name(i) + "]";
+    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 0);
+    Y1_0[i] = Y1i_tmp;
+    Y1Tot_tmp += Y1i_tmp;
+
+    fieldName = "Y0_0[" + Foam::name(i) + "]";
+    Y0i_tmp = transPropDict.lookupOrDefault(fieldName, 0);
+    Y0_0[i] = Y0i_tmp;
+    Y0Tot_tmp += Y0i_tmp;
+}
+Y1_0[n-1] = scalar(1.0) - Y1Tot_tmp;
+Y0_0[n-1] = scalar(1.0) - Y0Tot_tmp;
+
 //Since isothermal case, calculate BIP matrix from input table once for T_0
 plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 calcKij = false;
@@ -546,33 +573,37 @@ Info<< endl;
 
 //phase-1
 //set pure oil phase initial mole fractions
-x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0;
-y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0;
+for(i=0; i<n; i++) y1_0[i] = Y1_0[i];
+plicFuncs::y2x(n,MW,y1_0,x1_0);
 
-plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x1_0,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
 
-plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y1_0,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x1_0,Dij1_tmp);
 
-plicFuncs::calc_D_from_Dij(n, x_cellI_tmp, Dij1_tmp, D1_tmp);
+plicFuncs::calc_D_from_Dij(n, x1_0, Dij1_tmp, D1_tmp);
+
+MW1_0 = plicFuncs::calc_MW_from_x(n,MW,x1_0);
 
 //phase-0
 //set pure water phase initial mole fractions
-x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1;
-y_cellI_tmp[0] = 0; y_cellI_tmp[1] = 1;
+for(i=0; i<n; i++) y0_0[i] = Y0_0[i];
+plicFuncs::y2x(n,MW,y0_0,x0_0);
 
-plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x0_0,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
 
-plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y0_0,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
 
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x0_0,Dij0_tmp);
 
-plicFuncs::calc_D_from_Dij(n, x_cellI_tmp, Dij0_tmp, D0_tmp);
+plicFuncs::calc_D_from_Dij(n, x0_0, Dij0_tmp, D0_tmp);
+
+MW0_0 = plicFuncs::calc_MW_from_x(n,MW,x0_0);
 
 volScalarField rho1
 (
@@ -599,7 +630,7 @@ volScalarField v1
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW[0]/rho1_0
+    1e-3*MW1_0/rho1_0
 );
 
 volScalarField rho0
@@ -627,7 +658,7 @@ volScalarField v0
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW[n-1]/rho0_0
+    1e-3*MW0_0/rho0_0
 );
 
 volScalarField rho
@@ -721,47 +752,114 @@ PtrList<dimensionedScalar> D1_0(n);
 PtrList<dimensionedScalar> D0_0(n);
 PtrList<volScalarField> Dij1(Nij);
 PtrList<volScalarField> Dij0(Nij);
-PtrList<volScalarField> Dij1f(Nij);
-PtrList<volScalarField> Dij0f(Nij);
+PtrList<surfaceScalarField> Dij1f(Nij);
+PtrList<surfaceScalarField> Dij0f(Nij);
 PtrList<volScalarField> D1(n);
 PtrList<volScalarField> D0(n);
-PtrList<surfaceScalarField> D1f(n);
-PtrList<surfaceScalarField> D0f(n);
+//PtrList<surfaceScalarField> D1f(n);
+//PtrList<surfaceScalarField> D0f(n);
 
 for(i=0; i<n; i++)
 {
-    fieldName = "D1" + Foam::name(i);
-    Info<< "Reading diffusivity " << fieldName << endl;
+    fieldName = "D1_0[" + Foam::name(i) + "]";
+    Info<< "Initializing diffusivity " << fieldName << endl;
     D1_0.set
     (
         i,
         new dimensionedScalar
         (
-            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
+            fieldName, dimLength*dimLength/dimTime, D1_tmp[i]
         )
     );
 
-    fieldName = "D0" + Foam::name(i);
-    Info<< "Reading diffusivity " << fieldName << endl;
+    fieldName = "D0_0[" + Foam::name(i) + "]";
+    Info<< "Initializing diffusivity " << fieldName << endl;
     D0_0.set
     (
         i,
         new dimensionedScalar
         (
-            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
+            fieldName, dimLength*dimLength/dimTime, D0_tmp[i]
         )
     );
-}
 
-for(i=0; i<n; i++)
-{    
     for(j=0; j<n; j++)
     {
         ijIndex = n*i + j;
 
-        fieldName = "D1" + Foam::name(i) + Foam::name(j);
+        fieldName = "Dij1_0[" + Foam::name(i) + "][" + Foam::name(j) + "]";
+        Info<< "Initializing diffusivity " << fieldName << endl;
+        Dij1_0.set
+        (
+            ijIndex,
+            new dimensionedScalar
+            (
+                fieldName, dimLength*dimLength/dimTime, Dij1_tmp[ijIndex]
+            )
+        );
+
+        fieldName = "Dij0_0[" + Foam::name(i) + "][" + Foam::name(j) + "]";
+        Info<< "Initializing diffusivity " << fieldName << endl;
+        Dij0_0.set
+        (
+            ijIndex,
+            new dimensionedScalar
+            (
+                fieldName, dimLength*dimLength/dimTime, Dij0_tmp[ijIndex]
+            )
+        );
+    }
+}
+
+for(i=0; i<n; i++)
+{
+    fieldName = "D1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D1_0[i]
+        )
+    );
+
+    fieldName = "D0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D0_0[i]
+        )
+    );
+
+    for(j=0; j<n; j++)
+    {
+        ijIndex = n*i + j;
+
+        fieldName = "Dij1" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D1.set
+        Dij1.set
         (
             ijIndex,
             new volScalarField
@@ -775,13 +873,13 @@ for(i=0; i<n; i++)
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                D1_0[i]
+                Dij1_0[ijIndex]
             )
         );
 
-        fieldName = "D1f" + Foam::name(i) + Foam::name(j);
+        fieldName = "Dij1f" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D1f.set
+        Dij1f.set
         (
             ijIndex,
             new surfaceScalarField
@@ -795,13 +893,13 @@ for(i=0; i<n; i++)
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                D1_0[i]
+                Dij1_0[ijIndex]
             )
         );
         
         fieldName = "D0" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D0.set
+        Dij0.set
         (
             ijIndex,
             new volScalarField
@@ -815,13 +913,13 @@ for(i=0; i<n; i++)
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                D0_0[i]
+                Dij0_0[ijIndex]
             )
         );
 
-        fieldName = "D0f" + Foam::name(i) + Foam::name(j);
+        fieldName = "Dij0f" + Foam::name(i) + Foam::name(j);
         Info<< "Initializing field " << fieldName << endl;
-        D0f.set
+        Dij0f.set
         (
             ijIndex,
             new surfaceScalarField
@@ -835,7 +933,7 @@ for(i=0; i<n; i++)
                     IOobject::NO_WRITE
                 ),
                 mesh,
-                D0_0[i]
+                Dij0_0[ijIndex]
             )
         );
     }
@@ -850,11 +948,13 @@ PtrList<volScalarField> x1(n);
 PtrList<volScalarField> c1(n);
 PtrList<volScalarField> C1(n);
 PtrList<volScalarField> C1_old(n);
+PtrList<volScalarField> c1_old(n);
 PtrList<volScalarField> Y0(n);
 PtrList<volScalarField> x0(n);
 PtrList<volScalarField> c0(n);
 PtrList<volScalarField> C0(n);
 PtrList<volScalarField> C0_old(n);
+PtrList<volScalarField> c0_old(n);
 
 PtrList<volScalarField> C_phAvg(n);
 
@@ -959,6 +1059,26 @@ for(i=0; i<(n-1); i++)
         )
     );
 
+    fieldName = "c1_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c1_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho1*Y1[i],
+            Y1[i].boundaryField().types()
+        )
+    );
+
     fieldName = "Y0" + Foam::name(i);
     Info<< "Reading field " << fieldName << endl;
     Y0.set
@@ -1017,7 +1137,7 @@ for(i=0; i<(n-1); i++)
             Y0[i].boundaryField().types()
         )
     );
-
+    
     fieldName = "C0" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
     C0.set
@@ -1058,6 +1178,26 @@ for(i=0; i<(n-1); i++)
         )
     );
 
+    fieldName = "c0_old" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    c0_old.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            rho0*Y0[i],
+            Y0[i].boundaryField().types()
+        )
+    );
+
     fieldName = "C_phAvg" + Foam::name(i);
     Info<< "Initializing field " << fieldName << endl;
     C_phAvg.set
@@ -1079,13 +1219,26 @@ for(i=0; i<(n-1); i++)
     );
 }
 
-volScalarField Y1t = 0.0*Y1[0];
-volScalarField Y0t = 0.0*Y0[0];
+volScalarField Yt
+(
+    IOobject
+    (
+        "Yt",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+volScalarField Y1t = Yt;
+volScalarField Y0t = Yt;
 
 for(i=0; i<(n-1); i++)
 {
-    Y1t += Y1[i];
-    Y0t += Y0[i];
+    Y1t -= Y1[i];
+    Y0t -= Y0[i];
 }
 
 int endIndex = n-1;
@@ -1105,10 +1258,9 @@ Y1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y1[0]
+        Y1t
     )
 );
-Y1[endIndex] = scalar(1.0) - Y1t;
 Y1[endIndex].correctBoundaryConditions();
 
 fieldName = "x1" + Foam::name(endIndex);
@@ -1190,6 +1342,26 @@ C1_old.set
     )
 );
 
+fieldName = "c1_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+c1_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        rho1*Y1[endIndex],
+        Y1[endIndex].boundaryField().types()
+    )
+);
+
 fieldName = "Y0" + Foam::name(endIndex);
 Info<< "Reading field " << fieldName << endl;
 Y0.set
@@ -1205,10 +1377,9 @@ Y0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y0[0]
+        Y0t
     )
 );
-Y0[endIndex] = scalar(1.0) - Y0t;
 Y0[endIndex].correctBoundaryConditions();
 
 fieldName = "x0" + Foam::name(endIndex);
@@ -1290,6 +1461,26 @@ C0_old.set
     )
 );
 
+fieldName = "c0_old" + Foam::name(endIndex);
+Info<< "Initializing field " << fieldName << endl;
+c0_old.set
+(
+    endIndex,
+    new volScalarField
+    (
+        IOobject
+        (
+            fieldName,
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        rho0*Y0[endIndex],
+        Y0[endIndex].boundaryField().types()
+    )
+);
+
 fieldName = "C_phAvg" + Foam::name(endIndex);
 Info<< "Initializing field " << fieldName << endl;
 C_phAvg.set
@@ -1312,41 +1503,6 @@ C_phAvg.set
 //Done species concentrations Y, x, C initialization
 //------------------------------------------------------------------//
 
-//------------------------------------------------------------------//
-//T, Enthalpy initialization
-Info<< "Reading field T1" << endl;
-volScalarField T1
-(
-    IOobject
-    (
-        "T1",
-        runTime.timeName(),
-        mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh
-);
-T1.correctBoundaryConditions();
-
-Info<< "Reading field T0" << endl;
-volScalarField T0
-(
-    IOobject
-    (
-        "T0",
-        runTime.timeName(),
-        mesh,
-        IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
-    ),
-    mesh
-);
-T0.correctBoundaryConditions();
-
-T_0 = T1.internalField()[0];
-//Done T, Enthalpy initialization
-//------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Max and min values for scalar fields
@@ -1358,6 +1514,8 @@ List<scalar> Y1max(n);
 List<scalar> Y0max(n);
 List<scalar> Y1min(n);
 List<scalar> Y0min(n);
+List<scalar> Y1_TMP(n);
+List<scalar> Y0_TMP(n);
 
 for(i=0; i<n; i++)
 {
@@ -1370,8 +1528,10 @@ for(i=0; i<n; i++)
     Y0max[i] = 1;
     Y1min[i] = 0;
     Y0min[i] = 0;
-}
 
+    Y1_TMP[i] = Y1_0[i];
+    Y0_TMP[i] = Y0_0[i];
+}
 //Done max and min values for scalar fields
 //------------------------------------------------------------------//
 
@@ -1499,6 +1659,9 @@ if (p_rgh.needReference())
 //------------------------------------------------------------------//
 //alpha, species, density advection
 surfaceScalarField& phiAlpha1(interface.phiAlpha1());
+volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
+scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
+
 centredCPCCellToCellStencilObject cell_stencil(mesh);
 
 labelList unbounded_Y_in_cell(nCells, 0);
@@ -1820,22 +1983,37 @@ PtrList<volScalarField> Ys0(n);
 PtrList<volScalarField> Js1(n);
 PtrList<volScalarField> Js0(n);
 PtrList<volScalarField> mS1(n);
+PtrList<volScalarField> mS0(n);
 
-for(i=0; i<n; i++)
-{
-    fieldName = "Ys1" + Foam::name(i);
-    Ys1_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
-    ys1_tmp[i] = Ys1_0[i];
-    fieldName = "Ys0" + Foam::name(i);
-    Ys0_0[i] = transPropDict.lookupOrDefault(fieldName, 0.1);    
-    ys0_tmp[i] = Ys0_0[i];
+// LLE calculation to set initial equilibrium mass fractions
+n_miscible = 0;
+x1Tot_00 = MW0_0/(MW1_0 + MW0_0);
+species_lle4_(&P_thermo_tmp,&T_0,&n,Pc,Tc,w,kij,x1_0,x0_0,&x1Tot_00,&x1Tot_0,xs1_tmp,xs0_tmp,&n_miscible);
+
+plicFuncs::x2y(n, MW, xs1_tmp, ys1_tmp);
+plicFuncs::x2y(n, MW, xs0_tmp, ys0_tmp);
+
+Info<< "n_miscible = " << n_miscible << endl;
+Info<< "Equilibrium mass fractions: " << endl;
+Info<< "ys1:  ";
+for(i=0; i<n; i++) Info<< ys1_tmp[i] << "  ";
+Info<< endl;
+Info<< "ys0:  ";
+for(i=0; i<n; i++) Info<< ys0_tmp[i] << "  ";
+Info<< endl;
+
+if(n_miscible==1)
+{    
+    Info<< "FATAL ERROR: Fully miscible species pair at given T0..." << endl;
+    exit(-1);
 }
-plicFuncs::y2x(n, MW, ys1_tmp, xs1_tmp);
-plicFuncs::y2x(n, MW, ys0_tmp, xs0_tmp);
+
 for(i=0; i<n; i++)
 {
     xs1_0[i] = xs1_tmp[i];
     xs0_0[i] = xs0_tmp[i];
+    Ys1_0[i] = ys1_tmp[i];
+    Ys0_0[i] = ys0_tmp[i];
 }
 
 for(i=0; i<n; i++)
@@ -1979,6 +2157,26 @@ for(i=0; i<n; i++)
             dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
         )
     );
+
+    fieldName = "mS0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    mS0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
+        )
+    );
 }
 
 fieldName = "Ts";
@@ -2015,6 +2213,22 @@ volScalarField JsTot
 fieldName = "mS1Tot";
 Info<< "Initializing field " << fieldName << endl;
 volScalarField mS1Tot
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimMass/dimVol/dimTime, 0)
+);
+
+fieldName = "mS0Tot";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField mS0Tot
 (
     IOobject
     (
@@ -2120,8 +2334,8 @@ scalarField& pSCells = pS.internalField();
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
 
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
-plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);
+//plicFuncs::correct_rho(P_thermo_tmp,T1,x1,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,rho1);
+//plicFuncs::correct_rho(P_thermo_tmp,T0,x0,n,Pc,Tc,w,MW,kij_T,Ta_kij,Tb_kij,nT_kij,calcKij,kij,rho0);
 
 for(i=0; i<n; i++)
 {
@@ -2133,17 +2347,43 @@ for(i=0; i<n; i++)
     volScalarField& C0i = C0[i];
     volScalarField& C1Oldi = C1_old[i];
     volScalarField& C0Oldi = C0_old[i];
+    volScalarField& c1Oldi = c1_old[i];
+    volScalarField& c0Oldi = c0_old[i];
 
     c1i = rho1*Y1i;
     C1i = alpha1*c1i;
     C1Oldi = C1i;
+    c1Oldi = c1i;
 
     c0i = rho0*Y0i;
     C0i = alpha0*c0i;
     C0Oldi = C0i;
+    c0Oldi = c0i;
+
+    Y1i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y1i, rho1, alpha1, c1i, C1i);
+
+    Y0i.correctBoundaryConditions();
+    plicFuncs::correct_boundaryField_C(Y0i, rho0, alpha0, c0i, C0i);
+
+    forAll(C1i.boundaryField(), patchI)
+    {
+        forAll(C1i.boundaryField()[patchI], fcI)
+        {
+            C1Oldi.boundaryField()[patchI][fcI] = C1i.boundaryField()[patchI][fcI];
+            C0Oldi.boundaryField()[patchI][fcI] = C0i.boundaryField()[patchI][fcI];
+            c1Oldi.boundaryField()[patchI][fcI] = c1i.boundaryField()[patchI][fcI];
+            c0Oldi.boundaryField()[patchI][fcI] = c0i.boundaryField()[patchI][fcI];
+        }
+    }
 }
 
 #include "correct_thermo_trans_prop.H"
+
+#include "diff_grad_interp.H"
+
+rho = alpha1*rho1 + alpha0*rho0;
+mu = alpha1*mu1 + alpha0*mu0;
 //Done initialize dependent variable fields correctly
 //------------------------------------------------------------------//
 
@@ -2155,6 +2395,31 @@ for(i=0; i<n; i++)
     C0min[i] = min(alpha0*rho0*Y0max[i]).value();
 }
 
+//------------------------------------------------------------------//
+//Clipping mass conservation errors
+scalar alpha1_avg;
+scalar alpha1_clip_avg;
+scalar alpha1_clip_err;
+scalar alpha1_clip_cum_err = 0;
+
+List<scalar> C1_avg(n);
+List<scalar> C1_clip_avg(n);
+List<scalar> C1_clip_err(n);
+List<scalar> C1_clip_cum_err(n);
+
+List<scalar> C0_avg(n);
+List<scalar> C0_clip_avg(n);
+List<scalar> C0_clip_err(n);
+List<scalar> C0_clip_cum_err(n);
+
+for(i=0; i<n; i++)
+{
+    C1_clip_cum_err[i] = 0;
+    C0_clip_cum_err[i] = 0;
+}
+//------------------------------------------------------------------//
+
+/*
 volScalarField p_rghEqnComp1 =
     fvc::ddt(rho1)
     + fvc::div(phi, rho1, "div(phi,rho)") - fvc::Sp(fvc::div(phi), rho1);
@@ -2166,3 +2431,4 @@ volScalarField p_rghEqnComp0 =
 volScalarField p_rghEqnComp =
     (max(alpha1, scalar(0))/rho1)*p_rghEqnComp1
     + (max(alpha0, scalar(0))/rho0)*p_rghEqnComp0;
+    */

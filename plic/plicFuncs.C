@@ -8893,6 +8893,22 @@ void y2x(int n, double *MW, double *y, double *x)
 }
 
 
+double calc_MW_from_x
+(
+    int n,
+    double *MW,
+    double *x
+)
+{
+    int i;
+    double MWm = 0;
+    
+    for(i=0; i<n; i++) MWm += MW[i]*x[i];
+
+    return MWm;
+}
+
+
 double calc_rho_from_V(int n, double *x, double *MW, double V)
 {
     int i;
@@ -9641,6 +9657,45 @@ void correct_thermo_trans_prop
 }
 
 
+void calc_D_from_Dij
+(
+    int n,
+    double *x,
+    double *Dij,
+    double *D
+)
+{
+    int i, j, idx;
+    double sum_xbyD;
+
+    if(n==2)
+    {
+        for(i=0; i<n; i++)
+        {
+            D[i] = Dij[1];
+        }
+    }
+    else
+    {
+        for(i=0; i<n; i++)
+        {
+            sum_xbyD = 0.0;
+            for(j=0; j<n; j++)
+            {
+                if(j!=i)
+                {
+                    idx = j + i*n;
+                    sum_xbyD += x[j]/Dij[idx];
+                }
+            }
+            if(sum_xbyD < SMALL) sum_xbyD += SMALL;
+
+            D[i] = 1.0/sum_xbyD;
+        }
+    }
+}
+
+
 void correct_D_from_Dij
 (
     int n,
@@ -9650,7 +9705,6 @@ void correct_D_from_Dij
 )
 {
     int i, j, idx;
-    double sum_xbyD;
     double *x_tmp;
     double *Dij_tmp; 
     double *D_tmp;    
@@ -9671,31 +9725,7 @@ void correct_D_from_Dij
             }
         }
 
-        if(n==2)
-        {
-            for(i=0; i<n; i++)
-            {
-                D_tmp[i] = Dij_tmp[1];
-            }
-        }
-        else
-        {
-            for(i=0; i<n; i++)
-            {
-                sum_xbyD = 0.0;
-                for(j=0; j<n; j++)
-                {
-                    if(j!=i)
-                    {
-                        idx = j + i*n;
-                        sum_xbyD += x_tmp[j]/Dij_tmp[idx];
-                    }
-                }
-                if(sum_xbyD < SMALL) sum_xbyD += SMALL;
-
-                D_tmp[i] = 1.0/sum_xbyD;                
-            }
-        }
+        calc_D_from_Dij(n, x_tmp, Dij_tmp, D_tmp);
         
         for(i=0; i<n; i++)
         {
@@ -9719,31 +9749,7 @@ void correct_D_from_Dij
                 }
             }
 
-            if(n==2)
-            {
-                for(i=0; i<n; i++)
-                {
-                    D_tmp[i] = Dij_tmp[1];
-                }
-            }
-            else
-            {
-                for(i=0; i<n; i++)
-                {
-                    sum_xbyD = 0.0;
-                    for(j=0; j<n; j++)
-                    {
-                        if(j!=i)
-                        {
-                            idx = j + i*n;
-                            sum_xbyD += x_tmp[j]/Dij_tmp[idx];
-                        }
-                    }
-                    if(sum_xbyD < SMALL) sum_xbyD += SMALL;
-
-                    D_tmp[i] = 1.0/sum_xbyD;                
-                }
-            }
+            calc_D_from_Dij(n, x_tmp, Dij_tmp, D_tmp);            
         
             for(i=0; i<n; i++)
             {

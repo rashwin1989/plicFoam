@@ -1,10 +1,12 @@
 
-
-plicFuncs::print_line(osGrad, 100);
-osGrad<< "Solution Time = " << runTime.timeName() << nl 
-<<"Gradients and Interpolation for diffusion" << endl;
-plicFuncs::print_line(osGrad, 100);
-osGrad<< endl;
+if(grad_debug)
+{
+    plicFuncs::print_line(osGrad, 100);
+    osGrad<< "Solution Time = " << runTime.timeName() << nl 
+        <<"Gradients and Interpolation for diffusion" << endl;
+    plicFuncs::print_line(osGrad, 100);
+    osGrad<< endl;
+}
 
 //------------------------------------------------------------------//
 //Make flat fields for alpha1, phase centroids, x, T required for gradient calculation
@@ -57,10 +59,10 @@ for(i=0; i<n; i++)
     for(j=0; j<n; j++)
     {
         idx = i*n + j;
-        const volScalarField& D1ij = D1[idx];
-        const volScalarField& D0ij = D0[idx];
-        surfaceScalarField& D1fij = D1f[idx];
-        surfaceScalarField& D0fij = D0f[idx];
+        const volScalarField& D1ij = Dij1[idx];
+        const volScalarField& D0ij = Dij0[idx];
+        surfaceScalarField& D1fij = Dij1f[idx];
+        surfaceScalarField& D0fij = Dij0f[idx];
         plicFuncs::linearInterpolate_2ph(D1ij, mesh, w_ph1, D1fij);
         plicFuncs::linearInterpolate_2ph(D0ij, mesh, w_ph1, D0fij);
     }
@@ -125,7 +127,7 @@ if(grad_debug2)
             for(j=0; j<n; j++)
             {
                 idx = i*n + j;
-                osGrad<< setw(8) << D1[idx].internalField()[cellI] << "  ";
+                osGrad<< setw(8) << Dij1[idx].internalField()[cellI] << "  ";
             }
         }
         osGrad<< endl;
@@ -183,7 +185,7 @@ if(grad_debug2)
             for(j=0; j<n; j++)
             {
                 idx = i*n + j;
-                osGrad<< setw(8) << D1f[idx][faceI] << "  ";
+                osGrad<< setw(8) << Dij1f[idx][faceI] << "  ";
             }
         }
         osGrad<< endl;

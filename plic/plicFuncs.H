@@ -949,6 +949,8 @@ namespace plicFuncs
     
     void y2x(int n, double *MW, double *y, double *x);
 
+    double calc_MW_from_x(int n, double *MW, double *x);
+
     double calc_rho_from_V(int n, double *x, double *MW, double V);
 
     double calc_CvIG_from_CpIG(int n, double *x, double *CpIG);
@@ -1156,6 +1158,14 @@ namespace plicFuncs
         PtrList<volScalarField>& D,
         const bool debug,
         OFstream& os
+    );
+
+    void calc_D_from_Dij
+    (
+        int n,
+        double *x,
+        double *Dij,
+        double *D
     );
 
     void correct_D_from_Dij

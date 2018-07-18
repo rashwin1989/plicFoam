@@ -27,6 +27,8 @@ if (adjustTimeStep)
 
         maxDeltaTFact = min(maxDeltaTFactAdv, maxDeltaTFactDiff);
 
+        maxDeltaTFact = min(maxDeltaTFact, 5.0);
+
         runTime.setDeltaT
         (
             min
