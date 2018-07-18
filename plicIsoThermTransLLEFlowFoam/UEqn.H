@@ -1,7 +1,25 @@
 
+if(U_debug)
+{
+    plicFuncs::print_line(osU, 100);
+    osU<< "Solution Time = " << runTime.timeName() << "  Momentum Eqn" << endl;
+    plicFuncs::print_line(osU, 100);
+    osU<< endl;
+}
+
 alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
 alpha0f = scalar(1) - alpha1f;
 muf = alpha1f*mu1f + alpha0f*mu0f;
+
+if(U_debug)
+{
+    plicFuncs::print_field(mu1, osU); 
+    plicFuncs::print_field(mu0, osU);
+    plicFuncs::print_surfaceField(alpha1f, mesh, osU);
+    plicFuncs::print_surfaceField(mu1f, mesh, osU);
+    plicFuncs::print_surfaceField(mu0f, mesh, osU);
+    plicFuncs::print_surfaceField(muf, mesh, osU);
+}
 
 /*
 surfaceScalarField gammaf = mag(interface.nHatf())/mesh.magSf();
@@ -19,6 +37,7 @@ Info<< "Min(mu) = " << min(mu).value()
     << endl;
 Info<< "Min(muf) = " << min(muf).value()
     << "  Max(muf) = " << max(muf).value()
+    << nl
     << endl;
 
 

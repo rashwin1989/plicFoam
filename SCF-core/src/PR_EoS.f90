@@ -1218,7 +1218,7 @@ subroutine calculate_kij_and_dkijdT( &
       allocate( kij_stored(n,n) )
 
       ! 0) read A, B data 
-      open(unit = 111, file = 'constant/PPR78AB.dat+', &
+      open(unit = 111, file = 'PPR78AB.dat+', &
         access = 'sequential', status = 'unknown')
       do i=1,22
         read(111,*) (A(i,j),j=1,22)
@@ -1232,7 +1232,7 @@ subroutine calculate_kij_and_dkijdT( &
 
       ! 1) read a header file for species' database
       !      n_species (it is database size, used species No. is n <= n_species)
-      open(unit = 111, file = 'constant/species.dat+', &
+      open(unit = 111, file = 'species.dat+', &
         access = 'sequential', status = 'unknown')
       read(111,*) n_species, n_pure
       close(111)
@@ -1241,7 +1241,7 @@ subroutine calculate_kij_and_dkijdT( &
 
       ! 2) read group data for all species
       allocate( G(1:n_species*3+n_pure,1:23) );!times 3 means P.N.A. + water + n-decane + ...
-      open(unit = 111, file = 'constant/groups.dat+', &
+      open(unit = 111, file = 'groups.dat+', &
         access = 'sequential', status = 'unknown')
       do i=1,n_species*3+n_pure
         read(111,*) (G(i,j),j=1,23)
@@ -1263,7 +1263,7 @@ subroutine calculate_kij_and_dkijdT( &
 
       ! 3) read T_up
       allocate( T_up(1:NS,1:NS) )
-      open(unit = 111, file = 'constant/BIP_T_up.dat+', &
+      open(unit = 111, file = 'BIP_T_up.dat+', &
         access = 'sequential', status = 'unknown')
       do i=1,NS
         read(111,*) (T_up(i,j),j=1,NS)
@@ -1272,7 +1272,7 @@ subroutine calculate_kij_and_dkijdT( &
       close(111)
 
       allocate( T_up2(1:NS,1:NS) )
-      open(unit = 111, file = 'constant/BIP_T_up2.dat+', &
+      open(unit = 111, file = 'BIP_T_up2.dat+', &
         access = 'sequential', status = 'unknown')
       do i=1,NS
         read(111,*) (T_up2(i,j),j=1,NS)
@@ -1282,7 +1282,7 @@ subroutine calculate_kij_and_dkijdT( &
 
       ! 4) read BIP sign
       allocate( sBIP(1:NS,1:NS) )
-      open(unit = 111, file = 'constant/BIP_sign.dat+', &
+      open(unit = 111, file = 'BIP_sign.dat+', &
         access = 'sequential', status = 'unknown')
       !print*, 'sBIP:'
       do i=1,NS
@@ -1293,7 +1293,7 @@ subroutine calculate_kij_and_dkijdT( &
 
       ! 5) read BIP value
       allocate( rBIP(1:NS,1:NS) )
-      open(unit = 111, file = 'constant/BIP_value.dat+', &
+      open(unit = 111, file = 'BIP_value.dat+', &
         access = 'sequential', status = 'unknown')
       !print*, 'rBIP:'
       do i=1,NS

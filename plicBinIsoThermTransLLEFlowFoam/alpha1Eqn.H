@@ -1,9 +1,11 @@
 
-
-plicFuncs::print_line(osAlpha, 100);
-osAlpha<< "Solution Time = " << runTime.timeName() << endl;
-plicFuncs::print_line(osAlpha, 100);
-osAlpha<< endl;
+if(alpha_debug)
+{
+    plicFuncs::print_line(osAlpha, 100);
+    osAlpha<< "Solution Time = " << runTime.timeName() << endl;
+    plicFuncs::print_line(osAlpha, 100);
+    osAlpha<< endl;
+}
 
 /*
 volScalarField divU(fvc::div(phi));

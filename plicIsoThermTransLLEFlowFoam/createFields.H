@@ -2,10 +2,10 @@
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
-scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX;
+scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN_COEFF, A_INTFC_2PH_MIN, ALPHA_2PH_MAX, ALPHA_2PH_MIN_IST, ALPHA_2PH_MAX_IST;
 //Temp variables
-label iOCorr, iPCorr, iNonOrthCorr;
-label nCells, nFaces, n_flatFld_diff, n_flatFld_ist, faceI;
+label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
+label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
 word fieldName;
@@ -17,21 +17,23 @@ fileName outputFile;
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
 int n_flux_type, MAX_ITER_Ts;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, grad_debug2, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug, transProp_debug;
 double R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
-int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell;
-double T_0, P_thermo_tmp, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, pSCoeff, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI;
+int n, i, j, ijIndex, idx, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, iread, n_miscible;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI, Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij;
+FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) arrays/pointers
 //Input and parameter arrays
-int *tk;
-double *Pc, *Tc, *Vc, *w, *MW, *coef_ab, *Tb, *SG, *H8, *k, *dm;
+double *Pc, *Tc, *Vc, *w, *MW, *Tb, *SG, *H8, *k, *dm;
+double *kij_T, *kij;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp, *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
+double *y_cellI_tmp, *x_cellI_tmp, *Dij1_tmp, *Dij0_tmp, *D1_tmp, *D0_tmp;
+double *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
 
@@ -87,6 +89,8 @@ SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDI
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
 ALPHA_2PH_MIN = transPropDict.lookupOrDefault("ALPHA_2PH_MIN", 1E-09);
 ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
+ALPHA_2PH_MIN_IST = transPropDict.lookupOrDefault("ALPHA_2PH_MIN_IST", 1E-06);
+ALPHA_2PH_MAX_IST = 1 - ALPHA_2PH_MIN_IST;
 A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
 scalar avgSf = (mesh.magSf()).average().value();
 A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
@@ -105,8 +109,12 @@ ist_debug2 = transPropDict.lookupOrDefault("ist_debug2", false);
 momentumPredictor = solDict.lookupOrDefault("momentumPredictor", false);
 advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
+pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
+U_debug = transPropDict.lookupOrDefault("U_debug", false);
+interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
+transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
 // int switches
-n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
+n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 0);
 //Done reading tolerances, max iters and switches
 //------------------------------------------------------------------//
 
@@ -128,8 +136,6 @@ _NNEW2_(Tc, double, n);
 _NNEW2_(Vc, double, n);
 _NNEW2_(w, double, n);
 _NNEW2_(MW, double, n);
-_NNEW2_(tk, int, n);
-_NNEW2_(coef_ab, double, n);
 _NNEW2_(Tb, double, n);
 _NNEW2_(SG, double, n);
 _NNEW2_(H8, double, n);
@@ -137,6 +143,10 @@ _NNEW2_(k, double, n);
 _NNEW2_(dm, double, n);
 _NNEW2_(y_cellI_tmp, double, n);
 _NNEW2_(x_cellI_tmp, double, n);
+_NNEW2_(Dij1_tmp, double, n*n);
+_NNEW2_(Dij0_tmp, double, n*n);
+_NNEW2_(D1_tmp, double, n);
+_NNEW2_(D0_tmp, double, n);
 _NNEW2_(xs1_tmp, double, n);
 _NNEW2_(xs0_tmp, double, n);
 _NNEW2_(ys1_tmp, double, n);
@@ -145,10 +155,33 @@ _NNEW2_(ys0_tmp, double, n);
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
+//Read input parameters for BIP table from input file
+f = fopen("constant/kij_input.dat+", "r");
+iread = fscanf(f, "%lf %lf %d", &Ta_kij, &Tb_kij, &nT_kij);
+fclose(f);
+
+_NNEW2_(kij_T, double, nT_kij*n*n);
+_NNEW2_(kij, double, n*n);
+
+f = fopen("constant/kij_T.dat+", "r");
+for(iT=0; iT<nT_kij; iT++)
+{
+    for(i=0; i<n; i++)
+    {
+        for(j=0; j<n; j++)
+        {
+            idx = iT*n*n + i*n + j;
+            iread = fscanf(f, "%lf", &kij_T[idx]);
+        }
+    }
+}
+fclose(f);
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
 //Read thermo input parameters from files
-int n_species_db, iread;
+int n_species_db;
 char str_tmp[50];
-FILE *f;
 int n_pseudospecies_db, n_purespecies_db;
 int *idx_species, *idx_groups;
 
@@ -208,21 +241,6 @@ for (j=0;j<n;j++)
         //Vc[j] = 83.14*Tc[j]/Pc[j]/(3.72+.26*(tmp-7)); // cm^3/mol
 
         Pc[j] *= 1e5;  // bar --> Pa
-
-        if (idx_groups[j]>=0) 
-        {
-            // the first condition
-            // we use PPR78 to calculate BIPs
-            tk[j] = -(n_pseudospecies_db*idx_groups[j]+i+1);
-        }
-        else 
-        {
-            // in the following
-            // Guang's BIPs are used
-            // NOTE that there are only 3 species
-            // water, toluene, n-decane
-            tk[j] = -idx_groups[j];
-        }
 
         //x1[j] *= xPNA[ idx_groups[j] ];
 
@@ -335,8 +353,6 @@ for (j=0;j<n;j++)
 }
 
 fclose(f);
-
-for (j=0;j<n;j++) coef_ab[j]=-1;
 //Done read thermo input parameters from files
 //------------------------------------------------------------------//
 
@@ -363,6 +379,12 @@ outputFile = "diff_dbg";
 OFstream osDiff(runTime.path()/outputFile);
 outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
+outputFile = "pEqn_dbg";
+OFstream osPEqn(runTime.path()/outputFile);
+outputFile = "U_dbg";
+OFstream osU(runTime.path()/outputFile);
+outputFile = "transProp_dbg";
+OFstream osTransProp(runTime.path()/outputFile);
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//
 
@@ -370,6 +392,7 @@ OFstream osIst(runTime.path()/outputFile);
 //Set mesh related variables and fields
 nCells = mesh.nCells();
 nFaces = mesh.nFaces();
+nIntFaces = mesh.nInternalFaces();
 
 const labelList& own = mesh.owner();
 const labelList& nei = mesh.neighbour();
@@ -443,6 +466,7 @@ volScalarField alpha1_old
 
 Info<< "Calculating field alpha0\n" << endl;
 volScalarField alpha0("alpha0", scalar(1) - alpha1);
+volScalarField alpha0_old = alpha0;
 
 volScalarField limitedAlpha1
 (
@@ -474,27 +498,81 @@ surfaceScalarField alpha0f = scalar(1) - alpha1f;
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
-//Thermo and transport properties fields initialization
-Info<< "Reading transportProperties\n" << endl;
+//T, Enthalpy initialization
+Info<< "Reading field T1" << endl;
+volScalarField T1
+(
+    IOobject
+    (
+        "T1",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+T1.correctBoundaryConditions();
 
-//initialization of values for phase densities
-const dimensionedScalar& rho1_0 = transPropDict.lookup("rho1");
-const dimensionedScalar& rho0_0 = transPropDict.lookup("rho0");
-//initialization of values for phase viscosities
-const dimensionedScalar& mu1_0 = transPropDict.lookup("mu1");
-const dimensionedScalar& mu0_0 = transPropDict.lookup("mu0");
-//initialization of values for thermal conductivities
-const dimensionedScalar& lambda1_0 = transPropDict.lookup("lambda1");
-const dimensionedScalar& lambda0_0 = transPropDict.lookup("lambda0");
-//initialization of values for specific heats
-const dimensionedScalar& Cp1_0 = transPropDict.lookup("Cp1");
-const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
-//initialization of values for mass diffusivities
-//const dimensionedScalar& D1_0 = transPropDict.lookup("D1");
-//const dimensionedScalar& D0_0 = transPropDict.lookup("D0");
-//initialization of values for molecular weights
-const dimensionedScalar& MW1_0 = transPropDict.lookup("MW1");
-const dimensionedScalar& MW0_0 = transPropDict.lookup("MW0");
+Info<< "Reading field T0" << endl;
+volScalarField T0
+(
+    IOobject
+    (
+        "T0",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+T0.correctBoundaryConditions();
+
+T_0 = T1.internalField()[0];
+//Done T, Enthalpy initialization
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//Thermo and transport properties fields initialization
+Info<< "Initializing transportProperties\n" << endl;
+
+//Since isothermal case, calculate BIP matrix from input table once for T_0
+plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+calcKij = false;
+Info<< "BIP matrix:  ";
+for(i=0; i<n*n; i++) Info<< kij[i] << "  ";
+Info<< endl;
+
+//phase-1
+//set pure oil phase initial mole fractions
+x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0;
+y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0;
+
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
+
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
+
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
+
+plicFuncs::calc_D_from_Dij(n, x_cellI_tmp, Dij1_tmp, D1_tmp);
+
+//phase-0
+//set pure water phase initial mole fractions
+x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1;
+y_cellI_tmp[0] = 0; y_cellI_tmp[1] = 1;
+
+plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
+
+plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
+
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
+
+plicFuncs::calc_D_from_Dij(n, x_cellI_tmp, Dij0_tmp, D0_tmp);
 
 volScalarField rho1
 (
@@ -521,7 +599,7 @@ volScalarField v1
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW1_0/rho1_0
+    1e-3*MW[0]/rho1_0
 );
 
 volScalarField rho0
@@ -549,7 +627,7 @@ volScalarField v0
         IOobject::NO_WRITE
     ),
     mesh,
-    1e-3*MW0_0/rho0_0
+    1e-3*MW[n-1]/rho0_0
 );
 
 volScalarField rho
@@ -594,6 +672,9 @@ volScalarField mu0
     mu0_0
 );
 
+volScalarField mu1_thermo = mu1;
+volScalarField mu0_thermo = mu0;
+
 surfaceScalarField mu1f(linearInterpolate(mu1));
 surfaceScalarField mu0f(linearInterpolate(mu0));
 
@@ -613,62 +694,6 @@ volScalarField mu
 
 // Mixture viscosity at cell faces
 surfaceScalarField muf(alpha1f*mu1f + alpha0f*mu0f);
-
-volScalarField lambda1
-(
-    IOobject
-    (
-        "lambda1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    lambda1_0
-);
-
-volScalarField lambda0
-(
-    IOobject
-    (
-        "lambda0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    lambda0_0
-);
-
-volScalarField Cp1
-(
-    IOobject
-    (
-        "Cp1",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    Cp1_0
-);
-
-volScalarField Cp0
-(
-    IOobject
-    (
-        "Cp0",
-        runTime.timeName(),
-        mesh,
-        IOobject::NO_READ,
-        IOobject::NO_WRITE
-    ),
-    mesh,
-    Cp0_0
-);
 
 // Mass flux
 surfaceScalarField rhoPhi
@@ -690,12 +715,18 @@ volScalarField dgdt
 );
 
 int Nij = n*n;
+PtrList<dimensionedScalar> Dij1_0(Nij);
+PtrList<dimensionedScalar> Dij0_0(Nij);
 PtrList<dimensionedScalar> D1_0(n);
 PtrList<dimensionedScalar> D0_0(n);
-PtrList<volScalarField> D1(Nij);
-PtrList<volScalarField> D0(Nij);
-PtrList<surfaceScalarField> D1f(Nij);
-PtrList<surfaceScalarField> D0f(Nij);
+PtrList<volScalarField> Dij1(Nij);
+PtrList<volScalarField> Dij0(Nij);
+PtrList<volScalarField> Dij1f(Nij);
+PtrList<volScalarField> Dij0f(Nij);
+PtrList<volScalarField> D1(n);
+PtrList<volScalarField> D0(n);
+PtrList<surfaceScalarField> D1f(n);
+PtrList<surfaceScalarField> D0f(n);
 
 for(i=0; i<n; i++)
 {
@@ -706,7 +737,7 @@ for(i=0; i<n; i++)
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(fieldName)
+            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
         )
     );
 
@@ -717,7 +748,7 @@ for(i=0; i<n; i++)
         i,
         new dimensionedScalar
         (
-            transPropDict.lookup(fieldName)
+            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
         )
     );
 }

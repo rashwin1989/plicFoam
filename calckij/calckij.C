@@ -42,7 +42,6 @@ Description
 int main(int argc, char *argv[])
 {
     #include "setRootCase.H"
-    #include "createTime.H"
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     int *tk;
@@ -59,11 +58,11 @@ int main(int argc, char *argv[])
     int n_pseudospecies_db, n_purespecies_db;
     int *idx_species, *idx_groups;
 
-    f = fopen("constant/BIP_nT.dat+", "r");
+    f = fopen("kij_input.dat+", "r");
     iread = fscanf(f, "%lf %lf %d", &Ta, &Tn, &nT);
     fclose(f);
 
-    f = fopen("constant/input.dat+", "r");
+    f = fopen("input.dat+", "r");
     iread = fscanf(f, "%s %d", str_tmp, &n);
     fclose(f);
 
@@ -85,7 +84,7 @@ int main(int argc, char *argv[])
     _NNEW2_(idx_groups, int, n);
 
     //Read thermo input parameters from files       
-    f = fopen("constant/species.dat+", "r");
+    f = fopen("species.dat+", "r");
 
     iread = fscanf(f, "%d %d", &n_pseudospecies_db, &n_purespecies_db);
     if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
@@ -95,7 +94,7 @@ int main(int argc, char *argv[])
 
     fclose(f);
 
-    f = fopen("constant/input.dat+", "r");
+    f = fopen("input.dat+", "r");
 
     iread=fscanf(f, "%s %d", str_tmp, &n);  // num of species
     if(iread <= 0) Info<< "Input file reading error-----------------" << endl;
@@ -118,7 +117,7 @@ int main(int argc, char *argv[])
 
     fclose(f);
 
-    f = fopen("constant/petro.dat+","r");
+    f = fopen("petro.dat+","r");
 
     for (j=0;j<n;j++) 
     {
@@ -266,7 +265,7 @@ int main(int argc, char *argv[])
 
     fclose(f);
 
-    f = fopen("constant/kij_T.dat+", "w");
+    f = fopen("kij_T.dat+", "w");
 
     dT = (Tn - Ta)/(nT - 1);
 
@@ -303,11 +302,7 @@ int main(int argc, char *argv[])
     _DDELETE2_(k);
     _DDELETE2_(H8);
     _DDELETE2_(Tb);
-    _DDELETE2_(SG);
-   
-    Info<< "ExecutionTime = "
-        << runTime.elapsedCpuTime()
-        << " s\n\n" << endl;     
+    _DDELETE2_(SG);       
 
     Info<< "End\n" << endl;    
 

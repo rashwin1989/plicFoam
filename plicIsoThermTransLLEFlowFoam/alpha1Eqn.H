@@ -1,10 +1,13 @@
 
+if(alpha_debug)
+{
+    plicFuncs::print_line(osAlpha, 100);
+    osAlpha<< "Solution Time = " << runTime.timeName() << endl;
+    plicFuncs::print_line(osAlpha, 100);
+    osAlpha<< endl;
+}
 
-plicFuncs::print_line(osAlpha, 100);
-osAlpha<< "Solution Time = " << runTime.timeName() << endl;
-plicFuncs::print_line(osAlpha, 100);
-osAlpha<< endl;
-
+/*
 volScalarField divU(fvc::div(phi));
 
 volScalarField::DimensionedInternalField Sp
@@ -53,20 +56,24 @@ forAll(dgdt, celli)
         Su[celli] -= alpha1[celli]*pSCells[celli];
     }
 }
+    */
 
-volScalarField surfInt_phiAlpha1(fvc::surfaceIntegrate(phiAlpha1));
-scalarField& surfInt_phiAlpha1Cells = surfInt_phiAlpha1.internalField();
+surfInt_phiAlpha1 = fvc::surfaceIntegrate(phiAlpha1);
 
 forAll(alpha1Cells, cellI)
 {
+    /*
     alpha1Cells[cellI] = (alpha1OldCells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt + Su[cellI]*dt);
     alpha1Cells[cellI] /= (scalar(1.0) - Sp[cellI]*dt);
+        */
+    alpha1Cells[cellI] = alpha1Cells[cellI] - surfInt_phiAlpha1Cells[cellI]*dt;
 }
 
-Info<< "alpha1:  avg = "
-    << alpha1.weightedAverage(mesh.V()).value()
+alpha1_avg = alpha1.weightedAverage(mesh.V()).value();
+
+Info<< "alpha1:"
+    << "  avg = " << alpha1_avg
     << "  min = " << min(alpha1).value()
-    << "  undershoot = " << min(min(alpha1).value(), 0)
     << "  max = " << max(alpha1).value()
     << "  overshoot = " << max((max(alpha1).value() - 1), 0)
     << endl;
@@ -141,12 +148,12 @@ if(alpha_debug)
             osAlpha<< "div(phi) = " << div_phi
                 << "  div(phi, alpha1) = " << div_alpha1 << nl
                 << "pS = " << pSCells[cellI]
-                << "  dgdt = " << dgdt[cellI]
-                << "  Su = " << Su[cellI]
-                << " Sp = " << Sp[cellI] << nl
-                << "div(phi, alpha1)*dt = " << div_alpha1*dt
-                << "  Su*dt = " << Su[cellI]*dt
-                << " Sp*dt = " << Sp[cellI]*dt << nl
+                //<< "  dgdt = " << dgdt[cellI]
+                //<< "  Su = " << Su[cellI]
+                //<< " Sp = " << Sp[cellI] << nl
+                << "  div(phi, alpha1)*dt = " << div_alpha1*dt
+                //<< "  Su*dt = " << Su[cellI]*dt
+                //<< " Sp*dt = " << Sp[cellI]*dt << nl
                 << "  alpha1 new time = " << alpha1Cells[cellI] << nl
                 << endl;
         }
@@ -158,14 +165,15 @@ if(redist_alpha)
     plicFuncs::redistribute_alpha_field(mesh, alpha1Cells, cell_stencil.stencil(), ALPHA_MIN_BOUND, ALPHA_BOUND_ITERS_MAX, minAlpha1Cell, maxAlpha1Cell, minAlpha1, maxAlpha1, alpha_debug, osAlpha);
 
     alpha1.correctBoundaryConditions();
+    
+    alpha1_avg = alpha1.weightedAverage(mesh.V()).value();
 
-    Info<< "alpha1 after redistribution:  avg = "
-    << alpha1.weightedAverage(mesh.V()).value()
-    << "  min = " << min(alpha1).value()
-    << "  undershoot = " << min(min(alpha1).value(), 0)
-    << "  max = " << max(alpha1).value()
-    << "  overshoot = " << max((max(alpha1).value() - 1), 0)
-    << endl;
+    Info<< "Redistributed alpha1:"
+        << "  avg = " << alpha1_avg
+        << "  min = " << min(alpha1).value()
+        << "  max = " << max(alpha1).value()
+        << "  overshoot = " << max((max(alpha1).value() - 1), 0)
+        << endl;
 }
 
 if(alpha_debug)
@@ -190,8 +198,14 @@ if(alpha_debug)
 alpha1.max(0.0);
 alpha1.min(1.0);
 
-Info<< "alpha1 after clipping:  avg = "
-    << alpha1.weightedAverage(mesh.V()).value()    
+alpha1_clip_avg = (alpha1).weightedAverage(mesh.V()).value();
+alpha1_clip_err = mag(alpha1_clip_avg - alpha1_avg);
+alpha1_clip_cum_err += alpha1_clip_err;
+
+Info<< "Clipped alpha1:"        
+    << "  avg = " << alpha1_clip_avg
+    << "  err = " << alpha1_clip_err
+    << "  cum_err = " << alpha1_clip_cum_err
     << endl;
 
 alpha1.correctBoundaryConditions();

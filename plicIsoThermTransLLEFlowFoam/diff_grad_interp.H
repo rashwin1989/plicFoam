@@ -56,7 +56,7 @@ for(i=0; i<n; i++)
 
     for(j=0; j<n; j++)
     {
-        idx = i + j*n;
+        idx = i*n + j;
         const volScalarField& D1ij = D1[idx];
         const volScalarField& D0ij = D0[idx];
         surfaceScalarField& D1fij = D1f[idx];
@@ -124,7 +124,7 @@ if(grad_debug2)
         {
             for(j=0; j<n; j++)
             {
-                idx = i + j*n;
+                idx = i*n + j;
                 osGrad<< setw(8) << D1[idx].internalField()[cellI] << "  ";
             }
         }
@@ -182,7 +182,7 @@ if(grad_debug2)
         {
             for(j=0; j<n; j++)
             {
-                idx = i + j*n;
+                idx = i*n + j;
                 osGrad<< setw(8) << D1f[idx][faceI] << "  ";
             }
         }

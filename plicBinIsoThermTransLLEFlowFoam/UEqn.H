@@ -1,8 +1,11 @@
 
-plicFuncs::print_line(osU, 100);
-osU<< "Solution Time = " << runTime.timeName() << "  Momentum Eqn" << endl;
-plicFuncs::print_line(osU, 100);
-osU<< endl;
+if(U_debug)
+{
+    plicFuncs::print_line(osU, 100);
+    osU<< "Solution Time = " << runTime.timeName() << "  Momentum Eqn" << endl;
+    plicFuncs::print_line(osU, 100);
+    osU<< endl;
+}
 
 alpha1f = fvc::interpolate(limitedAlpha1, phi, "alpha1f");
 alpha0f = scalar(1) - alpha1f;
