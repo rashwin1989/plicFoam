@@ -200,7 +200,7 @@ alpha1_clip_avg = (alpha1).weightedAverage(mesh.V()).value();
 alpha1_clip_err = mag(alpha1_clip_avg - alpha1_avg);
 alpha1_clip_cum_err += alpha1_clip_err;
 
-Info<< "Clipped alpha1[" << i << "]:"        
+Info<< "Clipped alpha1:"        
     << "  avg = " << alpha1_clip_avg
     << "  err = " << alpha1_clip_err
     << "  cum_err = " << alpha1_clip_cum_err

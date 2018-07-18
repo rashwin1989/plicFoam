@@ -153,6 +153,8 @@ for(i=0; i<(n-1); i++)
 
     Info<< "Clipped C1[" << i << "]:"        
         << "  avg = " << C1_clip_avg[i]
+        << "  min = " << min(C1i).value()
+        << "  max = " << max(C1i).value()
         << "  err = " << C1_clip_err[i]
         << "  cum_err = " << C1_clip_cum_err[i]
         << endl;
@@ -267,6 +269,8 @@ for(i=0; i<(n-1); i++)
 
     Info<< "Clipped C0[" << i << "]:"        
         << "  avg = " << C0_clip_avg[i]
+        << "  min = " << min(C0i).value()
+        << "  max = " << max(C0i).value()
         << "  err = " << C0_clip_err[i]
         << "  cum_err = " << C0_clip_cum_err[i]
         << endl;

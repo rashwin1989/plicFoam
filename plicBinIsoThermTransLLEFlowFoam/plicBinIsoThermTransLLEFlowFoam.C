@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << endl; 
             }
+            Info<< endl;
 
             dt = deltaT;
             Info<< "Calculating two-phase advective fluxes" << endl;
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << endl;            
+                << " s" << << nl << endl;            
 
             #include "alpha1Eqn.H"
 
