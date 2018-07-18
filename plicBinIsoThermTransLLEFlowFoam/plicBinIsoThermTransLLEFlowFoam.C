@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
-                << " s" << << nl << endl;            
+                << " s" << nl << endl;            
 
             #include "alpha1Eqn.H"
 
