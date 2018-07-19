@@ -219,6 +219,9 @@ double transport_LLE_f_(const gsl_vector *v, void *params)
       id++;
     }
   }
+
+  printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+  printf("\n");
   
   return transport_LLE_eval_func(k, _LLE_INPUT_);
 }
@@ -274,6 +277,12 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   do
   {
     gsl_iter++;
+
+    printf("-----------------------------------------------------\n");
+    printf("GSL iter:  ", gsl_iter);
+    printf("-----------------------------------------------------\n");
+    printf("\n");
+
     gsl_status = gsl_multimin_fminimizer_iterate(gsl_s);
 
     if (gsl_status) break;

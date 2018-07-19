@@ -9824,12 +9824,54 @@ void calc_intfc_transLLE
 
     Ts_tmp = Ts;
 
+    if(debug)
+    {
+        print_line(os, 100);
+        os<< "Interface Tansport-LLE Calculation" << endl;
+        print_line(os, 100);
+        os<< endl;
+    }
+
     for(iTs=0; iTs<MAX_ITERS_Ts; iTs++)
     {
+        if(debug)
+        {
+            print_line(os, 100);
+            os<< "iTs = " << iTs+1 << "  Ts = " << Ts_tmp << endl;
+            print_line(os, 100);
+            os<< endl;
+        }
         //calculate BIPs for current iteration interface temperature Ts_tmp
         calc_kij_from_table(Ts_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
+        if(debug)
+        {
+            os<< "BIP matrix:  ";
+            for(i=0; i<n*n; i++) os<< kij[i] << "  ";
+            os<< nl<< endl;
+            print_line(os, 100);
+            os<< "GSL optimization function" << endl;
+            print_line(os, 100);
+            os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << endl;
+            print_line(os, 100);
+            os<< setw(8) << "Species " << setw(12) << "xeff1 " << setw(12) << "xeff0 " << setw(12) << "xs1 " << setw(12) << "xs0 " << endl;
+            print_line(os, 100);
+            for(i=0; i<n; i++)
+            {
+                os<< setw(8) << i << setw(12) << xeff1[i] << setw(12) << xeff0[i] << setw(12) << xs1[i] << setw(12) << xs0[i] << endl;
+            }
+            print_line(os, 100);
+        }
+
         iLLE = my2_gsl_find_transport_LLE(n,Pc,Tc,Vc,w,MW,Tb,SG,H8,kij,n_flux_type,dn1,dn0,P,Ts_tmp,xeff1,xeff0,xs1,xs0,lnphi1,lnphi0,Dij1,Dij0,h1,h0,flux_m_1,flux_m_0,flux_umf);
+
+        if(debug)
+        {
+            print_line(os, 100);
+            os<< "Done GSL optimization function" << endl;
+            print_line(os, 100);
+            os<< nl << endl;
+        }
 
         //calculate fluid properties on both sides of interface
         //convert the mole fractions to mass fractions

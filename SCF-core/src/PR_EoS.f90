@@ -2590,7 +2590,7 @@ subroutine findEquilibrium_new2( &
   ! Gex Method for equilibrium
   real(8) :: x10(n),x1(n),x2(n),s,s1,fixed
 
-  bPrint = 0 ! 1: print debugging ; 0: do not print
+  bPrint = 1 ! 1: print debugging ; 0: do not print
 
   ! initialize the phases
   ! copy x_a & x_b to x1(oil phase) & x2(water phase)
@@ -2613,9 +2613,9 @@ subroutine findEquilibrium_new2( &
   enddo
   x2(n) = 1 - 1d-6*dfloat(n-1)
 
-  !print *,'x1',x1
-  !print *,'x2',x2
-  !print *, 'TS', T
+  print *,'x1: ',x1
+  print *,'x2: ',x2
+  print *,'Ts: ',T
 
   ! converge the water phase
   n_backward = 0
@@ -2624,11 +2624,11 @@ subroutine findEquilibrium_new2( &
     call fugacities2(P,T,n,Pc,Tc,w,kij,x2,fuga_b,G_b)
 
     if (bPrint>0) then
-      print *,'x1',x1
-      print *,'x2',x2
-      print *,'f1',fuga_a
-      print *,'f2',fuga_b
-      !print *,'sum',sum(x1),sum(x2)
+      print *,'x1: ',x1
+      print *,'x2: ',x2
+      print *,'f1: ',fuga_a
+      print *,'f2: ',fuga_b
+      print *,'sum: ',sum(x1),' ',sum(x2)
     endif
 
     x_ao = x1
@@ -2722,10 +2722,11 @@ subroutine findEquilibrium_new2( &
   enddo
   s_min = s
 
-  !print *, s, x1, x2
-
-  !print *,'times',i,s
-  !print *,sum(x1),sum(x2)
+  print *,'iters: ',i
+  print *,'s: ',s
+  print *,'x1: ',x1
+  print *,'x2: ',x2
+  print *,'sum(x1): ',sum(x1),' sum(x2): ',sum(x2)
 
   ! reset the phase
   x_a = x1    
