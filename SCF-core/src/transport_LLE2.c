@@ -235,6 +235,17 @@ double transport_LLE_eval_func(
   // LLE
   transport_LLE_core(P,T_s,k,n,Pc,Tc,w,kij,x_1,x_2);
 
+  printf("-------------------------------------------------------\n");
+  printf("Done phase equilibrium calculation\n");
+  printf("-------------------------------------------------------\n");
+  printf("\n");
+
+  printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+  printf("\n");
+  printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
+  printf("\n");
+  printf("-------------------------------------------------------\n");
+
   // properties
   // phase-1  
   fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_1,kij,lnphi_1,dlnphi_1,&V_1);
@@ -283,6 +294,13 @@ double transport_LLE_eval_func(
       rhs_flux,flux_m_1,flux_m_2,flux_umf);
 
   _tmp = transport_evaluation_func(n,y_1,y_2,flux_m_1,flux_m_2);
+
+  printf("-------------------------------------------------------\n");
+  printf("Done transport_evaluation_function\n");
+  printf("-------------------------------------------------------\n");
+  printf("transport equations error = %.9f\n", _tmp);
+  printf("-------------------------------------------------------\n");
+  printf("\n");
 
   return _tmp;
 }

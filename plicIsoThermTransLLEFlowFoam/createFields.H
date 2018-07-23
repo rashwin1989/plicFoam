@@ -375,22 +375,43 @@ Info<< "Done initialize UMFPACK" << endl;
 //Set up output streams linked to output files
 outputFile = "plic_dbg";
 OFstream osPlic(runTime.path()/outputFile);
+osPlic.precision(5);
+
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
+osAlpha.precision(5);
+
 outputFile = "adv_dbg";
 OFstream osAdv(runTime.path()/outputFile);
+osAdv.precision(5);
+
 outputFile = "grad_dbg";
 OFstream osGrad(runTime.path()/outputFile);
+osGrad.precision(5);
+
 outputFile = "diff_dbg";
 OFstream osDiff(runTime.path()/outputFile);
+osDiff.precision(5);
+
 outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
+osIst.precision(5);
+osIst.setf(std::ios::scientific);
+//osIst.setf(std::ios::showpos);
+osIst.setf(std::ios::left);
+
 outputFile = "pEqn_dbg";
 OFstream osPEqn(runTime.path()/outputFile);
+osPEqn.precision(5);
+
 outputFile = "U_dbg";
 OFstream osU(runTime.path()/outputFile);
+osU.precision(5);
+
 outputFile = "transProp_dbg";
 OFstream osTransProp(runTime.path()/outputFile);
+osTransProp.precision(5);
+
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//
 
@@ -552,17 +573,19 @@ scalar Y0Tot_tmp = 0;
 for(i=0; i<(n-1); i++)
 {    
     fieldName = "Y1_0[" + Foam::name(i) + "]";
-    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 0);
+    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 0.0);
     Y1_0[i] = Y1i_tmp;
     Y1Tot_tmp += Y1i_tmp;
 
     fieldName = "Y0_0[" + Foam::name(i) + "]";
-    Y0i_tmp = transPropDict.lookupOrDefault(fieldName, 0);
+    Y0i_tmp = transPropDict.lookupOrDefault(fieldName, 0.0);
     Y0_0[i] = Y0i_tmp;
     Y0Tot_tmp += Y0i_tmp;
 }
 Y1_0[n-1] = scalar(1.0) - Y1Tot_tmp;
+Y1_0[n-1] = max(Y1_0[n-1], 0.0);
 Y0_0[n-1] = scalar(1.0) - Y0Tot_tmp;
+Y0_0[n-1] = max(Y0_0[n-1], 0.0);
 
 //Since isothermal case, calculate BIP matrix from input table once for T_0
 plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
@@ -1240,6 +1263,11 @@ for(i=0; i<(n-1); i++)
     Y1t -= Y1[i];
     Y0t -= Y0[i];
 }
+
+Y1t.max(0.0);
+Y1t.min(1.0);
+Y0t.max(0.0);
+Y0t.min(1.0);
 
 int endIndex = n-1;
 

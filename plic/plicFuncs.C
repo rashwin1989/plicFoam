@@ -9845,7 +9845,7 @@ void calc_intfc_transLLE
         calc_kij_from_table(Ts_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
 
         if(debug)
-        {
+        {            
             os<< "BIP matrix:  ";
             for(i=0; i<n*n; i++) os<< kij[i] << "  ";
             os<< nl<< endl;
@@ -9854,11 +9854,11 @@ void calc_intfc_transLLE
             print_line(os, 100);
             os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << endl;
             print_line(os, 100);
-            os<< setw(8) << "Species " << setw(12) << "xeff1 " << setw(12) << "xeff0 " << setw(12) << "xs1 " << setw(12) << "xs0 " << endl;
+            os<< setw(8) << "Species" << setw(14) << "xeff1" << setw(14) << "xeff0" << setw(14) << "xs1" << setw(14) << "xs0" << endl;
             print_line(os, 100);
             for(i=0; i<n; i++)
             {
-                os<< setw(8) << i << setw(12) << xeff1[i] << setw(12) << xeff0[i] << setw(12) << xs1[i] << setw(12) << xs0[i] << endl;
+                os<< setw(8) << i << setw(14) << xeff1[i] << setw(14) << xeff0[i] << setw(14) << xs1[i] << setw(14) << xs0[i] << endl;
             }
             print_line(os, 100);
         }
@@ -9869,6 +9869,14 @@ void calc_intfc_transLLE
         {
             print_line(os, 100);
             os<< "Done GSL optimization function" << endl;
+            os<< "iLLE = " << iLLE << endl;
+            print_line(os, 100);
+            os<< setw(8) << "Species" << setw(14) << "xs1" << setw(14) << "xs0" << setw(14) << "flux_m_1" << setw(14) << "flux_m_0" << endl;
+            print_line(os, 100);
+            for(i=0; i<n; i++)
+            {
+                os<< setw(8) << i << setw(14) << xs1[i] << setw(14) << xs0[i] << setw(14) << flux_m_1[i] << setw(14) << flux_m_0[i] << endl;
+            }
             print_line(os, 100);
             os<< nl << endl;
         }
@@ -10686,7 +10694,7 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
             
             //assign the calculated values to corresponding fields
-            TsCells[cellI] = Ts_cellI;
+            //TsCells[cellI] = Ts_cellI;
             mS1TotCells[cellI] = mS1Tot_cellI;
             JsTotCells[cellI] = mS1Tot_cellI*V_cellI;
             for(i=0; i<n; i++)
@@ -10717,38 +10725,38 @@ void calc_Xs_Ys_Js_mS_alphaS
                     << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
                     << "T1 = " << T1Cells[cellI] << "  T0 = " << T0Cells[cellI] << "  rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(10) << "x1" << "  " << setw(10) << "x0" << "  " << setw(10) << "y1" << "  " << setw(10) << "y0" << "  " << setw(10) << "C1" << "  " << setw(10) << "C0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "x1" << "  " << setw(14) << "x0" << "  " << setw(14) << "y1" << "  " << setw(14) << "y0" << "  " << setw(14) << "C1" << "  " << setw(14) << "C0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << x1_cellI[i] << "  " << setw(10) << x0_cellI[i] << "  " << setw(10) << Y1_cellI[i] << "  " << setw(10) << Y0_cellI[i] << "  " << setw(10) << C1_cellI[i] << "  " << setw(10) << C0_cellI[i] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << x1_cellI[i] << "  " << setw(14) << x0_cellI[i] << "  " << setw(14) << Y1_cellI[i] << "  " << setw(14) << Y0_cellI[i] << "  " << setw(14) << C1_cellI[i] << "  " << setw(14) << C0_cellI[i] << endl;
                 }
                 print_line(os, 100);
                 os<< "dn1 = " << dn1 << "  dn0 = " << dn0 << "  Teff1 = " << Teff1 << "  Teff0 = " << Teff0 << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(10) << "xeff1" << "  " << setw(10) << "xeff0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "xeff1" << "  " << setw(14) << "xeff0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << xeff1[i] << "  " << setw(10) << xeff0[i] << endl;                
+                    os<< setw(8) << i << "  " << setw(14) << xeff1[i] << "  " << setw(14) << xeff0[i] << endl;                
                 }
                 print_line(os, 100);
                 os<< "Ts = " << Ts_cellI << "  mS1Tot = " << mS1Tot_cellI << "  alphaS1 = " << alphaS1Cells[cellI] << "  alphaS0 = " << alphaS0Cells[cellI] << nl
                     //<< "limiter_mS1Tot = " << limiter_mS1Tot << "  limiter_min = " << limiter_min << nl
                     << "iLLE = " << iLLE << "  iTs = " << iTs << endl;
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(10) << "xs1" << "  " << setw(10) << "xs0" << "  " << setw(10) << "ys1" << "  " << setw(10) << "ys0" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "xs1" << "  " << setw(14) << "xs0" << "  " << setw(14) << "ys1" << "  " << setw(14) << "ys0" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << xs1[i] << "  " << setw(10) << xs0[i] << "  " << setw(10) << ys1[i] << "  " << setw(10) << ys0[i] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << xs1[i] << "  " << setw(14) << xs0[i] << "  " << setw(14) << ys1[i] << "  " << setw(14) << ys0[i] << endl;
                 }
                 print_line(os, 100);
-                os<< setw(7) << "Species" << "  " << setw(10) << "flux_m_1" << "  " << setw(10) << "flux_m_0" << "  " << setw(10) << "Js1" << "  " << setw(10) << "Js0" << "  " << setw(10) << "mS1" << endl;
+                os<< setw(8) << "Species" << "  " << setw(14) << "flux_m_1" << "  " << setw(14) << "flux_m_0" << "  " << setw(14) << "Js1" << "  " << setw(14) << "Js0" << "  " << setw(14) << "mS1" << endl;
                 print_line(os, 100);
                 for(i=0; i<n; i++)
                 {
-                    os<< setw(7) << i << "  " << setw(10) << flux_m_1[i] << "  " << setw(10) << flux_m_0[i] << "  " << setw(10) << Js1_cellI[i] << "  " << setw(10) << Js0_cellI[i] << "  " << setw(10) << mS1_cellI[i] << endl;
+                    os<< setw(8) << i << "  " << setw(14) << flux_m_1[i] << "  " << setw(14) << flux_m_0[i] << "  " << setw(14) << Js1_cellI[i] << "  " << setw(14) << Js0_cellI[i] << "  " << setw(14) << mS1_cellI[i] << endl;
                 }
                 print_line(os, 100);
                 print_line(os, 100);

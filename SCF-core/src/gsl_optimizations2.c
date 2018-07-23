@@ -279,7 +279,7 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
     gsl_iter++;
 
     printf("-----------------------------------------------------\n");
-    printf("GSL iter:  ", gsl_iter);
+    printf("GSL iter:  %d\n", gsl_iter);
     printf("-----------------------------------------------------\n");
     printf("\n");
 

@@ -61,6 +61,10 @@ Description
 
 #include "MACROS2.H"
 
+using std::left;
+using std::showpos;
+using std::scientific;
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
