@@ -1,8 +1,11 @@
 
-plicFuncs::print_line(osIst, 100);
-osIst<< "Solution Time = " << runTime.timeName() << "  Interfacial transfer" << endl;
-plicFuncs::print_line(osIst, 100);
-osIst<< endl;
+if(ist_debug)
+{
+    plicFuncs::print_line(osIst, 100);
+    osIst<< "Solution Time = " << runTime.timeName() << "  Interfacial transfer" << endl;
+    plicFuncs::print_line(osIst, 100);
+    osIst<< endl;
+}
 
 dt = deltaT;
 
@@ -183,11 +186,13 @@ forAll(alpha1Cells, cellI)
     alpha1_cellI = alpha1Cells[cellI] + alphaS1Cells[cellI]*dt;
     if(alpha1_cellI < 0)
     {
-        osIst<< "alpha1 undershoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+        osIst<< "Time = " << runTime.timeName() << nl
+            << "alpha1 undershoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
     }
     if(alpha1_cellI > 1)
     {
-        osIst<< "alpha1 overshoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+        osIst<< "Time = " << runTime.timeName() << nl
+            << "alpha1 overshoot in cell " << cellI << "  alpha1 = " << alpha1_cellI << endl;
     }
     alpha1_cellI = max(alpha1_cellI, 0.0);
     alpha1Cells[cellI] = alpha1_cellI;
@@ -199,7 +204,8 @@ forAll(alpha1Cells, cellI)
         C1i_cellI = C1[i].internalField()[cellI] + mS1[i].internalField()[cellI]*dt;
         if(C1i_cellI < 0)
         {
-            osIst<< "C1[" << i << "] -ve in cell " << cellI << "  C1[" << i << "] = " << C1i_cellI << endl;
+            osIst<< "Time = " << runTime.timeName() << nl
+                << "C1[" << i << "] -ve in cell " << cellI << "  C1[" << i << "] = " << C1i_cellI << endl;
         }        
         C1i_cellI = max(C1i_cellI, 0.0);
         C1[i].internalField()[cellI] = C1i_cellI;
@@ -240,11 +246,13 @@ forAll(alpha1Cells, cellI)
     alpha0_cellI = alpha0Cells[cellI] + alphaS0Cells[cellI]*dt;
     if(alpha0_cellI < 0)
     {
-        osIst<< "alpha0 undershoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+        osIst<< "Time = " << runTime.timeName() << nl
+            << "alpha0 undershoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
     }
     if(alpha0_cellI > 1)
     {
-        osIst<< "alpha0 overshoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
+        osIst<< "Time = " << runTime.timeName() << nl
+            << "alpha0 overshoot in cell " << cellI << "  alpha0 = " << alpha0_cellI << endl;
     }
     alpha0_cellI = max(alpha0_cellI, 0.0);
     alpha0Cells[cellI] = alpha0_cellI;
@@ -257,7 +265,8 @@ forAll(alpha1Cells, cellI)
         C0i_cellI = C0[i].internalField()[cellI] + mS0[i].internalField()[cellI]*dt;
         if(C0i_cellI < 0)
         {
-            osIst<< "C0[" << i << "] -ve in cell " << cellI << "  C0[" << i << "] = " << C0i_cellI << endl;
+            osIst<< "Time = " << runTime.timeName() << nl
+                << "C0[" << i << "] -ve in cell " << cellI << "  C0[" << i << "] = " << C0i_cellI << endl;
         }
         C0i_cellI = max(C0i_cellI, 0.0);
         C0[i].internalField()[cellI] = C0i_cellI;

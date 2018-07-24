@@ -247,12 +247,26 @@ double transport_LLE_eval_func(
   /* printf("-------------------------------------------------------\n"); */
 
   // properties
-  // phase-1  
-  fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_1,kij,lnphi_1,dlnphi_1,&V_1);
+  // phase-1
+  if(n_flux_type >= 0) 
+  {
+      fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_1,kij,lnphi_1,dlnphi_1,&V_1);
+  }
+  else
+  {
+      molar_volume2_(&P,&T_s,&n,Pc,Tc,w,kij,x_1,&V_1);
+  }
   new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_1,Dij_1);
 
-  // phase-2  
-  fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_2,kij,lnphi_2,dlnphi_2,&V_2);
+  // phase-2
+  if(n_flux_type >= 0)
+  {
+      fugacities_n_its_derivatives3_(&P,&T_s,&n,Pc,Tc,w,x_2,kij,lnphi_2,dlnphi_2,&V_2);
+  }
+  else
+  {
+      molar_volume2_(&P,&T_s,&n,Pc,Tc,w,kij,x_2,&V_2);
+  }
   new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_2,Dij_2);
 
   x2y(n, MW, x_1, y_1);
