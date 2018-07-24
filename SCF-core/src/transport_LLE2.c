@@ -186,10 +186,10 @@ void transport_LLE_core(
 
   k_fortran=k+1;
 
-  printf("-------------------------------------------------------\n");
-  printf("findequilibrium_new2_ FORTRAN function\n");
-  printf("-------------------------------------------------------\n");
-  printf("\n");
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("findequilibrium_new2_ FORTRAN function\n"); */
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("\n"); */
 
   findequilibrium_new2_(&P,&T_s,&k_fortran,&n,Pc,Tc,w,kij,x_1,x_2,&s_min);
 }
@@ -216,15 +216,15 @@ double transport_LLE_eval_func(
     _NEW_(y_2,double,n);    
   }
 
-  printf("-------------------------------------------------------\n");
-  printf("transport_LLE_eval_func\n");
-  printf("-------------------------------------------------------\n");
-  printf("\n");
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("transport_LLE_eval_func\n"); */
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("\n"); */
 
-  printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
-  printf("\n");
-  printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
-  printf("\n");
+  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
+  /* printf("\n"); */
+  /* printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]); */
+  /* printf("\n"); */
 
   // -1) latest, setup to search in positive domain
   for (j=0; j<n; j++) {
@@ -235,16 +235,16 @@ double transport_LLE_eval_func(
   // LLE
   transport_LLE_core(P,T_s,k,n,Pc,Tc,w,kij,x_1,x_2);
 
-  printf("-------------------------------------------------------\n");
-  printf("Done phase equilibrium calculation\n");
-  printf("-------------------------------------------------------\n");
-  printf("\n");
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("Done phase equilibrium calculation\n"); */
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("\n"); */
 
-  printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
-  printf("\n");
-  printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
-  printf("\n");
-  printf("-------------------------------------------------------\n");
+  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
+  /* printf("\n"); */
+  /* printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]); */
+  /* printf("\n"); */
+  /* printf("-------------------------------------------------------\n"); */
 
   // properties
   // phase-1  
@@ -295,12 +295,12 @@ double transport_LLE_eval_func(
 
   _tmp = transport_evaluation_func(n,y_1,y_2,flux_m_1,flux_m_2);
 
-  printf("-------------------------------------------------------\n");
-  printf("Done transport_evaluation_function\n");
-  printf("-------------------------------------------------------\n");
-  printf("transport equations error = %.9f\n", _tmp);
-  printf("-------------------------------------------------------\n");
-  printf("\n");
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("Done transport_evaluation_function\n"); */
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("transport equations error = %.9f\n", _tmp); */
+  /* printf("-------------------------------------------------------\n"); */
+  /* printf("\n"); */
 
   return _tmp;
 }

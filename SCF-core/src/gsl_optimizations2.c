@@ -220,8 +220,8 @@ double transport_LLE_f_(const gsl_vector *v, void *params)
     }
   }
 
-  printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
-  printf("\n");
+  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
+  /* printf("\n"); */
   
   return transport_LLE_eval_func(k, _LLE_INPUT_);
 }
@@ -278,10 +278,10 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   {
     gsl_iter++;
 
-    printf("-----------------------------------------------------\n");
-    printf("GSL iter:  %d\n", gsl_iter);
-    printf("-----------------------------------------------------\n");
-    printf("\n");
+    /* printf("-----------------------------------------------------\n"); */
+    /* printf("GSL iter:  %d\n", gsl_iter); */
+    /* printf("-----------------------------------------------------\n"); */
+    /* printf("\n"); */
 
     gsl_status = gsl_multimin_fminimizer_iterate(gsl_s);
 
@@ -310,8 +310,8 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   else if (fabs(x_1[n-1]-x_2[n-1])<2e-3) {
     if (fabs(x_L[n-1]-x_R[n-1])<1e-2) {
       gsl_status = -2;
-      printf("x1: ");for (j=0;j<n;j++) printf("%9.10le ", x_1[j]);printf("\n");
-      printf("x2: ");for (j=0;j<n;j++) printf("%9.10le ", x_2[j]);printf("\n");
+      /* printf("x1: ");for (j=0;j<n;j++) printf("%9.10le ", x_1[j]);printf("\n"); */
+      /* printf("x2: ");for (j=0;j<n;j++) printf("%9.10le ", x_2[j]);printf("\n"); */
     }else{
       gsl_status = -1;
     }
@@ -323,11 +323,11 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
     }
   }
 
-  if (gsl_status<0) {
-    printf("\tGSL steps %d\n", gsl_iter);
-    printf("x1: ");for (j=0;j<n;j++) printf("%9.10le ", x_1[j]);printf("\n");
-    printf("x2: ");for (j=0;j<n;j++) printf("%9.10le ", x_2[j]);printf("\n");
-  }
+  /* if (gsl_status<0) { */
+  /*   printf("\tGSL steps %d\n", gsl_iter); */
+  /*   printf("x1: ");for (j=0;j<n;j++) printf("%9.10le ", x_1[j]);printf("\n"); */
+  /*   printf("x2: ");for (j=0;j<n;j++) printf("%9.10le ", x_2[j]);printf("\n"); */
+  /* } */
   //MY_PRINTF("\tGSL returns %d, f0=%le\n", gsl_status, gsl_s->fval);
 
   if (gsl_status==-1) {

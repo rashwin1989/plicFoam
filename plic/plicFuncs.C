@@ -9688,9 +9688,23 @@ void calc_D_from_Dij
                     sum_xbyD += x[j]/Dij[idx];
                 }
             }
-            if(sum_xbyD < SMALL) sum_xbyD += SMALL;
-
-            D[i] = 1.0/sum_xbyD;
+            if(sum_xbyD < SMALL) 
+            {
+                D[i] = 0.0;
+                for(j=0; j<n; j++)
+                {
+                    if(j!=i)
+                    {
+                        idx = j + i*n;
+                        D[i] += Dij[idx];
+                    }
+                }
+                D[i] /= (n-1);
+            }
+            else
+            {
+                D[i] = 1.0/sum_xbyD;
+            }
         }
     }
 }
@@ -10668,10 +10682,20 @@ void calc_Xs_Ys_Js_mS_alphaS
             }
             mS1Tot_cellI_tmp = -A_intfc_cellI*JsTot_cellI/V_cellI;
 
-            for(i=0; i<n; i++)
+            if(mS1Tot_cellI_tmp > 0)
             {
-                mS1_cellI[i] = mS1Tot_cellI_tmp*ys1[i] + Js1_cellI[i];
-            }            
+                for(i=0; i<n; i++)
+                {
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y0_cellI[i] + Js0_cellI[i];
+                }
+            }
+            else
+            {
+                for(i=0; i<n; i++)
+                {
+                    mS1_cellI[i] = mS1Tot_cellI_tmp*Y1_cellI[i] + Js1_cellI[i];
+                }
+            }
 
             limiterTot = 1;
             limiter_min = 1;
