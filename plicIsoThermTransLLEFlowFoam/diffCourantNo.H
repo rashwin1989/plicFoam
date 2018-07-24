@@ -2,23 +2,33 @@
 scalar diffCoNum = 0.0;
 scalar meanDiffCoNum = 0.0;
 
-dimensionedScalar DMax = gMax(D1[0]);
-for(i=0; i<D1.size(); i++)
+dimensionedScalar DMax = gMax(Dij1[1]);
+for(i=0; i<n; i++)
 {
-    dimensionedScalar DMaxI = gMax(D1[i]);
-    if(DMaxI.value() > DMax.value())
+    for(j=i+1; j<n; j++)
     {
-        DMax = DMaxI;
+        ijIndex = i*n + j;
+        dimensionedScalar DMaxI = gMax(Dij1[ijIndex]);
+        if(DMaxI.value() > DMax.value())
+        {
+            DMax = DMaxI;
+        }
     }
 }
-for(i=0; i<D0.size(); i++)
+
+for(i=0; i<n; i++)
 {
-    dimensionedScalar DMaxI = gMax(D0[i]);
-    if(DMaxI.value() > DMax.value())
+    for(j=i+1; j<n; j++)
     {
-        DMax = DMaxI;
-    }    
+        ijIndex = i*n + j;
+        dimensionedScalar DMaxI = gMax(Dij0[ijIndex]);
+        if(DMaxI.value() > DMax.value())
+        {
+            DMax = DMaxI;
+        }
+    }
 }
+
 
 surfaceScalarField DSfSf(DMax*mesh.magSf()*mesh.magSf());
 

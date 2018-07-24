@@ -607,7 +607,7 @@ dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
 new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x1_0,Dij1_tmp);
 
-plicFuncs::calc_D_from_Dij(n, x1_0, Dij1_tmp, D1_tmp);
+//plicFuncs::calc_D_from_Dij(n, x1_0, Dij1_tmp, D1_tmp);
 
 MW1_0 = plicFuncs::calc_MW_from_x(n,MW,x1_0);
 
@@ -624,7 +624,7 @@ dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
 
 new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x0_0,Dij0_tmp);
 
-plicFuncs::calc_D_from_Dij(n, x0_0, Dij0_tmp, D0_tmp);
+//plicFuncs::calc_D_from_Dij(n, x0_0, Dij0_tmp, D0_tmp);
 
 MW0_0 = plicFuncs::calc_MW_from_x(n,MW,x0_0);
 
@@ -771,40 +771,40 @@ volScalarField dgdt
 int Nij = n*n;
 PtrList<dimensionedScalar> Dij1_0(Nij);
 PtrList<dimensionedScalar> Dij0_0(Nij);
-PtrList<dimensionedScalar> D1_0(n);
-PtrList<dimensionedScalar> D0_0(n);
+//PtrList<dimensionedScalar> D1_0(n);
+//PtrList<dimensionedScalar> D0_0(n);
 PtrList<volScalarField> Dij1(Nij);
 PtrList<volScalarField> Dij0(Nij);
 PtrList<surfaceScalarField> Dij1f(Nij);
 PtrList<surfaceScalarField> Dij0f(Nij);
-PtrList<volScalarField> D1(n);
-PtrList<volScalarField> D0(n);
+//PtrList<volScalarField> D1(n);
+//PtrList<volScalarField> D0(n);
 //PtrList<surfaceScalarField> D1f(n);
 //PtrList<surfaceScalarField> D0f(n);
 
 for(i=0; i<n; i++)
 {
-    fieldName = "D1_0[" + Foam::name(i) + "]";
-    Info<< "Initializing diffusivity " << fieldName << endl;
-    D1_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            fieldName, dimLength*dimLength/dimTime, D1_tmp[i]
-        )
-    );
+    // fieldName = "D1_0[" + Foam::name(i) + "]";
+    // Info<< "Initializing diffusivity " << fieldName << endl;
+    // D1_0.set
+    // (
+    //     i,
+    //     new dimensionedScalar
+    //     (
+    //         fieldName, dimLength*dimLength/dimTime, D1_tmp[i]
+    //     )
+    // );
 
-    fieldName = "D0_0[" + Foam::name(i) + "]";
-    Info<< "Initializing diffusivity " << fieldName << endl;
-    D0_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            fieldName, dimLength*dimLength/dimTime, D0_tmp[i]
-        )
-    );
+    // fieldName = "D0_0[" + Foam::name(i) + "]";
+    // Info<< "Initializing diffusivity " << fieldName << endl;
+    // D0_0.set
+    // (
+    //     i,
+    //     new dimensionedScalar
+    //     (
+    //         fieldName, dimLength*dimLength/dimTime, D0_tmp[i]
+    //     )
+    // );
 
     for(j=0; j<n; j++)
     {
@@ -836,45 +836,45 @@ for(i=0; i<n; i++)
 
 for(i=0; i<n; i++)
 {
-    fieldName = "D1" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D1.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D1_0[i]
-        )
-    );
+    // fieldName = "D1" + Foam::name(i);
+    // Info<< "Initializing field " << fieldName << endl;
+    // D1.set
+    // (
+    //     i,
+    //     new volScalarField
+    //     (
+    //         IOobject
+    //         (
+    //             fieldName,
+    //             runTime.timeName(),
+    //             mesh,
+    //             IOobject::NO_READ,
+    //             IOobject::NO_WRITE
+    //         ),
+    //         mesh,
+    //         D1_0[i]
+    //     )
+    // );
 
-    fieldName = "D0" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D0.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D0_0[i]
-        )
-    );
+    // fieldName = "D0" + Foam::name(i);
+    // Info<< "Initializing field " << fieldName << endl;
+    // D0.set
+    // (
+    //     i,
+    //     new volScalarField
+    //     (
+    //         IOobject
+    //         (
+    //             fieldName,
+    //             runTime.timeName(),
+    //             mesh,
+    //             IOobject::NO_READ,
+    //             IOobject::NO_WRITE
+    //         ),
+    //         mesh,
+    //         D0_0[i]
+    //     )
+    // );
 
     for(j=0; j<n; j++)
     {

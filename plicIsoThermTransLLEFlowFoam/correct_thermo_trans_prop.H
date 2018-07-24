@@ -50,13 +50,17 @@ plicFuncs::correct_thermo_trans_prop
     osTransProp
 );
 
-plicFuncs::correct_D_from_Dij(n, x1, Dij1, D1);
-plicFuncs::correct_D_from_Dij(n, x0, Dij0, D0);
+//plicFuncs::correct_D_from_Dij(n, x1, Dij1, D1);
+//plicFuncs::correct_D_from_Dij(n, x0, Dij0, D0);
 
 for(i=0; i<n; i++)
 {
-    Info<< "D1[" << i << "]:  min = " << gMin(D1[i]) << "  max = " << gMax(D1[i]) << endl;
-    Info<< "D0[" << i << "]:  min = " << gMin(D0[i]) << "  max = " << gMax(D0[i]) << endl;
+    for(j=i+1; j<n; j++)
+    {
+        ijIndex = i*n + j;
+        Info<< "D1[" << i << "," << j << "]:  min = " << gMin(Dij1[ijIndex]) << "  max = " << gMax(Dij1[ijIndex]) << endl;
+        Info<< "D0[" << i << "," << j << "]:  min = " << gMin(Dij0[ijIndex]) << "  max = " << gMax(Dij0[ijIndex]) << endl;
+    }
 }
 
 Info<< "mu1_thermo:  min = " << gMin(mu1_thermo) << "  max = " << gMax(mu1_thermo) << endl;
