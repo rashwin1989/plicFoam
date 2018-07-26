@@ -37,15 +37,15 @@ FFLAGS = -O3 $(FFLAGS_ADDON) -fPIC
 
 LIB= -lm -lgfortran $(LIB_ADDON) \
      -lgsl -lgslcblas \
-     /home/r_ashwin/Ashwin/UMFPACK/Lib/libumfpack.a \
-     /home/r_ashwin/Ashwin/AMD/Lib/libamd.a \
-     /home/r_ashwin/Ashwin/UFconfig/xerbla/libcerbla.a  
-			 
+     ../../UMFPACK/Lib/libumfpack.a \
+     ../../AMD/Lib/libamd.a \
+     ../../UFconfig/xerbla/libcerbla.a
+
 CPPFLAGS = -I./ \
 	   -I/usr/include/x86_64-linux-gnu/ \
-	   -I/home/r_ashwin/Ashwin/UMFPACK/Include \
-	   -I/home/r_ashwin/Ashwin/AMD/Include \
-	   -I/home/r_ashwin/Ashwin/UFconfig 
+	   -I../../UMFPACK/Include \
+	   -I../../AMD/Include \
+	   -I../../UFconfig 
 
 
 SRC = PR_EoS.o vis_n_therm.o Maxwell_Stefan_flux.o myUmfpack.o transport_LLE2.o gsl_optimizations2.o 

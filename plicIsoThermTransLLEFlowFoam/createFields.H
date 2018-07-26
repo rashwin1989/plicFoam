@@ -1565,7 +1565,7 @@ for(i=0; i<n; i++)
 
 //------------------------------------------------------------------//
 //PLIC interface class set up and interface properties like normal, curvature 
-plic interface(mesh, alpha1, U, phi, rho1, rho0, rho, osPlic);
+plic interface(mesh, alpha1, alpha0, U, phi, rho1, rho0, rho, osPlic);
 
 volScalarField alpha1_smooth
 (

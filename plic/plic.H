@@ -85,8 +85,14 @@ class plic
     //- least squares grad
     plicLeastSquaresGrad lsGrad_;
 
-    //- Reference to volume fraction field
+    //- Reference to ph-1 volume fraction field
     const volScalarField& alpha_ph1_;
+
+    //- Reference to ph-0 volume fraction field
+    const volScalarField& alpha_ph0_;
+
+    //- Ratio of alpha0 to (1-alpha1)
+    volScalarField rAlpha0_;
 
     //- Input dictionary
     IOdictionary transPropDict_;
@@ -209,6 +215,7 @@ class plic
     List<List<scalar> > c0_flatFld_;
     List<scalar> h1_flatFld_;
     List<scalar> h0_flatFld_;
+    List<scalar> rAlpha0_flatFld_;
 
     //-mesh faces info
     vectorField Cf_;
@@ -369,6 +376,7 @@ class plic
     (
         const fvMesh& mesh,
         const volScalarField& alpha_ph1,
+        const volScalarField& alpha_ph0,
         const volVectorField& U,
         const surfaceScalarField& phi,
         const volScalarField& rho1,
@@ -416,6 +424,10 @@ class plic
         const bool debug2,
         OFstream& os
     );
+
+    void calc_rAlpha0();
+
+    void rAlpha0_collectData();
 
     void calc_2ph_advFluxes
     (

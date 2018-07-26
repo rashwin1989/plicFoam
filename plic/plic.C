@@ -2401,6 +2401,7 @@ Foam::plic::plic
 (
     const fvMesh& mesh,
     const volScalarField& alpha_ph1,
+    const volScalarField& alpha_ph0,
     const volVectorField& U,
     const surfaceScalarField& phi,
     const volScalarField& rho1,
@@ -2413,6 +2414,20 @@ Foam::plic::plic
     faceStencil_(mesh),
     lsGrad_(mesh),
     alpha_ph1_(alpha_ph1),
+    alpha_ph0_(alpha_ph0),
+    rAlpha0_
+    (
+        IOobject
+        (
+            "rAlpha0",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("rAlpha0_0", dimless, 1.0)
+    ),
     transPropDict_
     (
         IOobject
@@ -2768,6 +2783,7 @@ Foam::plic::plic
     rho0_flatFld_.setSize(nflatFld);
     h1_flatFld_.setSize(nflatFld);
     h0_flatFld_.setSize(nflatFld);
+    rAlpha0_flatFld_.setSize(nflatFld);
     
     Y1_flatFld_.setSize(nSpecies_ - 1);
     Y0_flatFld_.setSize(nSpecies_ - 1);
@@ -6151,6 +6167,98 @@ void Foam::plic::calc_2ph_advFluxes
 }
 
 
+void Foam::plic::calc_rAlpha0()
+{
+    scalar alpha1_cellI, alpha0_cellI, rAlpha0_cellI, tAlpha0;
+    
+    scalarField& rAlpha0Cells = rAlpha0_.internalField();
+    const scalarField& alpha1Cells = alpha_ph1_.internalField();
+    const scalarField& alpha0Cells = alpha_ph0_.internalField();
+
+    forAll(rAlpha0Cells, cellI)
+    {
+        alpha1_cellI = alpha1Cells[cellI];
+        alpha0_cellI = alpha0Cells[cellI];
+
+        if(alpha1_cellI < ALPHA_2PH_MAX && alpha1_cellI > ALPHA_2PH_MIN)
+        {
+            tAlpha0 = 1.0 - alpha1_cellI;
+            if(tAlpha0 < SMALL) tAlpha0 += SMALL;
+            rAlpha0_cellI = alpha0_cellI/tAlpha0;
+            rAlpha0_cellI = min(1.0, rAlpha0_cellI);
+        }
+        else
+        {
+            rAlpha0_cellI = 1.0;
+        }
+
+        rAlpha0Cells[cellI] = rAlpha0_cellI;
+    }
+
+    forAll(rAlpha0_.boundaryField(), patchI)
+    {
+        fvPatchScalarField& prAlpha0 = rAlpha0_.boundaryField()[patchI];
+        const fvPatchScalarField& pAlpha1 = alpha_ph1_.boundaryField()[patchI];
+        const fvPatchScalarField& pAlpha0 = alpha_ph0_.boundaryField()[patchI];
+
+        forAll(prAlpha0, fcI)
+        {
+            alpha1_cellI = pAlpha1[fcI];
+            alpha0_cellI = pAlpha0[fcI];
+
+            if(alpha1_cellI < ALPHA_2PH_MAX && alpha1_cellI > ALPHA_2PH_MIN)
+            {
+                tAlpha0 = 1.0 - alpha1_cellI;
+                if(tAlpha0 < SMALL) tAlpha0 += SMALL;
+                rAlpha0_cellI = alpha0_cellI/tAlpha0;
+                rAlpha0_cellI = min(1.0, rAlpha0_cellI);
+            }
+            else
+            {
+                rAlpha0_cellI = 1.0;
+            }
+
+            prAlpha0[fcI] = rAlpha0_cellI;
+        }
+    }
+}
+
+
+void Foam::plic::rAlpha0_collectData()
+{
+    const mapDistribute& map = faceStencil().map();
+
+    // Insert my internal values
+    forAll(rAlpha0_, cellI)
+    {        
+        rAlpha0_flatFld_[cellI] = rAlpha0_[cellI];
+    }
+    // Insert my boundary values
+    forAll(rAlpha0_.boundaryField(), patchI)
+    {        
+        const fvPatchScalarField& prAlpha0 = rAlpha0_.boundaryField()[patchI];
+        label nCompact =
+            prAlpha0.patch().start()
+            -rAlpha0_.mesh().nInternalFaces()
+            +rAlpha0_.mesh().nCells();
+
+        forAll(prAlpha0, faceI)
+        {           
+            rAlpha0_flatFld_[nCompact] = prAlpha0[faceI];
+            nCompact++;
+        }
+    }
+
+    // Do all swapping    
+    map.distribute(rAlpha0_flatFld_);
+    
+    if(debug2_)
+    {        
+        Foam::plicFuncs::write_flatFld(rAlpha0_flatFld_, rAlpha0_);
+    }
+}
+
+
 void Foam::plic::calc_2ph_advFluxes
 (
     const PtrList<volScalarField>& c1,
@@ -6215,6 +6323,9 @@ void Foam::plic::calc_2ph_advFluxes
             << "               Collecting and distributing interface info" << nl
             << "\\====================================================================//" << nl << endl;
     }
+
+    calc_rAlpha0();
+    rAlpha0_collectData();
 
     intfcInfo_collectData();
 
@@ -6512,7 +6623,7 @@ void Foam::plic::calc_2ph_advFluxes
                     for(i=0; i<(n-1); i++)
                     {
                         curTetCurCellFlux_c1[i] = c1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;                        
-                        curTetCurCellFlux_c0[i] = c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
+                        curTetCurCellFlux_c0[i] = rAlpha0_flatFld_[curCell_lbl]*c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
                         curTetFlux_c1[i] += curTetCurCellFlux_c1[i];
                         curTetFlux_c0[i] += curTetCurCellFlux_c0[i];
                         
@@ -6802,7 +6913,7 @@ void Foam::plic::calc_2ph_advFluxes
                         for(i=0; i<(n-1); i++)
                         {
                             curTetCurCellFlux_c1[i] = c1_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph1;                        
-                            curTetCurCellFlux_c0[i] = c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
+                            curTetCurCellFlux_c0[i] = rAlpha0_flatFld_[curCell_lbl]*c0_flatFld_[i][curCell_lbl]*curTetCurCellVolFlux_ph0;
                             curTetFlux_c1[i] += curTetCurCellFlux_c1[i];
                             curTetFlux_c0[i] += curTetCurCellFlux_c0[i];
                         
