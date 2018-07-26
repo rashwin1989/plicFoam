@@ -202,6 +202,7 @@ double transport_LLE_eval_func(
 {
   int j;
   double _tmp;
+  int debug = 0;
 
   static int n1st=1; 
   static double *rhs_flux, *y_1, *y_2, *dlnphi_1, *dlnphi_2;
@@ -216,15 +217,18 @@ double transport_LLE_eval_func(
     _NEW_(y_2,double,n);    
   }
 
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("transport_LLE_eval_func\n"); */
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("\n"); */
+  if(debug==1)
+  {
+      printf("-------------------------------------------------------\n");
+      printf("transport_LLE_eval_func\n");
+      printf("-------------------------------------------------------\n");
+      printf("\n");
 
-  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
-  /* printf("\n"); */
-  /* printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]); */
-  /* printf("\n"); */
+      printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+      printf("\n");
+      printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
+      printf("\n");
+  }
 
   // -1) latest, setup to search in positive domain
   for (j=0; j<n; j++) {
@@ -235,16 +239,19 @@ double transport_LLE_eval_func(
   // LLE
   transport_LLE_core(P,T_s,k,n,Pc,Tc,w,kij,x_1,x_2);
 
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("Done phase equilibrium calculation\n"); */
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("\n"); */
+  if(debug==1)
+  {
+      printf("-------------------------------------------------------\n");
+      printf("Done phase equilibrium calculation\n");
+      printf("-------------------------------------------------------\n");
+      printf("\n");
 
-  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
-  /* printf("\n"); */
-  /* printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]); */
-  /* printf("\n"); */
-  /* printf("-------------------------------------------------------\n"); */
+      printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+      printf("\n");
+      printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
+      printf("\n");
+      printf("-------------------------------------------------------\n");
+  }
 
   // properties
   // phase-1
@@ -256,6 +263,19 @@ double transport_LLE_eval_func(
   {
       molar_volume2_(&P,&T_s,&n,Pc,Tc,w,kij,x_1,&V_1);
   }
+  if(V_1 < 1e-6)
+  {
+      printf("-------------------------------------------------------\n");
+      printf("Molar volume ERROR\n");
+      printf("-------------------------------------------------------\n");
+      printf("\n");
+      printf("V_1 = %.9f\n", V_1);
+      printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+      printf("\n");
+      printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
+      printf("\n");
+      printf("-------------------------------------------------------\n");
+  }
   new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_1,Dij_1);
 
   // phase-2
@@ -266,6 +286,19 @@ double transport_LLE_eval_func(
   else
   {
       molar_volume2_(&P,&T_s,&n,Pc,Tc,w,kij,x_2,&V_2);
+  }
+  if(V_2 < 1e-6)
+  {
+      printf("-------------------------------------------------------\n");
+      printf("Molar volume ERROR\n");
+      printf("-------------------------------------------------------\n");
+      printf("\n");
+      printf("V_2 = %.9f\n", V_2);
+      printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+      printf("\n");
+      printf("x_2: "); for(j=0; j<n; j++) printf("%.9f  ", x_2[j]);
+      printf("\n");
+      printf("-------------------------------------------------------\n");
   }
   new_tlsm_diffusion_krishna_model_(&P,&T_s,&n,Pc,Tc,Vc,w,MW,kij,x_2,Dij_2);
 
@@ -309,12 +342,15 @@ double transport_LLE_eval_func(
 
   _tmp = transport_evaluation_func(n,y_1,y_2,flux_m_1,flux_m_2);
 
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("Done transport_evaluation_function\n"); */
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("transport equations error = %.9f\n", _tmp); */
-  /* printf("-------------------------------------------------------\n"); */
-  /* printf("\n"); */
+  if(debug==1)
+  {
+      printf("-------------------------------------------------------\n");
+      printf("Done transport_evaluation_function\n");
+      printf("-------------------------------------------------------\n");
+      printf("transport equations error = %.9f\n", _tmp);
+      printf("-------------------------------------------------------\n");
+      printf("\n");
+  }
 
   return _tmp;
 }

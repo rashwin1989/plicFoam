@@ -105,6 +105,8 @@ plicFuncs::calc_Xs_Ys_Js_mS_alphaS
     ist_debug2, 
     osIst
 );
+
+Info<< "Max GSL iterations = " << gMax(status_transLLE) << endl;
 //Done calculate interfacial species concentrations and mass fluxes
 //Done calculate interfacial species transfer source terms and alpha source terms
 //-----------------------------------------------------------------------------------------------------//

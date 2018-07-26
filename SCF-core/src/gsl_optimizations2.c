@@ -198,6 +198,7 @@ int my2_gsl_find_transport_LLE2(_PARAMETERS_)
 double transport_LLE_f_(const gsl_vector *v, void *params)
 {
   int j, k, id, n;
+  int debug = 0;
 
   LPT_GSL_OPTIM optim;
   double *x_1;
@@ -220,9 +221,12 @@ double transport_LLE_f_(const gsl_vector *v, void *params)
     }
   }
 
-  /* printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]); */
-  /* printf("\n"); */
-  
+  if(debug==1)
+  {
+      printf("x_1: "); for(j=0; j<n; j++) printf("%.9f  ", x_1[j]);
+      printf("\n");
+  }
+
   return transport_LLE_eval_func(k, _LLE_INPUT_);
 }
 
@@ -230,6 +234,7 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
 {
   int j, k, id;
   double  tol;
+  int debug = 0;
 
   const gsl_multimin_fminimizer_type * gsl_T = 
         gsl_multimin_fminimizer_nmsimplex2;
@@ -253,7 +258,7 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   /* Starting point */
   gsl_x = gsl_vector_alloc (n-2);
   gsl_ss = gsl_vector_alloc (n-2);
-  gsl_vector_set_all (gsl_ss, 1e-8);
+  gsl_vector_set_all (gsl_ss, 1e-3);
 
   id = 0;
   for (j=0;j<n-1;j++) {
@@ -278,17 +283,30 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
   {
     gsl_iter++;
 
-    /* printf("-----------------------------------------------------\n"); */
-    /* printf("GSL iter:  %d\n", gsl_iter); */
-    /* printf("-----------------------------------------------------\n"); */
-    /* printf("\n"); */
+    if(debug==1)
+    {
+        printf("-----------------------------------------------------\n");
+        printf("GSL iter:  %d\n", gsl_iter);
+        printf("-----------------------------------------------------\n");
+        printf("\n");
+    }
 
     gsl_status = gsl_multimin_fminimizer_iterate(gsl_s);
 
     if (gsl_status) break;
 
     gsl_size = gsl_multimin_fminimizer_size (gsl_s);
-    gsl_status = gsl_multimin_test_size (gsl_size, 1e-9);
+    gsl_status = gsl_multimin_test_size (gsl_size, 1e-5);
+
+    if(debug==1)
+    {
+        printf("-----------------------------------------------------\n");
+        printf("Done GSL iter:  %d\n", gsl_iter);
+        printf("-----------------------------------------------------\n");
+        printf("GSL simplex size = %le\n", gsl_size);
+        printf("-----------------------------------------------------\n");
+        printf("\n");
+    }
 
     /*
     if (gsl_status == GSL_SUCCESS)
@@ -301,7 +319,7 @@ int my2_gsl_find_transport_LLE(_PARAMETERS_)
     printf ("%le %le\n", gsl_s->fval, gsl_size);
     */
   }
-  while (gsl_status == GSL_CONTINUE && gsl_iter < 1000);
+  while (gsl_status == GSL_CONTINUE && gsl_iter < 100);
 
   gsl_status = gsl_iter;
 
