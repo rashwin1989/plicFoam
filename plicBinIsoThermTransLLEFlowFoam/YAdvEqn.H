@@ -51,6 +51,8 @@ for(i=0; i<(n-1); i++)
     volScalarField surfInt_advFlux_Y1i(fvc::surfaceIntegrate(advFlux_Y1i));
     scalarField& surfInt_advFlux_Y1iCells = surfInt_advFlux_Y1i.internalField();
 
+    scalarField& dC1i_redistCells = dC1_redistCells[i];
+
     plicFuncs::print_line(osAdv, 100);
     osAdv<< "Advecting " << C1iName << " field" << endl;
     plicFuncs::print_line(osAdv, 100);
@@ -70,7 +72,7 @@ for(i=0; i<(n-1); i++)
 
     forAll(C1iCells,cellI)
     {                        
-        C1iCells[cellI] = C1iCells[cellI] - surfInt_advFlux_Y1iCells[cellI]*dt;
+        C1iCells[cellI] = C1iCells[cellI] - surfInt_advFlux_Y1iCells[cellI]*dt + dC1i_redistCells[cellI];
 
         if(alpha1Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {
@@ -167,6 +169,8 @@ for(i=0; i<(n-1); i++)
     volScalarField surfInt_advFlux_Y0i(fvc::surfaceIntegrate(advFlux_Y0i));
     scalarField& surfInt_advFlux_Y0iCells = surfInt_advFlux_Y0i.internalField();
 
+    scalarField& dC0i_redistCells = dC0_redistCells[i];
+
     plicFuncs::print_line(osAdv, 100);
     osAdv<< "Advecting " << C0iName << " field" << endl;
     plicFuncs::print_line(osAdv, 100);
@@ -186,7 +190,7 @@ for(i=0; i<(n-1); i++)
 
     forAll(C0iCells,cellI)
     {                
-        C0iCells[cellI] = C0iCells[cellI] - surfInt_advFlux_Y0iCells[cellI]*dt;
+        C0iCells[cellI] = C0iCells[cellI] - surfInt_advFlux_Y0iCells[cellI]*dt + dC0i_redistCells[cellI];
 
         if(alpha0Cells[cellI] < SMALLEST_ALPHA_FOR_YADV)
         {

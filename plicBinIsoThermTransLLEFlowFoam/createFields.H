@@ -1591,6 +1591,8 @@ labelList unbounded_Y_in_cell(nCells, 0);
 
 PtrList<surfaceScalarField> advFlux_Y1(n-1);
 PtrList<surfaceScalarField> advFlux_Y0(n-1);
+List<scalarField> dC1_redistCells(n-1);
+List<scalarField> dC0_redistCells(n-1);
 
 for(i=0; i<(n-1); i++)
 {
@@ -1633,6 +1635,9 @@ for(i=0; i<(n-1); i++)
             dimensionedScalar("advFlux_Y0", dimVol*dimDensity/dimTime, 0)
         )
     );
+
+    dC1_redistCells[i].setSize(nCells);
+    dC0_redistCells[i].setSize(nCells);
 }
 //Done alpha, species, density advection
 //------------------------------------------------------------------//

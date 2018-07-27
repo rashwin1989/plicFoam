@@ -853,6 +853,28 @@ namespace plicFuncs
         OFstream& os
     );
 
+    void redistribute_alpha_calc_dC_field
+    (
+        const fvMesh& mesh,
+        volScalarField& alpha1,
+        const volScalarField& rho1,
+        const PtrList<volScalarField>& Y1,
+        const volScalarField& rho0,
+        const PtrList<volScalarField>& Y0,
+        List<scalarField>& dC1_redistCells,
+        List<scalarField>& dC0_redistCells,
+        const labelListList& cellCellsAll,
+        int n,
+        const scalar& ALPHA_MIN_BOUND,
+        const label& ALPHA_BOUND_ITERS_MAX,    
+        label& minAlpha1Cell,
+        label& maxAlpha1Cell,
+        scalar& minAlpha1,
+        scalar& maxAlpha1,
+        const bool debug,
+        OFstream& os
+    );
+
     void redistribute_Ci_field
     (
         const fvMesh& mesh,

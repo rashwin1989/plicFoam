@@ -7413,6 +7413,252 @@ void redistribute_alpha_field
 }
 
 
+void redistribute_alpha_calc_dC_field
+(
+    const fvMesh& mesh,
+    volScalarField& alpha1,
+    const volScalarField& rho1,
+    const PtrList<volScalarField>& Y1,
+    const volScalarField& rho0,
+    const PtrList<volScalarField>& Y0,
+    List<scalarField>& dC1_redistCells,
+    List<scalarField>& dC0_redistCells,
+    const labelListList& cellCellsAll,
+    int n,
+    const scalar& ALPHA_MIN_BOUND,
+    const label& ALPHA_BOUND_ITERS_MAX,    
+    label& minAlpha1Cell,
+    label& maxAlpha1Cell,
+    scalar& minAlpha1,
+    scalar& maxAlpha1,
+    const bool debug,
+    OFstream& os
+)
+{
+    label minAlphaCell, maxAlphaCell, nIters, curCell, cellJ;
+    int i, nCells;
+    bool allNeiDone;
+    scalar ALPHA_MAX_BOUND, minAlpha, maxAlpha, tAlpha;
+    scalar alpha1_cellI, alpha1_curCell, alpha1_cellJ, dAlpha1_cellI, dAlpha1_cellJ, rho1_cellI, rho1_cellJ, dC1_cellI, dC1_cellJ, dAlpha0_cellI, dAlpha0_cellJ, rho0_cellI, rho0_cellJ, dC0_cellI, dC0_cellJ;
+
+    List<scalarField> Y1Cells(n);
+    List<scalarField> Y0Cells(n);
+    for(i=0; i<n; i++)
+    {
+        const scalarField& Y1iCells = Y1[i].internalField();
+        Y1Cells[i] = Y1iCells;
+        const scalarField& Y0iCells = Y0[i].internalField();
+        Y0Cells[i] = Y0iCells;
+    }
+
+    scalarField& alpha1Cells = alpha1.internalField();
+    const scalarField& rho1Cells = rho1.internalField();
+    const scalarField& rho0Cells = rho0.internalField();
+
+    nCells = mesh.nCells();
+    ALPHA_MAX_BOUND = 1 - ALPHA_MIN_BOUND;
+
+    forAll(alpha1Cells, cellI)
+    {
+        for(i=0; i<(n-1); i++)
+        {
+            dC1_redistCells[i][cellI] = 0.0;
+            dC0_redistCells[i][cellI] = 0.0;
+        }
+    }
+
+    forAll(alpha1Cells, cellI)
+    {
+        alpha1_cellI = alpha1Cells[cellI];
+
+        if(alpha1_cellI < ALPHA_MIN_BOUND)
+        {
+            if(debug)
+            {
+                os<< "Correcting alpha1 in cell " << cellI
+                    << "  alpha1 = " << alpha1_cellI << endl;
+            }
+
+            const labelList& curCellCells = cellCellsAll[cellI];
+            minAlpha = 1;
+            minAlphaCell = cellI;
+            nIters = 0;
+            allNeiDone = true;
+            for(cellJ=0; cellJ<curCellCells.size(); cellJ++)
+            {
+                curCell = curCellCells[cellJ];
+                if(!(curCell==cellI) && (curCell < nCells) && (alpha1Cells[curCell] > 0))
+                {
+                    allNeiDone = false;
+                    break;
+                }
+            }
+
+            if(!allNeiDone)
+            {
+                do
+                {
+                    if(debug)
+                    {
+                        os<< "alpha1 redistribution iteration no: " << nIters+1 << endl;
+                    }
+            
+                    allNeiDone = true;
+                    minAlpha = 1;
+                    for(cellJ=0; cellJ<curCellCells.size(); cellJ++)
+                    {
+                        curCell = curCellCells[cellJ];
+                        alpha1_curCell = alpha1Cells[curCell];
+
+                        if(!(curCell==cellI) && (curCell < nCells) && (alpha1_curCell > 0))
+                        {
+                            allNeiDone = false;
+                            if(alpha1_curCell < minAlpha)
+                            {
+                                minAlphaCell = curCell;
+                                minAlpha = alpha1_curCell;
+                            }
+                        }
+                    }            
+
+                    if(debug)
+                    {
+                        os<< "Nei cell with minimum non-zero alpha1: " << minAlphaCell
+                            << "  Nei cell alpha1 = " << minAlpha << endl;
+                    }
+                                        
+                    alpha1_cellJ = alpha1Cells[minAlphaCell];
+                    tAlpha = alpha1_cellJ + alpha1_cellI;
+                    alpha1Cells[minAlphaCell] = max(tAlpha, 0);
+                    alpha1Cells[cellI] = min(tAlpha, 0);
+                    dAlpha1_cellJ = alpha1Cells[minAlphaCell] - alpha1_cellJ;
+                    dAlpha0_cellI = dAlpha1_cellJ;
+
+                    rho1_cellJ = rho1Cells[minAlphaCell];
+                    rho0_cellI = rho0Cells[cellI];
+                    for(i=0; i<(n-1); i++)
+                    {
+                        dC1_cellJ = dAlpha1_cellJ*rho1_cellJ*Y1Cells[i][minAlphaCell];                        
+                        dC1_redistCells[i][minAlphaCell] += dC1_cellJ;
+                        dC1_redistCells[i][cellI] -= dC1_cellJ;
+
+                        dC0_cellI = dAlpha0_cellI*rho0_cellI*Y0Cells[i][cellI];
+                        dC0_redistCells[i][cellI] += dC0_cellI;
+                        dC0_redistCells[i][minAlphaCell] -= dC0_cellI;
+                    }
+
+                    if(debug)
+                    {
+                        os<< "New nei cell alpha1 = " << alpha1Cells[minAlphaCell]
+                            << "  New cell alpha1 = " << alpha1Cells[cellI] << endl;
+                    }
+            
+                    nIters++;
+                }while(alpha1Cells[cellI] < ALPHA_MIN_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+            }        
+        }
+
+        if(alpha1_cellI > ALPHA_MAX_BOUND)
+        {
+            if(debug)
+            {
+                os<< "Correcting alpha1 in cell " << cellI
+                    << "  alpha1 = " << alpha1_cellI << endl;
+            }
+
+            const labelList& curCellCells = cellCellsAll[cellI];
+            maxAlpha = 0;
+            maxAlphaCell = cellI;
+            nIters = 0;
+            allNeiDone = true;
+            for(cellJ=0; cellJ<curCellCells.size(); cellJ++)
+            {
+                curCell = curCellCells[cellJ];
+                if(!(curCell==cellI) && (curCell < nCells) && (alpha1Cells[curCell] < 1))
+                {
+                    allNeiDone = false;
+                    break;
+                }
+            }
+        
+            if(!allNeiDone)
+            {
+                do
+                {
+                    if(debug)
+                    {
+                        os<< "alpha1 correction iteration no: " << nIters+1 << endl;
+                    }
+
+                    maxAlpha = 0;
+                    allNeiDone = true;
+                    for(cellJ=0; cellJ<curCellCells.size(); cellJ++)
+                    {
+                        curCell = curCellCells[cellJ];
+                        alpha1_curCell = alpha1Cells[curCell];
+                        if(!(curCell==cellI) && (curCell < nCells) && (alpha1_curCell < 1))
+                        {
+                            allNeiDone = false;
+                            if(alpha1_curCell > maxAlpha)
+                            {
+                                maxAlphaCell = curCell;
+                                maxAlpha = alpha1_curCell;
+                            }
+                        }
+                    }
+
+                    if(debug)
+                    {
+                        os<< "Nei cell with maximum alpha1 below 1: " << maxAlphaCell
+                            << "  Nei cell alpha1 = " << maxAlpha << endl;
+                    }
+                    
+                    alpha1_cellJ = alpha1Cells[maxAlphaCell];
+                    tAlpha = alpha1_cellJ + alpha1_cellI - 1;
+                    alpha1Cells[maxAlphaCell] = min(tAlpha, 1);
+                    alpha1Cells[cellI] = max(tAlpha, 1);
+                    dAlpha1_cellI = alpha1Cells[cellI] - alpha1_cellI;
+                    dAlpha0_cellJ = dAlpha1_cellI;
+
+                    rho1_cellI = rho1Cells[cellI];
+                    rho0_cellJ = rho0Cells[cellJ];
+                    for(i=0; i<(n-1); i++)
+                    {
+                        dC1_cellI = dAlpha1_cellI*rho1_cellI*Y1Cells[i][cellI];
+                        dC1_redistCells[i][cellI] += dC1_cellI;
+                        dC1_redistCells[i][maxAlphaCell] -= dC1_cellI;
+
+                        dC0_cellJ = dAlpha0_cellJ*rho0_cellJ*Y0Cells[i][maxAlphaCell];
+                        dC0_redistCells[i][maxAlphaCell] += dC0_cellJ;
+                        dC0_redistCells[i][cellI] -= dC0_cellJ;
+                    }
+
+                    if(debug)
+                    {
+                        os<< "New nei cell alpha1 = " << alpha1Cells[maxAlphaCell]
+                            << "  New cell alpha1 = " << alpha1Cells[cellI] << nl << endl;
+                    }
+
+                    nIters++;
+                }while(alpha1Cells[cellI] > ALPHA_MAX_BOUND && !allNeiDone && nIters < ALPHA_BOUND_ITERS_MAX);        
+            }
+        }
+
+        if(alpha1Cells[cellI] < minAlpha1)
+        {
+            minAlpha1 = alpha1Cells[cellI];
+            minAlpha1Cell = cellI;
+        }
+
+        if(alpha1Cells[cellI] > maxAlpha1)
+        {
+            maxAlpha1 = alpha1Cells[cellI];
+            maxAlpha1Cell = cellI;
+        }
+    }
+}
+
+
 void redistribute_Ci_field
 (
     const fvMesh& mesh,

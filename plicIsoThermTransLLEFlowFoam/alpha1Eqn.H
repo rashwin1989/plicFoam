@@ -162,7 +162,9 @@ if(alpha_debug)
 
 if(redist_alpha)
 {
-    plicFuncs::redistribute_alpha_field(mesh, alpha1Cells, cell_stencil.stencil(), ALPHA_MIN_BOUND, ALPHA_BOUND_ITERS_MAX, minAlpha1Cell, maxAlpha1Cell, minAlpha1, maxAlpha1, alpha_debug, osAlpha);
+    //plicFuncs::redistribute_alpha_field(mesh, alpha1Cells, cell_stencil.stencil(), ALPHA_MIN_BOUND, ALPHA_BOUND_ITERS_MAX, minAlpha1Cell, maxAlpha1Cell, minAlpha1, maxAlpha1, alpha_debug, osAlpha);
+
+    plicFuncs::redistribute_alpha_calc_dC_field(mesh, alpha1, rho1, Y1, rho0, Y0, dC1_redistCells, dC0_redistCells, cell_stencil.stencil(), n, ALPHA_MIN_BOUND, ALPHA_BOUND_ITERS_MAX, minAlpha1Cell, maxAlpha1Cell, minAlpha1, maxAlpha1, alpha_debug, osAlpha);
 
     alpha1.correctBoundaryConditions();
     
