@@ -328,6 +328,22 @@ forAll(alpha1Cells, cellI)
     }
 }
 
+Info<< "alpha1:  avg = "
+    << alpha1.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha1).value()
+    << "  undershoot = " << min(min(alpha1).value(), 0)
+    << "  max = " << max(alpha1).value()
+    << "  overshoot = " << max((max(alpha1).value() - 1), 0)
+    << endl;
+
+Info<< "alpha0:  avg = "
+    << alpha0.weightedAverage(mesh.V()).value()
+    << "  min = " << min(alpha0).value()
+    << "  undershoot = " << min(min(alpha0).value(), 0)
+    << "  max = " << max(alpha0).value()
+    << "  overshoot = " << max((max(alpha0).value() - 1), 0)
+    << endl;
+
 alpha1.correctBoundaryConditions();
 alpha0.correctBoundaryConditions();
 
