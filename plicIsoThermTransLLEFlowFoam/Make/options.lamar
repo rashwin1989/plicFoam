@@ -11,7 +11,7 @@ EXE_LIBS = \
 	-L../SCF-core/lib \
         -lscfcore \
         -lm -lgfortran \
-        -libgsl \
+        -lgsl \
 	-lgslcblas \
         ../UMFPACK/Lib/libumfpack.a \
         ../AMD/Lib/libamd.a \
