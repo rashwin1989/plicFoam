@@ -8143,26 +8143,26 @@ void calc_cell_intfcGrad_coeffs
         magnf = mag(nf);
         if(magt1 < SMALL)
         {
-            os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
-                << endl;
+            // os<< "Time = " << mesh.time().timeName() << nl 
+            //     << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 = " << C1 << "  magt1 = " << magt1 << nl
+            //     << endl;
             magt1 += SMALL;
         }
         if(magnf < SMALL)
         {
-            os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
-                << endl;
+            // os<< "Time = " << mesh.time().timeName() << nl 
+            //     << "Cell " << curCell_lbl << "  nf = " << nf << "  mag(nf) = " << magnf << nl
+            //     << endl;
             magnf += SMALL;
         }
         scalar costheta1 = (nf & t1)/magt1/magnf;
         if(costheta1 > 1)
         {        
-            os<< "Time = " << mesh.time().timeName() << nl 
-                << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
-                << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
-                << "  costheta1 = " << costheta1 << nl 
-                << endl;
+            // os<< "Time = " << mesh.time().timeName() << nl 
+            //     << "Cell " << curCell_lbl << "  Cp = " << Cp << "C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+            //     << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+            //     << "  costheta1 = " << costheta1 << nl 
+            //     << endl;
             costheta1 = 1;
         }
         scalar theta1 = acos(costheta1);
@@ -8190,28 +8190,28 @@ void calc_cell_intfcGrad_coeffs
                 magt2 = mag(t2);
                 if(magt2 < SMALL)
                 {
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << nl
-                        << endl;
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C2 = " << C2 << "  magt2 = " << magt2 << nl
+                    //     << endl;
                     magt2 += SMALL;
                 }    
                 scalar magt1t2 = magt1*magt2;
                 if(magt1t2 < SMALL)
                 {
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
-                        << endl;
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  magt1 = " << magt1 << "  magt2 = " << magt2 << "  magt1t2 = " << magt1t2 << nl
+                    //     << endl;
                     magt1t2 += SMALL;
                 }        
         
                 scalar costheta2 = (nf & t2)/magt2/magnf;
                 if(costheta2 > 1)
                 {                
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "C2 cell " << C2_lbl << "  C2 = " << C2 << nl
-                        << "t2 = " << t2 << "  mag(t2) = " << magt2 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
-                        << "  costheta2 = " << costheta2 << nl 
-                        << endl;
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  Cp = " << Cp << "C2 cell " << C2_lbl << "  C2 = " << C2 << nl
+                    //     << "t2 = " << t2 << "  mag(t2) = " << magt2 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                    //     << "  costheta2 = " << costheta2 << nl 
+                    //     << endl;
                     costheta2 = 1;
                 }
                 scalar theta2 = acos(costheta2);
@@ -8247,9 +8247,9 @@ void calc_cell_intfcGrad_coeffs
 
                 if(sintheta12 < SMALL)
                 {
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  sintheta12 = " << sintheta12 << nl
-                        << endl;
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  sintheta12 = " << sintheta12 << nl
+                    //     << endl;
                     sintheta12 += SMALL;
                 }
 
@@ -8258,10 +8258,10 @@ void calc_cell_intfcGrad_coeffs
                 scalar at2bt1 = alpha*magt2 + beta*magt1;
                 if(mag(at2bt1) < SMALL)
                 {
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  alpha = " << alpha 
-                        << "  beta = " << beta << "  at2bt1 = " << at2bt1 << nl
-                        << endl;
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  theta1 = " << theta1 << "  theta2 = " << theta2 << "  alpha = " << alpha 
+                    //     << "  beta = " << beta << "  at2bt1 = " << at2bt1 << nl
+                    //     << endl;
                     at2bt1 += SMALL;
                 }
 
@@ -8304,12 +8304,12 @@ void calc_cell_intfcGrad_coeffs
             else
             {
                 if(costheta1 < 1E-3)
-                {        
-                    os<< "Time = " << mesh.time().timeName() << nl 
-                        << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 cell " << C1_lbl << "  C1 = " << C1 << nl
-                        << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
-                        << "  costheta1 = " << costheta1 << nl 
-                        << endl;
+                {   
+                    // os<< "Time = " << mesh.time().timeName() << nl 
+                    //     << "Cell " << curCell_lbl << "  Cp = " << Cp << "  C1 cell " << C1_lbl << "  C1 = " << C1 << nl
+                    //     << "t1 = " << t1 << "  mag(t1) = " << magt1 << "  nf = " << nf << "  mag(nf) = " << mag(nf) 
+                    //     << "  costheta1 = " << costheta1 << nl 
+                    //     << endl;
                     costheta1 = 1E-3;
                 }
                 dn = magt1/costheta1;
@@ -8351,10 +8351,7 @@ void calc_cell_intfcGrad_coeffs
         }
     }
     else
-    {
-        os<< "Time = " << mesh.time().timeName() << nl 
-            << "Cell " << curCell_lbl << ": Cell in interface normal direction not found! Using curCell centroid" << nl
-            << endl;
+    {        
         /*
         vector C1 = C[curCell_lbl];
         vector t1 = C1 - Cp;
@@ -8413,6 +8410,11 @@ void calc_cell_intfcGrad_coeffs
                     << endl;
             }
         }
+
+        os<< "Time = " << mesh.time().timeName() << nl 
+            << "Cell " << curCell_lbl << ": Cell in interface normal direction not found! Using curCell centroid" << nl
+            << "phase: " << phaseLbl << "  dn = " << dn << "  Yeff[0] = " << Yeff[0] << nl
+            << endl;
     }
     
     if(dn < SMALL)

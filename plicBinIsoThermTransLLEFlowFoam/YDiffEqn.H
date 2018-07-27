@@ -145,14 +145,12 @@ for(i=0; i<(n-1); i++)
 
     C1_avg[i] = (C1i).weightedAverage(mesh.V()).value();
 
-    Info<< "C1[" << i << "]:"
-        << "  avg = " << C1_avg[i]
-        << "  min = " << min(C1i).value()
-        << "  max = " << max(C1i).value()
+    Info<< "C1[" << i << "] avg = " << C1_avg[i]
+        << "  C1[" << i << "] min = " << min(C1i).value()
+        << "  C1[" << i << "] max = " << max(C1i).value()
         << nl
-        << "Y1[" << i << "]:"
-        << "  min = " << min(Y1i).value()
-        << "  max = " << max(Y1i).value()        
+        << "Y1[" << i << "] min = " << min(Y1i).value()
+        << "  Y1[" << i << "] max = " << max(Y1i).value()        
         << endl;    
 
     forAll(C1iCells,cellI)
@@ -175,10 +173,9 @@ for(i=0; i<(n-1); i++)
     C1_clip_err[i] = mag(C1_clip_avg[i] - C1_avg[i]);
     C1_clip_cum_err[i] += C1_clip_err[i];
 
-    Info<< "Clipped C1[" << i << "]:"        
-        << "  avg = " << C1_clip_avg[i]
-        << "  err = " << C1_clip_err[i]
-        << "  cum_err = " << C1_clip_cum_err[i]
+    Info<< "Clipped C1[" << i << "] avg = " << C1_clip_avg[i]
+        << "  C1[" << i << "] diff err = " << C1_clip_err[i]
+        << "  C1[" << i << "] cum_err = " << C1_clip_cum_err[i]
         << endl;
 
     Y1i.correctBoundaryConditions();
@@ -228,14 +225,12 @@ for(i=0; i<(n-1); i++)
 
     C0_avg[i] = (C0i).weightedAverage(mesh.V()).value();
 
-    Info<< "C0[" << i << "]:"
-        << "  avg = " << C0_avg[i]
-        << "  min = " << min(C0i).value()
-        << "  max = " << max(C0i).value()
+    Info<< "C0[" << i << "] avg = " << C0_avg[i]
+        << "  C0[" << i << "] min = " << min(C0i).value()
+        << "  C0[" << i << "] max = " << max(C0i).value()
         << nl
-        << "Y0[" << i << "]:"
-        << "  min = " << min(Y0i).value()
-        << "  max = " << max(Y0i).value()        
+        << "Y0[" << i << "] min = " << min(Y0i).value()
+        << "  Y0[" << i << "] max = " << max(Y0i).value()        
         << endl;
 
     forAll(C0iCells,cellI)
@@ -258,10 +253,9 @@ for(i=0; i<(n-1); i++)
     C0_clip_err[i] = mag(C0_clip_avg[i] - C0_avg[i]);
     C0_clip_cum_err[i] += C0_clip_err[i];
 
-    Info<< "Clipped C0[" << i << "]:"        
-        << "  avg = " << C0_clip_avg[i]
-        << "  err = " << C0_clip_err[i]
-        << "  cum_err = " << C0_clip_cum_err[i]
+    Info<< "Clipped C0[" << i << "] avg = " << C0_clip_avg[i]
+        << "  C0[" << i << "] diff err = " << C0_clip_err[i]
+        << "  C0[" << i << "] cum_err = " << C0_clip_cum_err[i]
         << endl;
 
     Y0i.correctBoundaryConditions();
