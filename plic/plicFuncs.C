@@ -8425,6 +8425,37 @@ void calc_cell_intfcGrad_coeffs
     }
 }
 
+/*
+void calc_erfInv_from_table
+(
+    double erf,
+    double erf_a,
+    double erf_b,
+    int nErf,
+    double *erfInv_table,
+    double& xbyDelta
+)
+{
+    dErf = (erf_b - erf_a)/(nErf - 1);
+
+    if(erf > erf_a && erf < erf_b)
+    {
+        idErf = floor((erf - erfa)/dErf);
+    }
+    else if(erf <= erf_a)
+    {
+        idErf = 0;
+    }
+    else
+    {
+        idErf = nErf - 1;
+    }
+
+    erf1 = erf_a + idErf*dErf;
+    
+    xbyDelta = erfInv_table[idErf] + (erfInv_table[idErf+1] - erfInv_table[idErf])*(erf - erf1)/dErf;
+}
+    */
 
 void calc_Js
 (
