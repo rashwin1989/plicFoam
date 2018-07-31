@@ -8427,7 +8427,7 @@ void calc_cell_intfcGrad_coeffs
     }
 }
 
-/*
+
 void calc_erfInv_from_table
 (
     double erf,
@@ -8438,26 +8438,40 @@ void calc_erfInv_from_table
     double& xbyDelta
 )
 {
+    int idErf;
+    double dErf, erf1, sqrx, erf_tmp;
+
     dErf = (erf_b - erf_a)/(nErf - 1);
 
     if(erf > erf_a && erf < erf_b)
     {
-        idErf = floor((erf - erfa)/dErf);
+        idErf = floor((erf - erf_a)/dErf);
+
+        erf1 = erf_a + idErf*dErf;
+    
+        xbyDelta = erfInv_table[idErf] + (erfInv_table[idErf+1] - erfInv_table[idErf])*(erf - erf1)/dErf;
     }
     else if(erf <= erf_a)
     {
         idErf = 0;
+        xbyDelta = erfInv_table[idErf];
     }
     else
     {
-        idErf = nErf - 1;
-    }
+        if(erf >= 1.0 - 1e-9)
+        {
+            erf_tmp = 1.0 - 1e-9;           
+        }
+        else
+        {
+            erf_tmp = erf;
+        }
 
-    erf1 = erf_a + idErf*dErf;
-    
-    xbyDelta = erfInv_table[idErf] + (erfInv_table[idErf+1] - erfInv_table[idErf])*(erf - erf1)/dErf;
+        sqrx = -log(1.0 - erf_tmp*erf_tmp);
+        xbyDelta = sqrt(sqrx);                
+    }
 }
-    */
+
 
 void calc_Js
 (
@@ -8479,21 +8493,48 @@ void calc_Js
     const PtrList<volScalarField>& Ys1,
     const PtrList<volScalarField>& Ys0,
     PtrList<volScalarField>& Js1,
-    PtrList<volScalarField>& Js0,    
+    PtrList<volScalarField>& Js0,
+    PtrList<volScalarField>& grads1,
+    PtrList<volScalarField>& grads0,
+    volScalarField& delta1,
+    volScalarField& delta0,
     const label& nSpecies,
     const scalar& ALPHA_2PH_MIN,
+    double erf_a,
+    double erf_b,
+    int nErf,
+    double *erfInv_table,
+    bool useErf,
+    const List<scalar>& Yinf1,
+    const List<scalar>& Yinf0,
     const bool debug,
     OFstream& os
 )
 {
+    int n = nSpecies;
+    int i;
+    double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+    scalar alpha1_cellI, A_intfc_cellI, dn1, dn0;
+    vector nf, C_intfc_cellI;
+
+    List<scalar> grads1_cellI(n);
+    List<scalar> grads0_cellI(n);
+    List<scalar> Yeff1(n);
+    List<scalar> Yeff0(n);
+    List<scalar> ys1(n);
+    List<scalar> ys0(n);
+
+    pi = Foam::constant::mathematical::pi;
+    two_sqrtPi = 2.0/sqrt(pi);
+
     scalar ALPHA_2PH_MAX = 1 - ALPHA_2PH_MIN;
 
-    const labelList& own = mesh.owner();
-    const labelList& nei = mesh.neighbour();
+    //const labelList& own = mesh.owner();
+    //const labelList& nei = mesh.neighbour();
 
-    const surfaceVectorField& Sf = mesh.Sf();
-    const surfaceScalarField& magSf = mesh.magSf();
-    const surfaceVectorField& Cf = mesh.Cf();
+    //const surfaceVectorField& Sf = mesh.Sf();
+    //const surfaceScalarField& magSf = mesh.magSf();
+    //const surfaceVectorField& Cf = mesh.Cf();
 
     const scalarField& alpha1Cells = alpha1.internalField();    
     const vectorField& C_intfcCells = C_intfc.internalField();
@@ -8501,130 +8542,151 @@ void calc_Js
     const vectorField& nHatCells = nHat.internalField();
     const scalarField& rho1Cells = rho1.internalField();
     const scalarField& rho0Cells = rho0.internalField();
+    scalarField& delta1Cells = delta1.internalField();
+    scalarField& delta0Cells = delta0.internalField();
 
     if(debug)
     {
-        os<< "-------------------------------------------------------------------------" << nl
-            << "Interfacial Species Flux Calculation" << nl
-            << "-------------------------------------------------------------------------" << nl
-            << nl
-            << "-------------------------------------------------------------------------" << nl
-            << "Internal cells" << nl
-            << "-------------------------------------------------------------------------" << nl
-            << endl;
+        print_line(os, 100);
+        os<< "Interfacial Species Flux Calculation" << endl;
+        print_line(os, 100);
+        os<< endl;
+        print_line(os, 100);
+        os<< "Internal cells" << endl;
+        print_line(os, 100);
+        os<< endl;
     }
 
     //Js for all interface cells
     forAll(alpha1Cells, cellI)
     {
-        scalar alpha1_cellI = alpha1Cells[cellI];        
+        alpha1_cellI = alpha1Cells[cellI];        
 
         if(alpha1_cellI > ALPHA_2PH_MIN && alpha1_cellI < ALPHA_2PH_MAX)
         {
-            vector nf = nHatCells[cellI];
-            vector C_intfc_cellI = C_intfcCells[cellI];
-            scalar A_intfc_cellI = A_intfcCells[cellI];
+            nf = nHatCells[cellI];
+            C_intfc_cellI = C_intfcCells[cellI];
+            A_intfc_cellI = A_intfcCells[cellI];
             labelList curCellsAll = cellStencil[cellI];
 
-            if(debug)
+            for(i=0; i<n; i++)
             {
-                os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+                ys1[i] = Ys1[i].internalField()[cellI];
+                ys0[i] = Ys0[i].internalField()[cellI];
             }
 
             if(debug)
             {
+                print_line(os, 100);
+                os<< "Cell: " << cellI << "  alpha1 = " << alpha1_cellI << endl;
+                print_line(os, 100);
                 os<< "nf = " << nf << "  C_intfc = " << C_intfc_cellI << "  A_intfc = " << A_intfc_cellI << nl
                     << "C_ph1 = " << C_ph1_flatFld[cellI] << "  C_ph0 = " << C_ph0_flatFld[cellI] << nl
-                    << "rho1 = " << rho1Cells[cellI] << "rho0 = " << rho0Cells[cellI] << endl;
-            }
-
-            scalar dn1;
-            List<scalar> Yeff1(nSpecies);
-            scalar dn0;
-            List<scalar> Yeff0(nSpecies);
-            scalar intfcGradi_cellI;
+                    << "rho1 = " << rho1Cells[cellI] << "  rho0 = " << rho0Cells[cellI] << endl;
+                print_line(os, 100);
+                os<< endl;
+            }            
 
             //phase-1
             //ensure nf direction is into the phase
             calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
-            if(debug)
-            {
-                os<< "dn1 = " << dn1 << endl;
-            }
-            if(dn1 < SMALL)
-            {
-                dn1 += SMALL;
-            }
-            if(debug)
-            {
-                os<< "dn1 stab = " << dn1 << endl;
-            }
+            
+            //Calculate the BL thickness delta from error function profile for Y[0]            
+            erf1 = (Yeff1[0] - ys1[0])/(Yinf1[0] - ys1[0]);
+            erf1 = max(erf1, 0.0);
+            erf1 = min(erf1, 1.0);
+            calc_erfInv_from_table(erf1,erf_a,erf_b,nErf,erfInv_table,x_delta1);
+            delta1_cellI = dn1/x_delta1;
 
-            for(label i=0; i<nSpecies; i++)
-            {
-                intfcGradi_cellI = (Yeff1[i] - Ys1[i].internalField()[cellI])/dn1;
-                
-                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*intfcGradi_cellI;
+            delta1Cells[cellI] = delta1_cellI;
 
-                if(debug)
+            for(i=0; i<n; i++)
+            {
+                if(useErf)
                 {
-                    os<< "species: " << i << "  Ys1i = " << Ys1[i].internalField()[cellI] << "  Yeff1i = " << Yeff1[i] << "  intfcGrad1i = " << intfcGradi_cellI << "  D1i = " << D1[i].internalField()[cellI] << "  Js1i = " <<  Js1[i].internalField()[cellI] << endl;
+                    grads1_cellI[i] = two_sqrtPi*(Yinf1[i] - ys1[i])/delta1_cellI;
                 }
+                else
+                {
+                    grads1_cellI[i] = (Yeff1[i] - ys1[i])/dn1;
+                }
+                
+                Js1[i].internalField()[cellI] = -A_intfc_cellI*rho1Cells[cellI]*D1[i].internalField()[cellI]*grads1_cellI[i];
+                grads1[i].internalField()[cellI] = grads1_cellI[i];
             }
             
             //phase-0
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
             calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
-            if(debug)
-            {
-                os<< "dn0 = " << dn0 << endl;
-            }
-            if(dn0 < SMALL)
-            {
-                dn0 += SMALL;
-            }
-            if(debug)
-            {
-                os<< "dn0 stab = " << dn0 << endl;
-            }
+            
+            //Calculate the BL thickness delta from error function profile for Y[0]            
+            erf0 = (Yeff0[0] - ys0[0])/(Yinf0[0] - ys0[0]);
+            erf0 = max(erf0, 0.0);
+            erf0 = min(erf0, 1.0);
+            calc_erfInv_from_table(erf0,erf_a,erf_b,nErf,erfInv_table,x_delta0);
+            delta0_cellI = dn0/x_delta0;
 
-            for(label i=0; i<nSpecies; i++)
+            delta0Cells[cellI] = delta0_cellI;
+
+            for(i=0; i<n; i++)
             {
-                intfcGradi_cellI = (Yeff0[i] - Ys0[i].internalField()[cellI])/dn0;
+                if(useErf)
+                {
+                    grads0_cellI[i] = two_sqrtPi*(Yinf0[i] - ys0[i])/delta0_cellI;
+                }
+                else
+                {
+                    grads0_cellI[i] = (Yeff0[i] - ys0[i])/dn0;
+                }
                 
-                Js0[i].internalField()[cellI] = A_intfc_cellI*rho0Cells[cellI]*D0[i].internalField()[cellI]*intfcGradi_cellI;
-
-                if(debug)
-                {
-                    os<< "species: " << i << "  Ys0i = " << Ys0[i].internalField()[cellI] << "  Yeff0i = " << Yeff0[i] << "  intfcGrad0i = " << intfcGradi_cellI << "  D0i = " << D0[i].internalField()[cellI] << "  Js0i = " <<  Js0[i].internalField()[cellI] << endl;
-                }
+                Js0[i].internalField()[cellI] = A_intfc_cellI*rho0Cells[cellI]*D0[i].internalField()[cellI]*grads0_cellI[i];
+                grads0[i].internalField()[cellI] = grads0_cellI[i];
             }
 
             if(debug)
             {
-                os<< "-------------------------------------------------------------------------" << endl;
-
-                for(label i=0; i<nSpecies; i++)
+                print_line(os, 100);
+                os<< "Phase-1:" << endl;
+                os<< "erf1 = " << erf1 << "  x_delta1 = " << x_delta1 << "  dn1 = " << dn1 << "  delta1 = " << delta1_cellI << endl;
+                print_line(os, 100);
+                os<< setw(9) << "Species" << setw(14) << "ys1" << setw(14) << "Yeff1" << setw(14) << "Yinf1" << setw(14) << "grads1" << setw(14) << "D1" << setw(14) << "Js1" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
                 {
-                    os<< "Js1[" << i << "] = " << Js1[i].internalField()[cellI] << "  Js0[" << i << "] = " << Js0[i].internalField()[cellI]
-                        << endl;
+                    os<< setw(9) << i << setw(14) << ys1[i] << setw(14) << Yeff1[i] << setw(14) << Yinf1[i] << setw(14) << grads1_cellI[i] << setw(14) << D1[i].internalField()[cellI] << setw(14) << Js1[i].internalField()[cellI] << endl;
                 }
+                print_line(os, 100);
 
-                os<< "-------------------------------------------------------------------------" << nl
-                    << endl;
+                print_line(os, 100);
+                os<< "Phase-0:" << endl;
+                os<< "erf0 = " << erf0 << "  x_delta0 = " << x_delta0 << "  dn0 = " << dn0 << "  delta0 = " << delta0_cellI << endl;
+                print_line(os, 100);
+                os<< setw(9) << "Species" << setw(14) << "ys0" << setw(14) << "Yeff0" << setw(14) << "Yinf0" << setw(14) << "grads0" << setw(14) << "D0" << setw(14) << "Js0" << endl;
+                print_line(os, 100);
+                for(i=0; i<n; i++)
+                {
+                    os<< setw(9) << i << setw(14) << ys0[i] << setw(14) << Yeff0[i] << setw(14) << Yinf0[i] << setw(14) << grads0_cellI[i] << setw(14) << D0[i].internalField()[cellI] << setw(14) << Js0[i].internalField()[cellI] << endl;
+                }
+                print_line(os, 100);
+                os<< endl;
             }
         }
         else
         {
-            for(label i=0; i<nSpecies; i++)
+            for(i=0; i<nSpecies; i++)
             { 
                 Js0[i].internalField()[cellI] = 0;
                 Js1[i].internalField()[cellI] = 0;
+                grads0[i].internalField()[cellI] = 0;
+                grads1[i].internalField()[cellI] = 0;
+                delta1Cells[cellI] = 0;
+                delta0Cells[cellI] = 0;
             }
         }        
     }
 
+    /*    
     if(debug)
     {
         os<< "-------------------------------------------------------------------------" << nl
@@ -9117,13 +9179,14 @@ void calc_Js
             }
         }
     }
+        */
 
     if(debug)
     {
-        os<< nl
-            << " Done Interfacial Species Flux Calculation" << nl
-            << "-------------------------------------------------------------------------" << nl
-            << endl;
+        print_line(os, 100);
+        os<< " Done Interfacial Species Flux Calculation" << endl;
+        print_line(os, 100);
+        os<< endl;
     }
 }
 

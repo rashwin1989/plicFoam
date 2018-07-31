@@ -940,6 +940,16 @@ namespace plicFuncs
         OFstream& os
     );
 
+    void calc_erfInv_from_table
+    (
+        double erf,
+        double erf_a,
+        double erf_b,
+        int nErf,
+        double *erfInv_table,
+        double& xbyDelta
+    );
+
     void calc_Js
     (
         const fvMesh& mesh,
@@ -961,8 +971,19 @@ namespace plicFuncs
         const PtrList<volScalarField>& Ys0,
         PtrList<volScalarField>& Js1,
         PtrList<volScalarField>& Js0,
+        PtrList<volScalarField>& grads1,
+        PtrList<volScalarField>& grads0,
+        volScalarField& delta1,
+        volScalarField& delta0,
         const label& nSpecies,
         const scalar& ALPHA_2PH_MIN,
+        double erf_a,
+        double erf_b,
+        int nErf,
+        double *erfInv_table,
+        bool useErf,
+        const List<scalar>& Yinf1,
+        const List<scalar>& Yinf0,
         const bool debug,
         OFstream& os
     );

@@ -29,13 +29,74 @@ for(i=0; i<n; i++)
 
 //------------------------------------------------------------------//
 //Calculate interfacial species mass fluxes
-plicFuncs::calc_Js(mesh, istCellStencil, Y1_flatFld_ist, Y0_flatFld_ist, alpha1_flatFld_ist, alpha1, rho1, rho0, D1, D0, C_ph1_flatFld_ist, C_ph0_flatFld_ist, C_intfc, A_intfc, nHat, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, ist_debug2, osIst);
+plicFuncs::calc_Js
+(
+    mesh,
+    istCellStencil,
+    Y1_flatFld_ist,
+    Y0_flatFld_ist,
+    alpha1_flatFld_ist,
+    alpha1, 
+    rho1,
+    rho0,
+    D1,
+    D0,
+    C_ph1_flatFld_ist,
+    C_ph0_flatFld_ist,
+    C_intfc,
+    A_intfc,
+    nHat,
+    Ys1,
+    Ys0,
+    Js1,
+    Js0,
+    grads1,
+    grads0,
+    delta1,
+    delta0,
+    nSpecies,
+    ALPHA_2PH_MIN_IST,
+    erf_a,
+    erf_b,
+    nErf,
+    erfInv_table,
+    useErf,
+    Y1_0,
+    Y0_0,
+    ist_debug2,
+    osIst
+);
 //Done calculate interfacial species mass fluxes
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
 //Calculate interfacial species transfer source terms and alpha source terms
-plicFuncs::calc_mS_alphaS(mesh, C1, C0, Y1, Y0, alpha1, rho1, rho0, Ys1, Ys0, Js1, Js0, nSpecies, ALPHA_2PH_MIN_IST, mS1, mS0, mS1Tot, mS0Tot, alphaS1, alphaS0, dt, ist_debug, osIst);
+plicFuncs::calc_mS_alphaS
+(
+    mesh,
+    C1,
+    C0,
+    Y1,
+    Y0,
+    alpha1,
+    rho1,
+    rho0,
+    Ys1,
+    Ys0,
+    Js1,
+    Js0,
+    nSpecies,
+    ALPHA_2PH_MIN_IST,
+    mS1,
+    mS0,
+    mS1Tot,
+    mS0Tot,
+    alphaS1,
+    alphaS0,
+    dt,
+    ist_debug,
+    osIst
+);
 //Done calculate interfacial species transfer source terms and alpha source terms
 //------------------------------------------------------------------//
 

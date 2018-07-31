@@ -376,22 +376,37 @@ Info<< "Done initialize UMFPACK" << endl;
 outputFile = "plic_dbg";
 OFstream osPlic(runTime.path()/outputFile);
 osPlic.precision(5);
+osPlic.setf(std::ios::scientific);
+//osPlic.setf(std::ios::showpos);
+osPlic.setf(std::ios::left);
 
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
 osAlpha.precision(5);
+osAlpha.setf(std::ios::scientific);
+//osAlpha.setf(std::ios::showpos);
+osAlpha.setf(std::ios::left);
 
 outputFile = "adv_dbg";
 OFstream osAdv(runTime.path()/outputFile);
 osAdv.precision(5);
+osAdv.setf(std::ios::scientific);
+//osAdv.setf(std::ios::showpos);
+osAdv.setf(std::ios::left);
 
 outputFile = "grad_dbg";
 OFstream osGrad(runTime.path()/outputFile);
 osGrad.precision(5);
+osGrad.setf(std::ios::scientific);
+//osGrad.setf(std::ios::showpos);
+osGrad.setf(std::ios::left);
 
 outputFile = "diff_dbg";
 OFstream osDiff(runTime.path()/outputFile);
 osDiff.precision(5);
+osDiff.setf(std::ios::scientific);
+//osDiff.setf(std::ios::showpos);
+osDiff.setf(std::ios::left);
 
 outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
@@ -403,14 +418,23 @@ osIst.setf(std::ios::left);
 outputFile = "pEqn_dbg";
 OFstream osPEqn(runTime.path()/outputFile);
 osPEqn.precision(5);
+osPEqn.setf(std::ios::scientific);
+//osPEqn.setf(std::ios::showpos);
+osPEqn.setf(std::ios::left);
 
 outputFile = "U_dbg";
 OFstream osU(runTime.path()/outputFile);
 osU.precision(5);
+osU.setf(std::ios::scientific);
+//osU.setf(std::ios::showpos);
+osU.setf(std::ios::left);
 
 outputFile = "transProp_dbg";
 OFstream osTransProp(runTime.path()/outputFile);
 osTransProp.precision(5);
+osTransProp.setf(std::ios::scientific);
+//osTransProp.setf(std::ios::showpos);
+osTransProp.setf(std::ios::left);
 
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//

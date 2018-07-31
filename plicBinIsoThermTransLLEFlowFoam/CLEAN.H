@@ -24,3 +24,5 @@ _DDELETE2_(xs1_tmp);
 _DDELETE2_(xs0_tmp);
 _DDELETE2_(ys1_tmp);
 _DDELETE2_(ys0_tmp);
+
+_DDELETE2_(erfInv_table);

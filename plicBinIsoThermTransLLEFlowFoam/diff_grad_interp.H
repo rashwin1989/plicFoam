@@ -35,8 +35,9 @@ plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1
 
 //------------------------------------------------------------------//
 //Linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
-plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, Cf_ph1, Cf_ph0);
 
+plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, Cf_ph1, Cf_ph0);
+/*
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
 
@@ -54,6 +55,7 @@ for(i=0; i<n; i++)
     plicFuncs::linearInterpolate_2ph(D1i, mesh, w_ph1, D1fi);
     plicFuncs::linearInterpolate_2ph(D0i, mesh, w_ph1, D0fi);
 }
+    */
 //Done linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 //------------------------------------------------------------------//
 

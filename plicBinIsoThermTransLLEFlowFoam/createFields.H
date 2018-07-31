@@ -16,11 +16,15 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, interp_debug, transProp_debug;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug;//, interp_debug, transProp_debug;
 //bool calcKij;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, idx, iread, n_miscible;
 double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij;
+int nErf, iErf;
+double erf_a, erf_b;
+double *erfInv_table;
+bool useErf;
 FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -110,8 +114,9 @@ advFlux_debug = transPropDict.lookupOrDefault("advFlux_debug", false);
 advFlux_debug2 = transPropDict.lookupOrDefault("advFlux_debug2", false);
 pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
 U_debug = transPropDict.lookupOrDefault("U_debug", false);
-interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
-transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
+//interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
+//transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
+useErf = transPropDict.lookupOrDefault("useErf", true);
 // int switches
 //n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -362,22 +367,67 @@ Info<< "Done initialize UMFPACK" << endl;
 //Set up output streams linked to output files
 outputFile = "plic_dbg";
 OFstream osPlic(runTime.path()/outputFile);
+osPlic.precision(5);
+osPlic.setf(std::ios::scientific);
+//osPlic.setf(std::ios::showpos);
+osPlic.setf(std::ios::left);
+
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
+osAlpha.precision(5);
+osAlpha.setf(std::ios::scientific);
+//osAlpha.setf(std::ios::showpos);
+osAlpha.setf(std::ios::left);
+
 outputFile = "adv_dbg";
 OFstream osAdv(runTime.path()/outputFile);
+osAdv.precision(5);
+osAdv.setf(std::ios::scientific);
+//osAdv.setf(std::ios::showpos);
+osAdv.setf(std::ios::left);
+
 outputFile = "grad_dbg";
 OFstream osGrad(runTime.path()/outputFile);
+osGrad.precision(5);
+osGrad.setf(std::ios::scientific);
+//osGrad.setf(std::ios::showpos);
+osGrad.setf(std::ios::left);
+
 outputFile = "diff_dbg";
 OFstream osDiff(runTime.path()/outputFile);
+osDiff.precision(5);
+osDiff.setf(std::ios::scientific);
+//osDiff.setf(std::ios::showpos);
+osDiff.setf(std::ios::left);
+
 outputFile = "ist_dbg";
 OFstream osIst(runTime.path()/outputFile);
+osIst.precision(5);
+osIst.setf(std::ios::scientific);
+//osIst.setf(std::ios::showpos);
+osIst.setf(std::ios::left);
+
 outputFile = "pEqn_dbg";
 OFstream osPEqn(runTime.path()/outputFile);
+osPEqn.precision(5);
+osPEqn.setf(std::ios::scientific);
+//osPEqn.setf(std::ios::showpos);
+osPEqn.setf(std::ios::left);
+
 outputFile = "U_dbg";
 OFstream osU(runTime.path()/outputFile);
+osU.precision(5);
+osU.setf(std::ios::scientific);
+//osU.setf(std::ios::showpos);
+osU.setf(std::ios::left);
+
 outputFile = "transProp_dbg";
 OFstream osTransProp(runTime.path()/outputFile);
+osTransProp.precision(5);
+osTransProp.setf(std::ios::scientific);
+//osTransProp.setf(std::ios::showpos);
+osTransProp.setf(std::ios::left);
+
 //Done set up output streams linked to output files
 //------------------------------------------------------------------//
 
@@ -530,6 +580,29 @@ T_0 = T1.internalField()[0];
 //Thermo and transport properties fields initialization
 Info<< "Initializing transportProperties\n" << endl;
 
+List<scalar> Y1_0(n);
+List<scalar> Y0_0(n);
+
+scalar Y1i_tmp, Y0i_tmp; 
+scalar Y1Tot_tmp = 0;
+scalar Y0Tot_tmp = 0;
+for(i=0; i<(n-1); i++)
+{    
+    fieldName = "Y1_0[" + Foam::name(i) + "]";
+    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 1.0);
+    Y1_0[i] = Y1i_tmp;
+    Y1Tot_tmp += Y1i_tmp;
+
+    fieldName = "Y0_0[" + Foam::name(i) + "]";
+    Y0i_tmp = transPropDict.lookupOrDefault(fieldName, 0.0);
+    Y0_0[i] = Y0i_tmp;
+    Y0Tot_tmp += Y0i_tmp;
+}
+Y1_0[n-1] = scalar(1.0) - Y1Tot_tmp;
+Y1_0[n-1] = max(Y1_0[n-1], 0.0);
+Y0_0[n-1] = scalar(1.0) - Y0Tot_tmp;
+Y0_0[n-1] = max(Y0_0[n-1], 0.0);
+
 //Since isothermal case, calculate BIP matrix from input table once for T_0
 plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 //calcKij = false;
@@ -548,7 +621,7 @@ dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
 plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
+//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
 
 //phase-0
 //set pure water phase initial mole fractions
@@ -561,7 +634,7 @@ dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
 plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
 
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
+//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
 
 volScalarField rho1
 (
@@ -713,158 +786,6 @@ PtrList<volScalarField> D0(n);
 PtrList<surfaceScalarField> D1f(n);
 PtrList<surfaceScalarField> D0f(n);
 
-for(i=0; i<n; i++)
-{
-    fieldName = "D1" + Foam::name(i);
-    Info<< "Reading diffusivity " << fieldName << endl;
-    D1_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
-        )
-    );
-
-    fieldName = "D0" + Foam::name(i);
-    Info<< "Reading diffusivity " << fieldName << endl;
-    D0_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
-        )
-    );
-}
-
-for(i=0; i<n; i++)
-{    
-    for(j=0; j<n; j++)
-    {
-        ijIndex = n*i + j;
-
-        fieldName = "Dij1" + Foam::name(i) + Foam::name(j);
-        Info<< "Initializing field " << fieldName << endl;
-        Dij1.set
-        (
-            ijIndex,
-            new volScalarField
-            (
-                IOobject
-                (
-                    fieldName,
-                    runTime.timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                D1_0[i]
-            )
-        );
-        
-        fieldName = "Dij0" + Foam::name(i) + Foam::name(j);
-        Info<< "Initializing field " << fieldName << endl;
-        Dij0.set
-        (
-            ijIndex,
-            new volScalarField
-            (
-                IOobject
-                (
-                    fieldName,
-                    runTime.timeName(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh,
-                D0_0[i]
-            )
-        );        
-    }
-
-    fieldName = "D1" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D1.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D1_0[i]
-        )
-    );
-
-    fieldName = "D0" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D0.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D0_0[i]
-        )
-    );
-
-    fieldName = "D1f" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D1f.set
-    (
-        i,
-        new surfaceScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D1_0[i]
-        )
-    );
-
-    fieldName = "D0f" + Foam::name(i);
-    Info<< "Initializing field " << fieldName << endl;
-    D0f.set
-    (
-        i,
-        new surfaceScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                runTime.timeName(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            D0_0[i]
-        )
-    );        
-}
 //Done thermo and transport properties fields initialization
 //------------------------------------------------------------------//
 
@@ -1524,8 +1445,8 @@ const vectorField& Cf_ph0_nei = interface.Cf_ph0_nei();
 vectorField Cf_ph1(nFaces);
 vectorField Cf_ph0(nFaces);
 
-const vectorField& C_ph1 = interface.C_ph1();
-const vectorField& C_ph0 = interface.C_ph0();
+//const vectorField& C_ph1 = interface.C_ph1();
+//const vectorField& C_ph0 = interface.C_ph0();
 
 const volVectorField& C_intfc = interface.C_intfc();
 const volScalarField& A_intfc = interface.A_intfc();
@@ -1899,6 +1820,8 @@ PtrList<volScalarField> Ys1(n);
 PtrList<volScalarField> Ys0(n);
 PtrList<volScalarField> Js1(n);
 PtrList<volScalarField> Js0(n);
+PtrList<volScalarField> grads1(n);
+PtrList<volScalarField> grads0(n);
 PtrList<volScalarField> mS1(n);
 PtrList<volScalarField> mS0(n);
 
@@ -1923,6 +1846,9 @@ if(n_miscible==1)
     Info<< "FATAL ERROR: Fully miscible species pair at given T0..." << endl;
     exit(-1);
 }
+
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs1_tmp,Dij1_tmp);
+new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs0_tmp,Dij0_tmp);
 
 for(i=0; i<n; i++)
 {    
@@ -2003,6 +1929,46 @@ for(i=0; i<n; i++)
             ),
             mesh,
             dimensionedScalar(fieldName, dimMass/dimTime, 0)
+        )
+    );
+
+    fieldName = "grads1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    grads1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimless/dimLength, 0)
+        )
+    );
+
+    fieldName = "grads0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    grads0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedScalar(fieldName, dimless/dimLength, 0)
         )
     );
 
@@ -2142,6 +2108,207 @@ volScalarField pS
     mesh,
     dimensionedScalar(fieldName, dimless/dimTime, 0)
 );
+
+fieldName = "delta1";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField delta1
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimLength, 0)
+);
+
+fieldName = "delta0";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField delta0
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(fieldName, dimLength, 0)
+);
+
+
+for(i=0; i<n; i++)
+{
+    fieldName = "D1" + Foam::name(i);
+    Info<< "Initializing diffusivity " << fieldName << endl;
+    D1_0.set
+    (
+        i,
+        new dimensionedScalar
+        (
+            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
+        )
+    );
+
+    fieldName = "D0" + Foam::name(i);
+    Info<< "Initializing diffusivity " << fieldName << endl;
+    D0_0.set
+    (
+        i,
+        new dimensionedScalar
+        (
+            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
+        )
+    );
+}
+
+for(i=0; i<n; i++)
+{    
+    for(j=0; j<n; j++)
+    {
+        ijIndex = n*i + j;
+
+        fieldName = "Dij1" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        Dij1.set
+        (
+            ijIndex,
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    runTime.timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D1_0[i]
+            )
+        );
+        
+        fieldName = "Dij0" + Foam::name(i) + Foam::name(j);
+        Info<< "Initializing field " << fieldName << endl;
+        Dij0.set
+        (
+            ijIndex,
+            new volScalarField
+            (
+                IOobject
+                (
+                    fieldName,
+                    runTime.timeName(),
+                    mesh,
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                mesh,
+                D0_0[i]
+            )
+        );        
+    }
+
+    fieldName = "D1" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D1_0[i]
+        )
+    );
+
+    fieldName = "D0" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0.set
+    (
+        i,
+        new volScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D0_0[i]
+        )
+    );
+
+    fieldName = "D1f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D1f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D1_0[i]
+        )
+    );
+
+    fieldName = "D0f" + Foam::name(i);
+    Info<< "Initializing field " << fieldName << endl;
+    D0f.set
+    (
+        i,
+        new surfaceScalarField
+        (
+            IOobject
+            (
+                fieldName,
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            D0_0[i]
+        )
+    );        
+}
+//------------------------------------------------------------------//
+//Read input parameters for error function inverse table from input file
+f = fopen("constant/erfInv_input.dat+", "r");
+iread = fscanf(f, "%lf %lf %d", &erf_a, &erf_b, &nErf);
+fclose(f);
+
+_NNEW2_(erfInv_table, double, nErf);
+
+f = fopen("constant/erfInv_table.dat+", "r");
+for(iErf=0; iErf<nErf; iErf++)
+{
+    iread = fscanf(f, "%lf", &erfInv_table[iErf]);    
+}
+fclose(f);
+//------------------------------------------------------------------//
 
 //Done interfacial conditions variables and source terms
 //------------------------------------------------------------------//
