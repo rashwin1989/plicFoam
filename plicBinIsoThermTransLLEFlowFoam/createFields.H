@@ -25,6 +25,7 @@ int nErf, iErf;
 double erf_a, erf_b;
 double *erfInv_table;
 bool useErf;
+bool calcDiff;
 FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -117,6 +118,7 @@ U_debug = transPropDict.lookupOrDefault("U_debug", false);
 //interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
 //transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
 useErf = transPropDict.lookupOrDefault("useErf", true);
+calcDiff = transPropDict.lookupOrDefault("calcDiff", true);
 // int switches
 //n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -1847,8 +1849,11 @@ if(n_miscible==1)
     exit(-1);
 }
 
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs1_tmp,Dij1_tmp);
-new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs0_tmp,Dij0_tmp);
+if(calcDiff)
+{
+    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs1_tmp,Dij1_tmp);
+    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs0_tmp,Dij0_tmp);
+}
 
 for(i=0; i<n; i++)
 {    
@@ -2144,27 +2149,54 @@ volScalarField delta0
 
 for(i=0; i<n; i++)
 {
-    fieldName = "D1" + Foam::name(i);
-    Info<< "Initializing diffusivity " << fieldName << endl;
-    D1_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
-        )
-    );
+    if(calcDiff)
+    {
+        fieldName = "D1" + Foam::name(i);
+        Info<< "Initializing diffusivity " << fieldName << endl;
+        D1_0.set
+            (
+                i,
+                new dimensionedScalar
+                (
+                    "D1_0", dimLength*dimLength/dimTime, Dij1_tmp[1]
+                )
+            );
 
-    fieldName = "D0" + Foam::name(i);
-    Info<< "Initializing diffusivity " << fieldName << endl;
-    D0_0.set
-    (
-        i,
-        new dimensionedScalar
-        (
-            "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
-        )
-    );
+        fieldName = "D0" + Foam::name(i);
+        Info<< "Initializing diffusivity " << fieldName << endl;
+        D0_0.set
+            (
+                i,
+                new dimensionedScalar
+                (
+                    "D0_0", dimLength*dimLength/dimTime, Dij0_tmp[1]
+                )
+            );
+    }
+    else
+    {
+        fieldName = "D1" + Foam::name(i);
+        Info<< "Reading diffusivity " << fieldName << endl;
+        D1_0.set
+            (
+                i,
+                new dimensionedScalar
+                (
+                    transPropDict.lookup("D1_0")
+                )
+            );
+
+        fieldName = "D0" + Foam::name(i);
+        Info<< "Reading diffusivity " << fieldName << endl;
+        D0_0.set
+            (
+                i,
+                new dimensionedScalar
+                (
+                    transPropDict.lookup("D0_0")
+                )
+            );
+    }
 }
 
 for(i=0; i<n; i++)
