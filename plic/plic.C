@@ -1465,6 +1465,12 @@ void Foam::plic::calcFaceFluxTets
 }
 
 
+void Foam::plic::makeCorrVec()
+{
+     
+}
+
+
 Foam::face Foam::plic::face_from_lbls
 (
     const label a,
