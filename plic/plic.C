@@ -1465,9 +1465,50 @@ void Foam::plic::calcFaceFluxTets
 }
 
 
-void Foam::plic::makeCorrVec()
+void Foam::plic::makeCorrVecFlatFld()
 {
-     
+    label cellI, nCompact, nCells, nFlatFld;
+
+    const fvMesh& mesh = mesh();
+    const mapDistribute& map = faceStencil().map();
+
+    nCells = mesh.nCells();
+    
+    nFlatFld = map.constructSize();
+    corrVec_flatFld_.resize(nFlatFld);
+    
+
+    for(cellI=0; cellI<nCells; cellI++)
+    {
+        corrVec_flatFld_[cellI] = vector::zero;
+    }
+
+    forAll(alpha_ph1_.boundaryField(), patchI)
+    {
+        const polyPatch& pp = mesh.boundary()[patchI].patch();
+        const fvPatchScalarField& pAlpha1 = alpha_ph1_.boundaryField()[patchI];
+
+        nCompact = pp.start() - mesh.nInternalFaces() + nCells;
+
+        if(isA<processorCyclicPolyPatch>(pp))
+        {
+            const vectorField& sep = pp.separation();
+
+            forAll(pAlpha1, fcI)
+            {
+                corrVec_flatFld_[nCompact++] = sep[fcI];
+            }
+        }
+        else
+        {
+            forAll(pAlpha1, fcI)
+            {
+                corrVec_flatFld_[nCompact++] = vector::zero;
+            }
+        }
+    }
+
+    map.distribute(corrVec_flatFld_);
 }
 
 
