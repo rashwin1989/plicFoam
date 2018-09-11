@@ -1,0 +1,47 @@
+EXE_INC = \
+	-I../SCF-core/include \
+	-I../UMFPACK/Include \
+        -I../AMD/Include \
+        -I../UFconfig \
+	-I../plic/lnInclude \
+	-I../plicStencils/lnInclude \
+	-I$(LIB_SRC)/finiteVolume/lnInclude
+
+EXE_LIBS = \
+	-L../SCF-core/lib \
+        -lscfcore \
+        -lm -lgfortran \
+        /usr/lib/libgsl.a \
+	/usr/lib/libgslcblas.a \
+        ../UMFPACK/Lib/libumfpack.a \
+        ../AMD/Lib/libamd.a \
+        ../UFconfig/xerbla/libcerbla.a  \
+	-lplic \
+	-lplicStencils \
+	-lcellInfo \
+	-lPlane \
+	-lplicLeastSquares \
+	-lfiniteVolume
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
