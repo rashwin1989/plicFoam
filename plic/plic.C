@@ -1464,7 +1464,7 @@ void Foam::plic::calcFaceFluxTets
     // end of tetrahedral decomposition of face flux polygon volume
 }
 
-
+/*
 void Foam::plic::makeCorrVecFlatFld()
 {
     label cellI, nCompact, nCells, nFlatFld;
@@ -1510,7 +1510,7 @@ void Foam::plic::makeCorrVecFlatFld()
 
     map.distribute(corrVec_flatFld_);
 }
-
+    */
 
 Foam::face Foam::plic::face_from_lbls
 (
