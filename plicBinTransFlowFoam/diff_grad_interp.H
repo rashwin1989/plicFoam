@@ -37,10 +37,16 @@ plicFuncs::calc_face_phaseState_diff(mesh, Y1[0], Af_ph1_own, Af_ph0_own, Af_ph1
 //Linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 
 plicFuncs::calc_2ph_Cf(Cf_ph1_own, Cf_ph0_own, Cf_ph1_nei, Cf_ph0_nei, Af_ph1_own, Af_ph0_own, Af_ph1_nei, Af_ph0_nei, Cf_ph1, Cf_ph0);
-/*
+
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph1, Cf_ph1, w_ph1);
 plicFuncs::calc_2ph_linearInterpolation_weights(mesh, C_ph0, Cf_ph0, w_ph0);
 
+plicFuncs::linearInterpolate_2ph(T1, mesh, w_ph1, T1f);
+plicFuncs::linearInterpolate_2ph(T0, mesh, w_ph0, T0f);
+plicFuncs::linearInterpolate_2ph(v1, mesh, w_ph1, v1f);
+plicFuncs::linearInterpolate_2ph(v0, mesh, w_ph0, v0f);
+plicFuncs::linearInterpolate_2ph(lambda1, mesh, w_ph1, lambda1f);
+plicFuncs::linearInterpolate_2ph(lambda0, mesh, w_ph0, lambda0f);
 plicFuncs::linearInterpolate_2ph(rho1, mesh, w_ph1, rho1f);
 plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
 plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f, interp_debug, osGrad);
@@ -48,6 +54,13 @@ plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f, interp_debug, osGrad);
 
 for(i=0; i<n; i++)
 {        
+    const volScalarField& hpar1i = hpar1[i];
+    const volScalarField& hpar0i = hpar0[i];
+    surfaceScalarField& hpar1fi = hpar1f[i];
+    surfaceScalarField& hpar0fi = hpar0f[i];
+    plicFuncs::linearInterpolate_2ph(hpar1i, mesh, w_ph1, hpar1fi);
+    plicFuncs::linearInterpolate_2ph(hpar0i, mesh, w_ph1, hpar0fi);
+
     const volScalarField& D1i = D1[i];
     const volScalarField& D0i = D0[i];
     surfaceScalarField& D1fi = D1f[i];
@@ -55,7 +68,7 @@ for(i=0; i<n; i++)
     plicFuncs::linearInterpolate_2ph(D1i, mesh, w_ph1, D1fi);
     plicFuncs::linearInterpolate_2ph(D0i, mesh, w_ph1, D0fi);
 }
-    */
+
 //Done linear interpolate T, v, lambda, mu, diffusivity, x to faces in both phases
 //------------------------------------------------------------------//
 

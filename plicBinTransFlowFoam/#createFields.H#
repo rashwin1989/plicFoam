@@ -1,3 +1,8 @@
+
+
+
+
+
 //------------------------------------------------------------------//
 //Define all label, scalar, vector (OpenFOAM format) variables
 //Input parameters, tolerances
@@ -2983,13 +2988,23 @@ for(i=0; i<n; i++)
     H0 = alpha0*rhoh0;
     H0_old = H0;
 
-//plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T1, x1, rho1, alpha1, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h1, rhoh1, H1);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T1, x1, rho1, alpha1, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h1, rhoh1, H1);
 
-//plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T0, x0, rho0, alpha0, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h0, rhoh0, H0);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T0, x0, rho0, alpha0, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h0, rhoh0, H0);
 
 #include "correct_thermo_trans_prop.H"
 
 #include "diff_grad_interp.H"
+
+Info << "Internal X0 = " << x0[11][0] << nl
+<< "Boundary X0 = " << x0.boundaryField()[0][0][0] << endl;
+
+Info << "Internal h0 = " << h0[11] << nl
+<< "Boundary h0 = " << h0.boundaryField()[0][0] << endl;
+
+Info << "Internal T0 = " << T0[11] << nl
+<< "Boundary T0 = " << T0.boundaryField()[0][0] << endl;
+
 
 rho = alpha1*rho1 + alpha0*rho0;
 mu = alpha1*mu1 + alpha0*mu0;

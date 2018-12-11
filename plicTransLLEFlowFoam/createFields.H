@@ -4,8 +4,8 @@
 label nSpecies, nOCorr, nPCorr, nNonOrthCorr, ALPHA_BOUND_ITERS_MAX, Y_BOUND_ITERS_MAX;
 scalar ALPHA_MAX_BOUND, ALPHA_MIN_BOUND, ALPHA_BOUND_ERR, SMALLEST_ALPHA_FOR_YADV, T1_TMP_VAL, T0_TMP_VAL, SMALLEST_ALPHA_FOR_YDIFF, MIN_ALPHA_DIFF, ALPHA_2PH_MIN, A_INTFC_2PH_MIN;
 //Temp variables
-label iOCorr, iPCorr, iNonOrthCorr;
-label nCells, nFaces, n_flatFld_diff, n_flatFld_ist;
+label iOCorr, iPCorr, iNonOrthCorr, faceI, celli;
+label nCells, nFaces, nIntFaces, n_flatFld_diff, n_flatFld_ist;
 scalar deltaT, dt, maxAlpha1, minAlpha1, div_alpha1, div_phi;
 vector minAlpha1CellC, maxAlpha1CellC;
 word fieldName;
@@ -353,6 +353,13 @@ flux_compRow_setRowCol(&flux_umf, n);
 Info<< "Done initialize UMFPACK" << endl;
 //------------------------------------------------------------------//
 //Set up output streams linked to output files
+outputFile = "plic_dbg";
+OFstream osPlic(runTime.path()/outputFile);
+osPlic.precision(5);
+osPlic.setf(std::ios::scientific);
+//osPlic.setf(std::ios::showpos);
+osPlic.setf(std::ios::left);
+
 outputFile = "alpha_dbg";
 OFstream osAlpha(runTime.path()/outputFile);
 outputFile = "adv_dbg";
@@ -1526,7 +1533,7 @@ T0_TMP_VAL = 0.5*(T0min + T0max);
 
 //------------------------------------------------------------------//
 //PLIC interface class set up and interface properties like normal, curvature 
-plic interface(mesh, alpha1, U, phi, rho1, rho0, rho);
+plic interface(mesh, alpha1, alpha0, U, phi, rho1, rho0, rho, osPlic);
 
 volScalarField alpha1_smooth
 (
@@ -2536,6 +2543,9 @@ scalarField& Dh0Cells = Dh0.internalField();
 //Initialize dependent variable fields correctly 
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
+
+// plicFuncs::correct_rho(P_thermo_tmp, T1, x0, n, Pc, Tc, w, MW, Ta_kij, Tb_kij, nT_kij, calcKij, kij, rho1);
+// plicFuncs::correct_rho(P_thermo_tmp, T0, x1, n, Pc, Tc, w, MW, Ta_kij, Tb_kij, nT_kij, calcKij, kij, rho0);
 
 plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x1, T1, rho1);
 plicFuncs::correct_rho(n, Pc, Tc, w, MW, tk, coef_ab, P_thermo_tmp, x0, T0, rho0);

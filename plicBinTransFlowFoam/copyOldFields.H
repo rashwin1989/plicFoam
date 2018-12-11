@@ -7,3 +7,5 @@ for(i=0; i<n; i++)
     C0_old[i] == C0[i];
     c0_old[i] == c0[i];
 }
+H1_old = H1;
+H0_old = H0;

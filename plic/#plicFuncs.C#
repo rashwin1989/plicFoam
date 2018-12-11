@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------*\
+*---------------------------------------------------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     |
@@ -6483,6 +6483,8 @@ void calc_diffFlux_limiter_T
         xNei_tmp[i] = xNei[i];
     }    
 
+    Info << "calc_diffFlux_limiter_T called." << endl;
+
     if(mag(diffFlux) > SMALL)
     {
         MWOwn_tmp = 0; MWNei_tmp = 0;
@@ -6499,6 +6501,8 @@ void calc_diffFlux_limiter_T
         for(iter=0; iter<MAX_ITER_T; iter++)
         {
             calc_kij_from_table(TOld, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+
+            Info << "Calling calc_v_cp_h_(" << TOld << ", " << kij << ")" << endl;
 
             calc_v_cp_h_(&P, &TOld, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &CpOwn_tmp, &hOwn_tmp);            
 
@@ -6568,7 +6572,7 @@ void calc_diffFlux_limiter_T
 
     _DDELETE_(xOwn_tmp);
     _DDELETE_(xNei_tmp);
-    //    Info << "calc_diffFlux_limiter_T ran. diffFlux_limiter =  " << diffFlux_limiter << endl;
+    Info << "calc_diffFlux_limiter_T ran. diffFlux_limiter =  " << diffFlux_limiter << endl;
 }
 
 

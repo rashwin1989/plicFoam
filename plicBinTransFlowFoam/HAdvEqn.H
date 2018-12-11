@@ -10,13 +10,13 @@ if(adv_debug2)
 dt = deltaT;
 
 //Phase-1
-volScalarField surfInt_advFlux_h1(fvc::surfaceIntegrate(advFlux_h1));
+volScalarField surfInt_advFlux_h1(fvc::surfaceIntegrate(advFlux_rhoh1));
 scalarField& surfInt_advFlux_h1Cells = surfInt_advFlux_h1.internalField();
 
 if(adv_debug2)
 {
-    plicFuncs::print_advFluxFld(mesh, advFlux_h1, alpha1, H1, h1, T1, "h1", "T1", osAdv);
-    plicFuncs::print_advFluxIntData(mesh, advFlux_h1, surfInt_advFlux_h1Cells, dt, alpha1, H1, h1, T1, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", "H1", "h1", "T1", osAdv);
+    plicFuncs::print_advFluxFld(mesh, advFlux_rhoh1, alpha1, H1, h1, T1, "h1", "T1", osAdv);
+    plicFuncs::print_advFluxIntData(mesh, advFlux_rhoh1, surfInt_advFlux_h1Cells, dt, alpha1, H1, h1, T1, Af_ph1_own, Af_ph1_nei, "ph1", "alpha1", "H1", "h1", "T1", osAdv);
 
     plicFuncs::print_line(osAdv, 80);
     osAdv<< setw(6) << "cellI" << "  " << setw(12) << "H1" << "  " << setw(12) << "rhoh1" << "  " << setw(12) << "h1" << "  " << setw(12) << "T1" << endl;
@@ -42,8 +42,10 @@ forAll(H1Cells,cellI)
         {
             x_cellI_tmp[i] = x1[i].internalField()[cellI];
         }
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+
+       plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
         T1Cells[cellI] = T_cellI_tmp;
+
     }
 
     if(adv_debug2)
@@ -91,12 +93,14 @@ forAll(T1Cells,cellI)
     {
         x_cellI_tmp[i] = x1[i].internalField()[cellI];
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h_cellI_tmp);
 
     h1Cells[cellI] = h_cellI_tmp;
     rhoh1Cells[cellI] = rho1Cells[cellI]*h_cellI_tmp;
     H1Cells[cellI] = alpha1Cells[cellI]*rhoh1Cells[cellI];
 }
+
+Info << "Done" << endl;
 
 Info<< "Phase-1 H after clipping = "
 << (H1).weightedAverage(mesh.Vsc()).value()
@@ -109,16 +113,16 @@ Info<< "Phase-1 H after clipping = "
 << endl;
 
 T1.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x1,T1,rho1,alpha1,h1,rhoh1,H1);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T1, x1, rho1, alpha1, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h1, rhoh1, H1);
 
 //Phase-0
-volScalarField surfInt_advFlux_h0(fvc::surfaceIntegrate(advFlux_h0));
+volScalarField surfInt_advFlux_h0(fvc::surfaceIntegrate(advFlux_rhoh0));
 scalarField& surfInt_advFlux_h0Cells = surfInt_advFlux_h0.internalField();
 
 if(adv_debug2)
 {
-    plicFuncs::print_advFluxFld(mesh, advFlux_h0, alpha0, H0, h0, T0, "h0", "T0", osAdv);
-    plicFuncs::print_advFluxIntData(mesh, advFlux_h0, surfInt_advFlux_h0Cells, dt, alpha0, H0, h0, T0, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", "H0", "h0", "T0", osAdv);
+    plicFuncs::print_advFluxFld(mesh, advFlux_rhoh0, alpha0, H0, h0, T0, "h0", "T0", osAdv);
+    plicFuncs::print_advFluxIntData(mesh, advFlux_rhoh0, surfInt_advFlux_h0Cells, dt, alpha0, H0, h0, T0, Af_ph0_own, Af_ph0_nei, "ph0", "alpha0", "H0", "h0", "T0", osAdv);
 
     plicFuncs::print_line(osAdv, 80);
     osAdv<< setw(6) << "cellI" << "  " << setw(12) << "H0" << "  " << setw(12) << "rhoh0" << "  " << setw(12) << "h0" << "  " << setw(12) << "T0" << endl;
@@ -144,8 +148,11 @@ forAll(H0Cells,cellI)
         {
             x_cellI_tmp[i] = x0[i].internalField()[cellI];
         }
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+
         T0Cells[cellI] = T_cellI_tmp;
+
     }
 
     if(adv_debug2)
@@ -193,7 +200,7 @@ forAll(T0Cells,cellI)
     {
         x_cellI_tmp[i] = x0[i].internalField()[cellI];
     }
-    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, tk, Tb, SG, H8, h_cellI_tmp);
+    plicFuncs::calc_h_from_T(x_cellI_tmp, P_thermo_tmp, T_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h_cellI_tmp);
 
     h0Cells[cellI] = h_cellI_tmp;
     rhoh0Cells[cellI] = rho0Cells[cellI]*h_cellI_tmp;
@@ -211,6 +218,6 @@ Info<< "Phase-0 H after clipping = "
 << endl;
 
 T0.correctBoundaryConditions();
-plicFuncs::correct_boundaryField_h_rhoh_H(n,Pc,Tc,w,MW,tk,Tb,SG,H8,P_thermo_tmp,x0,T0,rho0,alpha0,h0,rhoh0,H0);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T0, x0, rho0, alpha0, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h0, rhoh0, H0);
 
 Info<< "Done HAdvEqns" << endl;

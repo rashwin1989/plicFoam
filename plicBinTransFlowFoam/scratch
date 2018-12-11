@@ -1,0 +1,15 @@
+Info<< "Phase-1 H = "
+<< (H1).weightedAverage(mesh.Vsc()).value()
+<< nl
+<< "Min(H1) = " << min(H1).value()
+<< "  Max(H1) = " << max(H1).value()
+<< nl
+<< "Min(T1) = " << min(T1).value()
+<< "  Max(T1) = " << max(T1).value()
+<< nl
+<< "H1 undershoot = " << min((min(H1).value() - H1min), 0)
+<< "  H1 overshoot = " << max((max(H1).value() - H1max), 0)
+<< nl
+<< "T1 undershoot = " << min((min(T1).value() - T1min), 0)
+<< "  T1 overshoot = " << max((max(T1).value() - T1max), 0)
+<< endl;

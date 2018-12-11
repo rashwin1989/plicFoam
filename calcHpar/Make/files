@@ -1,0 +1,3 @@
+calcHpar.C
+
+EXE = $(FOAM_APPBIN)/calcHpar

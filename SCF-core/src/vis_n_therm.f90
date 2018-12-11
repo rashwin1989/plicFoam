@@ -539,6 +539,7 @@ subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
   ! PR coefficients of pure components and their derivatives
   do i=1,n
   !{
+
     Tr = T/Tc(i)
     if (w(i) .le. 0.491d0) then
       kappa = (0.374640d0+1.54226d0*w(i)-0.269920d0*w(i)**2)
@@ -546,10 +547,8 @@ subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
       kappa = (0.379642d0+1.48503d0*w(i)-0.164423d0*w(i)**2+0.0166667d0*w(i)**3)
     endif
     alpha = (1d0+kappa*(1d0-dsqrt(Tr)))**2
-
     ac(i) = 0.457235529d0*(R_gas*Tc(i))**2/Pc(i) 
     b(i)  =  0.0777960739* R_gas*Tc(i) / Pc(i)
-
     a(i)      =  ac(i)*alpha
     dadT(i)   = -ac(i)*kappa/dsqrt(T*Tc(i))*alpha
   !}
@@ -596,7 +595,7 @@ subroutine calc_v_h(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
   term1 = 1./2./sqr2/bm*dlog( (V+bm*(1.+sqr2))/(V+bm*(1.-sqr2)) )
 
   h = h_IG_m + P*V - R_gas*T + term1*(T*dadTm - am)
-  
+
 END subroutine calc_v_h
 !***************************************************************************
 

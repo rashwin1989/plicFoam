@@ -1,0 +1,3 @@
+calcH.C
+
+EXE = $(FOAM_APPBIN)/calcH

@@ -109,8 +109,11 @@ int main(int argc, char *argv[])
                 diffTerm_Y1[i] = diffTerm_zero;
                 diffTerm_Y0[i] = diffTerm_zero;
             }
-                       
-            #include "ist.H"
+
+            if(ist_ON)
+            {                       
+                #include "ist.H"
+            }
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -155,7 +158,7 @@ int main(int argc, char *argv[])
 
             dt = deltaT;
             Info<< "Calculating two-phase advective fluxes" << endl;
-            interface.calc_2ph_advFluxes(c1, c0, dt, advFlux_Y1, advFlux_Y0, advFlux_debug, advFlux_debug2, osAdv);
+            interface.calc_2ph_advFluxes(c1, c0, rhoh1, rhoh0, dt, advFlux_Y1, advFlux_Y0, advFlux_rhoh1, advFlux_rhoh0, advFlux_debug, advFlux_debug2, advFlux_debugH, osAdv, osAdvH);
      
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -172,6 +175,15 @@ int main(int argc, char *argv[])
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
+
+            if(!isothermal)
+            {
+                #include "HAdvEqn.H"
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+            }
             
             interface.intfc_correct();
             Info<< "Done interface reconstruction" << endl;
@@ -197,6 +209,17 @@ int main(int argc, char *argv[])
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
+
+            if(!isothermal)
+            {
+                    #include "HDiffEqn.H"
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+            }   
+
+
         }
 
         for(i=0; i<n; i++)

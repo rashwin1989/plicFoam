@@ -197,6 +197,8 @@ class plic
     PtrList<surfaceScalarField> fc0_;
     surfaceScalarField fh1_;
     surfaceScalarField fh0_;
+    surfaceScalarField frhoh1_;
+    surfaceScalarField frhoh0_;
 
     //- Flat fields for extended stencil use
     //- Use mapDistribute to obtain remote values
@@ -215,6 +217,8 @@ class plic
     List<List<scalar> > c0_flatFld_;
     List<scalar> h1_flatFld_;
     List<scalar> h0_flatFld_;
+    List<scalar> rhoh1_flatFld_;
+    List<scalar> rhoh0_flatFld_;
     List<scalar> rAlpha0_flatFld_;
 
     //-mesh faces info
@@ -349,6 +353,14 @@ class plic
         const volScalarField& h0
     );
 
+    void c_rhoh_collectData
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0,
+        const volScalarField& rhoh1,
+        const volScalarField& rhoh0
+    );
+
     void c_collectData
     (
         const PtrList<volScalarField>& c1,
@@ -425,10 +437,6 @@ class plic
         OFstream& os
     );
 
-    void calc_rAlpha0();
-
-    void rAlpha0_collectData();
-
     void calc_2ph_advFluxes
     (
         const PtrList<volScalarField>& c1,
@@ -440,6 +448,29 @@ class plic
         const bool debug2,
         OFstream& os
     );
+
+    void calc_2ph_advFluxes
+    (
+        const PtrList<volScalarField>& c1,
+        const PtrList<volScalarField>& c0,
+        const volScalarField& rhoh1,
+        const volScalarField& rhoh0,
+        const scalar& deltaT,
+        PtrList<surfaceScalarField>& advFlux_c1,
+        PtrList<surfaceScalarField>& advFlux_c0,
+        surfaceScalarField& advFlux_rhoh1,
+        surfaceScalarField& advFlux_rhoh0,
+        const bool debug,
+        const bool debug2,
+        const bool debugH,
+        OFstream& os,
+        OFstream& osh
+    );
+
+
+    void calc_rAlpha0();
+
+    void rAlpha0_collectData();
 
     void plic_correct();
 
