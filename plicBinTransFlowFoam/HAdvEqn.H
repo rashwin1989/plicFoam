@@ -43,7 +43,7 @@ forAll(H1Cells,cellI)
             x_cellI_tmp[i] = x1[i].internalField()[cellI];
         }
 
-       plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL, T1min, T1max);
         T1Cells[cellI] = T_cellI_tmp;
 
     }
@@ -59,21 +59,21 @@ if(adv_debug2)
     plicFuncs::print_line(osAdv, 80);
 }
 
-Info<< "Phase-1 H = "
-<< (H1).weightedAverage(mesh.Vsc()).value()
-<< nl
-<< "Min(H1) = " << min(H1).value()
-<< "  Max(H1) = " << max(H1).value()
-<< nl
-<< "Min(T1) = " << min(T1).value()
-<< "  Max(T1) = " << max(T1).value()
-<< nl
-<< "H1 undershoot = " << min((min(H1).value() - H1min), 0)
-<< "  H1 overshoot = " << max((max(H1).value() - H1max), 0)
-<< nl
-<< "T1 undershoot = " << min((min(T1).value() - T1min), 0)
-<< "  T1 overshoot = " << max((max(T1).value() - T1max), 0)
-<< endl;
+Info<< "Phase-1 H = ";
+Info << (H1).weightedAverage(mesh.Vsc()).value();
+Info << nl;
+Info << "Min(H1) = " << min(H1).value();
+Info << "  Max(H1) = " << max(H1).value();
+Info << nl;
+Info << "Min(T1) = " << min(T1).value();
+Info << "  Max(T1) = " << max(T1).value();
+Info << nl;
+Info << "H1 undershoot = " << min((min(H1).value() - H1min), 0);
+Info << "  H1 overshoot = " << max((max(H1).value() - H1max), 0);
+Info << nl;
+Info << "T1 undershoot = " << min((min(T1).value() - T1min), 0);
+Info << "  T1 overshoot = " << max((max(T1).value() - T1max), 0);
+Info << endl;
         
 forAll(T1Cells,cellI)
 {        
@@ -149,7 +149,7 @@ forAll(H0Cells,cellI)
             x_cellI_tmp[i] = x0[i].internalField()[cellI];
         }
 
-        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL);
+        plicFuncs::calc_T_from_h(x_cellI_tmp, P_thermo_tmp, h_cellI_tmp, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, T_cellI_tmp, MAX_ITER_T, T_TOL, H_TOL, T0min, T0max);
 
         T0Cells[cellI] = T_cellI_tmp;
 

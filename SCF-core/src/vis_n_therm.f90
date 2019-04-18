@@ -813,7 +813,8 @@ subroutine calc_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
   enddo  
 
   call PR_vol(P,T,am,bm,V,state)  
-  
+
+
   Vterm = (V**2+2.*V*bm-bm**2)
   
   ! adding the ideal gass specific heats
@@ -865,8 +866,10 @@ subroutine calc_hpar(P,T,x,n,Pc,Tc,w,MW,Tb,SG,H_8,kij, &
 !           *(apar(i)+2.*am-T*(dapardT(i)+2.*dadTm)-(bpar(i)+bm)/bm*(am-T*dadTm))
 
     ! adding partial enthalpy of the ideal gas                            
+
     hpar(i) = Hdep(i) + H_IG(i)                                           !
   !}
+
   enddo
 !}
 END subroutine calc_hpar

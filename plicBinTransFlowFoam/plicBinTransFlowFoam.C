@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 
             if(!isothermal)
             {
-                    #include "HDiffEqn.H"
+                #include "HDiffEqn.H"
 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()

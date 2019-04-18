@@ -1639,12 +1639,12 @@ for(i=0; i<n; i++)
 }
 
 double T1min, T1max, H1min, H1max;
-T1min = transPropDict.lookupOrDefault("T1MIN", 300);
+T1min = transPropDict.lookupOrDefault("T1MIN", 500);
 T1max = transPropDict.lookupOrDefault("T1MAX", 800);
 T1_TMP_VAL = 0.5*(T1min + T1max);
 
 double T0min, T0max, H0min, H0max;
-T0min = transPropDict.lookupOrDefault("T0MIN", 300);
+T0min = transPropDict.lookupOrDefault("T0MIN", 500);
 T0max = transPropDict.lookupOrDefault("T0MAX", 800);
 T0_TMP_VAL = 0.5*(T0min + T0max);
 
@@ -2983,9 +2983,9 @@ for(i=0; i<n; i++)
     H0 = alpha0*rhoh0;
     H0_old = H0;
 
-//plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T1, x1, rho1, alpha1, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h1, rhoh1, H1);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T1, x1, rho1, alpha1, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h1, rhoh1, H1);
 
-//plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T0, x0, rho0, alpha0, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h0, rhoh0, H0);
+plicFuncs::correct_boundaryField_h_rhoh_H(P_thermo_tmp, T0, x0, rho0, alpha0, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, h0, rhoh0, H0);
 
 #include "correct_thermo_trans_prop.H"
 

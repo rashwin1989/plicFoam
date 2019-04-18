@@ -4362,7 +4362,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = 0;
                 }
-                if(curPhaseState == 0)
+                else if(curPhaseState == 0)
                 {
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
@@ -4403,7 +4403,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         }            
                     }
                 }
-                if(curPhaseState == 1)
+                else if(curPhaseState == 1)
                 {
                     pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
                     diffFlux_limiter = 1;
@@ -4444,7 +4444,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                         }            
                     }
                 }
-                if(curPhaseState == 2)
+                else if(curPhaseState == 2)
                 {
                     pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];                    
                     diffFlux_limiter = 1;
@@ -6160,7 +6160,7 @@ void calc_2ph_diffFluxes_T
                     diffFlux_limiter_ph1_faceI = 1;
                     diffFlux_limiter_ph0_faceI = 1;
                 }
-                if(curPhaseState == 0)
+                else if(curPhaseState == 0)
                 {                    
                     diffFlux_T0_faceI = -magSf_ph0_faceI*lambda0_faceI*gradf_T0_faceI;
                     calc_diffFlux_limiter_T(alpha0Own, rho0Own, x0Own, T0Own, H0Own, VOwn, alpha0Nei, rho0Nei, x0Nei, T0Nei, H0Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T0_faceI, diffFlux_limiter_ph0_faceI, MAX_ITER_T, T_TOL, H_TOL, T0MIN, T0MAX);
@@ -6168,8 +6168,9 @@ void calc_2ph_diffFluxes_T
 
                     diffFlux_limiter_ph1_faceI = 1;
                     diffFlux_T1_faceI = 0;                    
+
                 }
-                if(curPhaseState == 1)
+                else if(curPhaseState == 1)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
                     calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
@@ -6178,7 +6179,7 @@ void calc_2ph_diffFluxes_T
                     diffFlux_limiter_ph0_faceI = 1;
                     diffFlux_T0_faceI = 0;
                 }
-                if(curPhaseState == 2)
+                else if(curPhaseState == 2)
                 {
                     diffFlux_T1_faceI = -magSf_ph1_faceI*lambda1_faceI*gradf_T1_faceI;
                     calc_diffFlux_limiter_T(alpha1Own, rho1Own, x1Own, T1Own, H1Own, VOwn, alpha1Nei, rho1Nei, x1Nei, T1Nei, H1Nei, VNei, P, n, Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, deltaT, diffFlux_T1_faceI, diffFlux_limiter_ph1_faceI, MAX_ITER_T, T_TOL, H_TOL, T1MIN, T1MAX);            
@@ -6204,12 +6205,13 @@ void calc_2ph_diffFluxes_T
                     os<< "Face: " << faceI << "  mag(Sf) = " << magSf_faceI << nl
                         << "magSf_ph1_own = " << magSf_ph1_own[faceI] << "  alpha1f_own = " << magSf_ph1_own[faceI]/magSf_faceI 
                         << "  magSf_ph1_nei = " << magSf_ph1_nei[faceI] << "  alpha1f_nei = " << magSf_ph1_nei[faceI]/magSf_faceI << nl
-                        << "magSf_ph0_own = " << magSf_ph0_own[faceI] << "  alpha0f_own = " << magSf_ph0_own[faceI]/magSf_faceI 
+                        << "magSf_ph0_used = " << magSf_ph0_faceI << "  alpha0f_own = " << magSf_ph0_own[faceI]/magSf_faceI  << nl
                         << "  magSf_ph0_nei = " << magSf_ph0_nei[faceI] << "  alpha0f_nei = " << magSf_ph0_nei[faceI]/magSf_faceI << nl
                         << "face phase state for diffusion flux calculation: " << curPhaseState << nl
                         << "Own: " << faceOwn << nl
                         << "T1Own = " << T1Own << "  T1Nei = " << T1Nei << nl
                         << "T0Own = " << T0Own << "  T0Nei = " << T0Nei << nl
+                        << "grad T0 = " << gradf_T0_faceI << "  grad T1 = " << gradf_T1_faceI << nl
                         << "diffFlux_T1 = " << diffFlux_T1_faceI << "  limiter_ph1 = " << diffFlux_limiter_ph1_faceI << nl
                         << "diffFlux_T0 = " << diffFlux_T0_faceI << "  limiter_ph0 = " << diffFlux_limiter_ph0_faceI << nl
                         << endl;
@@ -6354,7 +6356,8 @@ void calc_T_from_h
     double hm, TOld, TNew, F, dF, T_err, F_err, MW_tmp;
     double v_tmp, Cp_tmp, h_tmp;
 
-    // Info << "calc_T_from_h called." << endl;
+    //  Print
+    Info << "calc_T_from_h called." << endl;
 
     MW_tmp = 0;
     for(i=0; i<n; i++)
@@ -6377,7 +6380,9 @@ void calc_T_from_h
         dF = Cp_tmp;
 
         TNew = TOld - F/dF;
-        
+        // Print
+        Info << "TOld = " << TOld << "TNew = " << TNew << endl;
+
         T_err = mag(TNew - TOld);
         F_err = mag(F);
 
@@ -6387,7 +6392,80 @@ void calc_T_from_h
     }
 
     T = TNew;
+    //  Print
+    Info << "calc_T_from_h returned with " << iter << " iterations."<< endl;
+}
 
+void calc_T_from_h
+(
+    double *x,
+    double P,
+    double h,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
+    double& T,
+    const int& MAX_ITER_T,
+    const double& T_TOL,
+    const double& H_TOL,
+    double& Tmin,
+    double& Tmax
+)
+{
+    int i, iter;
+    double hm, TOld, TNew, F, dF, T_err, F_err, MW_tmp;
+    double v_tmp, Cp_tmp, h_tmp;
+
+    //  Print
+    //    Info << "calc_T_from_h called." << endl;
+
+    MW_tmp = 0;
+    for(i=0; i<n; i++)
+    {
+        MW_tmp += x[i]*MW[i];
+    }
+    MW_tmp *= 1e-3;
+
+    hm = h*MW_tmp;
+
+    TOld = T;
+    TNew = T;
+
+    for(iter=0; iter<MAX_ITER_T; iter++)
+    {        
+        calc_kij_from_table(TOld, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+        calc_v_cp_h_(&P, &TOld, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &Cp_tmp, &h_tmp);    
+
+        F = h_tmp - hm;
+        dF = Cp_tmp;
+
+        TNew = TOld - F/dF;
+        if(TNew > Tmax) TNew = 0.3*TOld + 0.7*Tmax;
+        if(TNew < Tmin) TNew = 0.3*TOld + 0.7*Tmin;
+
+        // Print
+        //        Info << "TOld = " << TOld << "TNew = " << TNew << endl;
+
+        T_err = mag(TNew - TOld);
+        F_err = mag(F);
+
+        TOld = TNew;
+
+        if(T_err < T_TOL || F_err < H_TOL) break;
+    }
+
+    T = TNew;
+    //  Print
     //    Info << "calc_T_from_h returned with " << iter << " iterations."<< endl;
 }
 
@@ -6473,6 +6551,7 @@ void calc_diffFlux_limiter_T
     double vNei_tmp, CpNei_tmp, hNei_tmp;
     double diffFlux_max, diffFlux_max_1, diffFlux_max_2, diffFlux_max_3;
     double *xOwn_tmp, *xNei_tmp;
+    double TLowerLimit, TUpperLimit;
 
     _NNEW_(xOwn_tmp, double, n);
     _NNEW_(xNei_tmp, double, n);
@@ -6495,6 +6574,9 @@ void calc_diffFlux_limiter_T
         MWNei_tmp *= 1e-3;
 
         TOld = 0.5*(TOwn + TNei);
+        TNew = TOld;
+        F_err = 2*mag(H_TOL);
+        T_err = mag(TOwn - TNei);
 
         for(iter=0; iter<MAX_ITER_T; iter++)
         {
@@ -6504,35 +6586,39 @@ void calc_diffFlux_limiter_T
 
             calc_v_cp_h_(&P, &TOld, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &CpNei_tmp, &hNei_tmp);
 
+            if(T_err < T_TOL || F_err < H_TOL) break;
+
             F = VOwn*alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp + VNei*alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HOwn - HNei;
             dFOwn = VOwn*alphaOwn*rhoOwn*CpOwn_tmp/MWOwn_tmp;
             dFNei = VNei*alphaNei*rhoNei*CpNei_tmp/MWNei_tmp;
             dF = dFOwn + dFNei;
 
             TNew = TOld - F/dF;
-            if(TNew > max(TOwn,TNei)) TNew = (TOld + max(TOwn,TNei))/2;
-            else if(TNew < min(TOwn,TNei)) TNew = (TOld + min(TOwn,TNei))/2;
+            
+            TLowerLimit =  max(min(TOwn,TNei),TMIN);
+            TUpperLimit =  min(max(TOwn,TNei),TMAX);
+            if(TNew < TLowerLimit) TNew = 0.7*TOld + 0.3*TLowerLimit;
+            else if(TNew > TUpperLimit) TNew = 0.7*TOld + 0.3*TUpperLimit;
         
             T_err = mag(TNew - TOld);
             F_err = mag(F);
 
             TOld = TNew;
         
-            if(T_err < T_TOL || F_err < H_TOL) break;
         }
 
         if(diffFlux > 0)
         {
             if(TOwn > TNei)
             {
-                diffFlux_max_1 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
+                diffFlux_max_1 = mag(0.5*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
                 calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
                 calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMAX, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
 
-                diffFlux_max_2 = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
-                diffFlux_max_3 = mag(0.25*VNei*(alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HNei));
+                diffFlux_max_2 = mag(0.5*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));
+                diffFlux_max_3 = mag(0.5*VNei*(alphaNei*rhoNei*hNei_tmp/MWNei_tmp - HNei));
                 diffFlux_max = min(diffFlux_max_1, min(diffFlux_max_2, diffFlux_max_3));
             }
             else
@@ -6544,13 +6630,13 @@ void calc_diffFlux_limiter_T
         {
             if(TOwn < TNei)
             {
-                diffFlux_max_1 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
+                diffFlux_max_1 = mag(0.5*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
                 calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
                 calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
                 calc_v_h_(&P, &TMIN, xNei_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vNei_tmp, &hNei_tmp);
-                diffFlux_max_2 = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
-                diffFlux_max_3 = mag(0.25*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
+                diffFlux_max_2 = mag(0.5*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
+                diffFlux_max_3 = mag(0.5*VNei*(HNei - alphaNei*rhoNei*hNei_tmp/MWNei_tmp));
                 diffFlux_max = min(diffFlux_max_1, min(diffFlux_max_2, diffFlux_max_3));
             }
             else
@@ -6568,7 +6654,6 @@ void calc_diffFlux_limiter_T
 
     _DDELETE_(xOwn_tmp);
     _DDELETE_(xNei_tmp);
-    //    Info << "calc_diffFlux_limiter_T ran. diffFlux_limiter =  " << diffFlux_limiter << endl;
 }
 
 
@@ -6626,13 +6711,13 @@ void calc_diffFlux_limiter2_T
         {
             calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);                
-            diffFlux_max = mag(0.25*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
+            diffFlux_max = mag(0.5*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
         }
         else
         {
             calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
-            diffFlux_max = mag(0.25*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
+            diffFlux_max = mag(0.5*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
         }        
 
         diffFlux_limiter = min(diffFlux_max/(mag(diffFlux)*dt), 1.0);

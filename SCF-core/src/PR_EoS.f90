@@ -640,6 +640,8 @@ subroutine PR_vol(P,T,a,b,PRV,state)
 
   call cubic_solve(a1,a2,a3,a4,vol)
 
+  !  print *,vol(1), vol(2), vol(3)
+
   if (imag(vol(2)) .ne. 0d0) then
   !{
     ! only one real root

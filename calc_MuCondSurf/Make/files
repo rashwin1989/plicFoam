@@ -1,0 +1,3 @@
+calc_MuCondSurf.C
+
+EXE = $(FOAM_APPBIN)/calc_MuCondSurf

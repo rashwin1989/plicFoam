@@ -1,0 +1,3 @@
+calc_hSurf.C
+
+EXE = $(FOAM_APPBIN)/calc_hSurf
