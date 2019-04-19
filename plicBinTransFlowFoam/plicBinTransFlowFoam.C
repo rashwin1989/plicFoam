@@ -198,6 +198,8 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
+            if(!useCombinedHeatMassDiffusion)
+            {
             #include "diff_grad_interp.H"
 
             Info<< "ExecutionTime = "
@@ -217,8 +219,34 @@ int main(int argc, char *argv[])
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
-            }   
+            }
+            }
+            
+            if(useCombinedHeatMassDiffusion)
+            {
+                if(isothermal)
+                {
+            #include "diff_grad_interp.H"
 
+            Info<< "ExecutionTime = "
+                << runTime.elapsedCpuTime()
+                << " s" << nl << endl;
+
+                #include "YDiffEqn.H"
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+                }   
+                else
+                {
+                #include "CombinedHYDiffEqn.H"
+
+                Info<< "ExecutionTime = "
+                    << runTime.elapsedCpuTime()
+                    << " s" << nl << endl;
+                }
+            }
 
         }
 
