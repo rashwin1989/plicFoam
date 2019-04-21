@@ -16,7 +16,8 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-int MAX_ITER_T, n_flux_type, MAX_ITER_Ts;
+int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS;
+scalar error_iter;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion;
 //bool calcKij;
 double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
@@ -98,11 +99,12 @@ else
 }
 ALPHA_BOUND_ITERS_MAX = 12;
 Y_BOUND_ITERS_MAX = 12;
+MAX_IMPLICIT_ITERS = transPropDict.lookupOrDefault("MAX_IMPLICIT_ITERS",100);
 // tolerances
 ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
 T_TOL = transPropDict.lookupOrDefault("T_TOL", 1E-3);
-H_TOL = transPropDict.lookupOrDefault("H_TOL", 0.1);
+H_TOL = transPropDict.lookupOrDefault("H_TOL", 0.001);
 //MASS_FRAC_TOL = transPropDict.lookupOrDefault("MASS_FRAC_TOL", 1E-3);
 SMALLEST_ALPHA_FOR_YDIFF = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YDIFF", 1E-15);
 MIN_ALPHA_DIFF = transPropDict.lookupOrDefault("MIN_ALPHA_DIFF", 1E-09);
@@ -3028,6 +3030,21 @@ for(i=0; i<n; i++)
     C0_clip_cum_err[i] = 0;
 }
 //------------------------------------------------------------------//
+
+
+//------------------------------------------------------------------//
+// Creating fields for implicit diffusion 
+
+volScalarField T0_old = 0*T0;
+volScalarField T1_old = 0*T1;
+volScalarField T0_error = 0*T0;
+volScalarField T1_error = 0*T1;
+
+
+
+// Done creating fields for implicit diffusion 
+//------------------------------------------------------------------//
+
 
 /*
 volScalarField p_rghEqnComp1 =

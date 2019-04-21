@@ -8,8 +8,8 @@ if(diff_debug_T)
     osDiff<< endl;
 }
 
-//set fractional time-step for diffusion
-dt = deltaT_diff/2;
+//set full time-step for diffusion limiter calculation
+dt = deltaT; // Max flux for the entire time-step
 
 //------------------------------------------------------------------//
 //Calculate enthalpy diffusive fluxes for both phases
@@ -50,7 +50,7 @@ plicFuncs::calc_2ph_diffFluxes_T
     x0,
     H0,
     T0,
-    dt,
+    dt, // Max flux for the entire time-step
     diffFlux_h1,
     diffFlux_h0,
     MAX_ITER_T,
@@ -66,6 +66,8 @@ plicFuncs::calc_2ph_diffFluxes_T
 //Done calculate enthalpy diffusive fluxes for both phases
 //------------------------------------------------------------------//
 
+//set fractional time-step for diffusion
+dt = deltaT_diff/2;
 //------------------------------------------------------------------//
 //Solve enthalpy diffusion equations in both phases
 

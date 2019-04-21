@@ -214,11 +214,39 @@ int main(int argc, char *argv[])
 
             if(!isothermal)
             {
+
+                T0_old   = 0*T0;
+                T1_old   = 0*T1;
+                T0_error = T0 - T0_old;
+                T1_error = T1 - T1_old;
+                error_iter = max(max(gMax(T1_error),-gMin(T1_error)),max(gMax(T0_error),-gMin(T0_error)));
+                implicit_iter_count = 1;
+
+                while((implicit_iter_count <= MAX_IMPLICIT_ITERS)&&(error_iter > T_TOL))
+                {
+
+                #include "diff_grad_interp.H"
+
                 #include "HDiffEqn.H"
+
+                    T0_error = T0 - T0_old;
+                    T1_error = T1 - T1_old;
+                    error_iter = max(max(gMax(T1_error),-gMin(T1_error)),max(gMax(T0_error),-gMin(T0_error)));
+
+                    T0_old   = T0;
+                    T1_old   = T1;
+
+                Info<< "IMPLICIT_ITERS = "
+                    << implicit_iter_count << " out of Max " << MAX_IMPLICIT_ITERS << nl 
+                    << "Error in T = " << error_iter << nl << endl;
+                    
+                     implicit_iter_count++;
+                }
 
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
+
             }
             }
             
