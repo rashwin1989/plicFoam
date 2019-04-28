@@ -6249,6 +6249,8 @@ void calc_2ph_diffFluxes_T
                 gradf_T1_faceI = pgradf_T1[fcI];
                 gradf_T0_faceI = pgradf_T0[fcI];
 
+                Info << "In T flux calculation, curPhaseState = " << curPhaseState << ". " << endl;
+
                 if(curPhaseState == 3)
                 {
                     diffFlux_T1_faceI = 0;
@@ -6264,6 +6266,7 @@ void calc_2ph_diffFluxes_T
 
                     diffFlux_limiter_ph1_faceI = 1;
                     diffFlux_T1_faceI = 0;                    
+                    if(true) Info << "T0Own = " << T0Own << ". T-DiffFluxLimiter = " << diffFlux_limiter_ph0_faceI << ". gradf_T0_faceI = " << gradf_T0_faceI  << endl;
                 }
                 else if(curPhaseState == 1)
                 {
@@ -6710,6 +6713,7 @@ void calc_diffFlux_limiter2_T
         xOwn_tmp[i] = xOwn[i];
     }
 
+    Info << "In calc_diffFlux_limiter2_T, diffFlux = " << diffFlux << ". SMALL = "  << SMALL << "." << endl;
     if(mag(diffFlux) > SMALL)
     {
         MWOwn_tmp = 0;
@@ -6932,6 +6936,7 @@ void linearInterpolate_2ph
         {
             //const Field<Type>& pYOwn = pY.patchInternalField();
             const Field<Type>& pYNei = pY.patchNeighbourField();
+
             forAll(pYf, fcI)
             {
                 faceOwn = own[faceI];
@@ -9664,6 +9669,81 @@ void correct_h
     }
 
     _DDELETE_(x_tmp);
+}
+
+
+void correct_hPar
+(
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
+    PtrList<volScalarField>& hPar
+)
+{
+    int i,j;
+    double T_tmp, *hPar_tmp;
+    double *x_tmp;
+
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(hPar_tmp, double, n);
+
+    const scalarField& TCells = T.internalField();
+
+    for(i=0; i<n; i++)
+    {
+        volScalarField& hPari = hPar[i];
+        scalarField& hPariCells = hPari.internalField();
+        forAll(TCells, cellI)
+        {
+            T_tmp = TCells[cellI];
+            for(j=0; j<n; j++)
+            {
+                x_tmp[j] = X[j].internalField()[cellI];
+            }
+
+            calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+         
+            calc_hpar_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, hPar_tmp);
+            hPariCells[cellI] = 1000*hPar_tmp[i]/MW[i];
+            //            Info << "HPar " << i << " in Cell = " << hPariCells[cellI] << endl;  
+        }
+
+        forAll(T.boundaryField(), patchI)
+        {
+            const fvPatchScalarField& pT = T.boundaryField()[patchI];
+            fvPatchScalarField& phPari = hPari.boundaryField()[patchI];
+        
+            forAll(pT, fcI)
+            {
+                T_tmp = pT[fcI];
+                for(j=0; j<n; j++)
+                {
+                    x_tmp[j] = X[j].boundaryField()[patchI][fcI];
+                }
+
+                calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+
+                calc_hpar_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, hPar_tmp);
+                phPari[fcI] = 1000*hPar_tmp[i]/MW[i];
+            }
+         }
+    }
+
+    _DDELETE_(x_tmp);
+    _DDELETE_(hPar_tmp);
 }
 
 

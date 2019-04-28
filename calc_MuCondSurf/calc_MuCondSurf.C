@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     double *Pc, *Tc, *Vc, *w, *MW, *Tb, *SG, *H8, *k, *dm;
-    double Ta_kij, Tn_kij, P, T, T_tmp, V, CvIG, mu_tmp, cond_tmp,rho_tmp,Cp_tmp,v_tmp,h_tmp;
+    double Ta_kij, Tn_kij, P, T, T_tmp, V, CvIG, mu_tmp, cond_tmp,rho_tmp,Cp_tmp,v_tmp,h_tmp, *h_par;
     int n, nT_kij, nT, nX, i, j, iT, iX, idx, n_miscible;
     double *kij, *kij_T;
     double Tmin, Tmax, dT, Xmin, Xmax, dX;
@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
     _NNEW2_(x, double, n);
     _NNEW2_(x_eqm0, double, n);
     _NNEW2_(x_eqm1, double, n);
+    _NNEW2_(h_par, double, n);
 
     iread=fscanf(f, "%s", str_tmp);         // index of species
     for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_species[i]);
@@ -286,6 +287,8 @@ int main(int argc, char *argv[])
 
     f = fopen("prop.dat+", "w");
     T = Tmin;
+    fprintf(f,"%s    %s   %s   %s   %s   %s   %s   %s    %s" "\n", "Cp [J/mol", "H [J/kg-mixture", "h-par-water [J/mol-water]", "h-par-oil [J/mol-oil]",  "Visc [Pa.s]", "Cond [W/m/K]", "Rho [kg/m3]","T [K]", "x_water");
+
     for(iT=0;iT<nT;iT++)
     {
         //        Info << "T = " << T << " K, " << endl;
@@ -295,20 +298,25 @@ int main(int argc, char *argv[])
         for(iX=0;iX<nX;iX++)
         {
             //  Info << "xWater = " << x[1] << endl;
-
+            //Mu and K
             calc_v_cvig_(&P,&T,x,&n,Pc,Tc,w,MW,Tb,SG,H8, kij, &V,&CvIG);
             vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x,&CvIG,&V,&cond_tmp,&mu_tmp);
-
             Info << "Mu = " << mu_tmp << " and K = " << cond_tmp << "at T = " << T << " and X_oil = " << x[0] << endl;
             
-
+            // Density
             density_pr_eos2_(&P, &T, x, &n, Pc, Tc, w, MW, kij, &rho_tmp);
             Info<< " rho = " << rho_tmp << endl;
 
+            // Cp is in J/mol of mixture;  H in J/kg 
             calc_v_cp_h_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &v_tmp, &Cp_tmp, &h_tmp);
             Info<< " Cp = " << Cp_tmp << endl;
+            Info << "H = " << h_tmp << endl;
 
-            fprintf(f,"%lf    %lf   %lf   %lf   %lf   %lf" "\n", Cp_tmp, mu_tmp, cond_tmp, rho_tmp, T, x[1]);
+            // H-partial vector in J/mol [oil water]
+            calc_hpar_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, h_par);
+            Info << "H-par oil = " << h_par[0] << ". H-par water = " << h_par[1]  << endl;
+
+            fprintf(f,"%lf    %lf   %lf   %lf   %lf   %lf %lf    %lf    %lf" "\n", Cp_tmp, h_tmp, h_par[1], h_par[0],  mu_tmp, cond_tmp, rho_tmp, T, x[1]);
             x[0] = min(1, x[0] + dX);
             x[1] = 1- x[0];
         }
@@ -344,7 +352,7 @@ int main(int argc, char *argv[])
                 is_2phase = false;
             }
 
-            fprintf(f,"%d    %lf    %lf    %lf    %lf " "\n", is_2phase, T, x_eqm0[1], x[1], x_eqm1[1]);
+            fprintf(f,"%d    %lf    %lf    %lf    %lf   " "\n", is_2phase, T, x_eqm0[1], x[1], x_eqm1[1]);
             x[0] = min(1, x[0] + dX);
             x[1] = 1- x[0];
         }
@@ -370,6 +378,7 @@ int main(int argc, char *argv[])
     _DDELETE2_(x);
     _DDELETE2_(x_eqm0);
     _DDELETE2_(x_eqm1);
+    _DDELETE2_(h_par);
    
     Info<< "ExecutionTime = "
         << runTime.elapsedCpuTime()

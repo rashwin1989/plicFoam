@@ -1589,7 +1589,8 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0),
+            alpha1.boundaryField().types()
             )
         );
 
@@ -1609,7 +1610,8 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0),
+            alpha1.boundaryField().types()
             )
         );
 }

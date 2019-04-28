@@ -52,6 +52,18 @@ plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
 plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f, interp_debug, osGrad);
 plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f, interp_debug, osGrad);
 
+
+plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
+plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
+plicFuncs::correct_hPar(P_thermo_tmp, T1, x1, n,  Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, hpar1);
+plicFuncs::correct_hPar(P_thermo_tmp, T0, x0, n,  Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, hpar0);
+
+/* forAll(T0Cells,cellI)
+{
+    Info << "H_par_oil = " << hpar0[0][cellI] << ". T = " << T0[cellI] << ". y_oil = " << Y0[0][cellI] << nl
+         << "H_par_water = " << hpar0[1][cellI] << ". T = " << T0[cellI] << ". y_oil = " << Y0[0][cellI] << endl;
+    } */
+
 for(i=0; i<n; i++)
 {        
     const volScalarField& hpar1i = hpar1[i];
