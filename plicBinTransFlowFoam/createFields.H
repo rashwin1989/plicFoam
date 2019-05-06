@@ -1203,7 +1203,7 @@ Y1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y1t
+        scalar(1) - Y1[0]
     )
 );
 Y1[endIndex].correctBoundaryConditions();
@@ -1322,7 +1322,7 @@ Y0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        Y0t
+        scalar(1) - Y0[0]
     )
 );
 Y0[endIndex].correctBoundaryConditions();
@@ -1590,7 +1590,7 @@ for(i=0; i<n; i++)
             ),
             mesh,
             dimensionSet(0, 2, -2, 0, 0, 0, 0),
-            alpha1.boundaryField().types()
+            Y1[i].boundaryField().types()
             )
         );
 
@@ -1611,7 +1611,7 @@ for(i=0; i<n; i++)
             ),
             mesh,
             dimensionSet(0, 2, -2, 0, 0, 0, 0),
-            alpha1.boundaryField().types()
+            Y0[i].boundaryField().types()
             )
         );
 }

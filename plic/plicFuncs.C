@@ -4319,6 +4319,8 @@ void calc_2ph_diffFluxes_Yi_Fick
         const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
         const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
         const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];        
+
+        Info << "Patch " << mesh.boundaryMesh().names()[patchI] << " of type " << mesh.boundaryMesh().types()[patchI] <<  endl;
         
         faceI = pp.start();
 
@@ -4527,6 +4529,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = 0;
                 }
+                Info << "In Y-diffusion, Coupledpatch " << mesh.boundaryMesh().names()[patchI] << ", facePhaseState = " << curPhaseState << ". Grad = " << pgradf_Y0i[fcI] << ". Area = " << curMagSf_ph0 << ". Limiter = " << diffFlux_limiter << ". DiffFlux = " << pdiffFlux_Y0i[fcI] << endl;
 
                 if(debug)
                 {
@@ -4576,7 +4579,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = -prho0f[fcI]*pD0fi[fcI]*curMagSf_ph0*pgradf_Y0i[fcI];
                     diffFlux_limiter = 1;
-                    calc_diffFlux_limiter
+                    calc_diffFlux_limiter3
                     (
                         rho0Own,
                         alpha0Own,
@@ -4598,7 +4601,7 @@ void calc_2ph_diffFluxes_Yi_Fick
                 {
                     pdiffFlux_Y1i[fcI] = -prho1f[fcI]*pD1fi[fcI]*curMagSf_ph1*pgradf_Y1i[fcI];
                     diffFlux_limiter = 1;
-                    calc_diffFlux_limiter
+                    calc_diffFlux_limiter3
                     (
                         rho1Own,
                         alpha1Own,
@@ -4627,6 +4630,8 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = 0;
                 }
+
+                Info << "In Y-diffusion, FixedValuepatch " << mesh.boundaryMesh().names()[patchI] << ", facePhaseState = " << curPhaseState << ". Grad = " << pgradf_Y0i[fcI] << ". Area = " << curMagSf_ph0 << ". Limiter = " << diffFlux_limiter << ". DiffFlux = " << pdiffFlux_Y0i[fcI] << endl;
 
                 if(debug)
                 {
@@ -6249,7 +6254,7 @@ void calc_2ph_diffFluxes_T
                 gradf_T1_faceI = pgradf_T1[fcI];
                 gradf_T0_faceI = pgradf_T0[fcI];
 
-                Info << "In T flux calculation, curPhaseState = " << curPhaseState << ". " << endl;
+                //                Info << "In T flux calculation, curPhaseState = " << curPhaseState << ". " << endl;
 
                 if(curPhaseState == 3)
                 {
@@ -6266,7 +6271,7 @@ void calc_2ph_diffFluxes_T
 
                     diffFlux_limiter_ph1_faceI = 1;
                     diffFlux_T1_faceI = 0;                    
-                    if(true) Info << "T0Own = " << T0Own << ". T-DiffFluxLimiter = " << diffFlux_limiter_ph0_faceI << ". gradf_T0_faceI = " << gradf_T0_faceI  << endl;
+                    //                    if(true) Info << "T0Own = " << T0Own << ". T-DiffFluxLimiter = " << diffFlux_limiter_ph0_faceI << ". gradf_T0_faceI = " << gradf_T0_faceI  << endl;
                 }
                 else if(curPhaseState == 1)
                 {
@@ -6713,7 +6718,7 @@ void calc_diffFlux_limiter2_T
         xOwn_tmp[i] = xOwn[i];
     }
 
-    Info << "In calc_diffFlux_limiter2_T, diffFlux = " << diffFlux << ". SMALL = "  << SMALL << "." << endl;
+    //    Info << "In calc_diffFlux_limiter2_T, diffFlux = " << diffFlux << ". SMALL = "  << SMALL << "." << endl;
     if(mag(diffFlux) > SMALL)
     {
         MWOwn_tmp = 0;
@@ -6727,13 +6732,13 @@ void calc_diffFlux_limiter2_T
         {
             calc_kij_from_table(TMIN, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMIN, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);                
-            diffFlux_max = mag(0.5*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
+            diffFlux_max = mag(1*VOwn*(HOwn - alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp));            
         }
         else
         {
             calc_kij_from_table(TMAX, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
             calc_v_h_(&P, &TMAX, xOwn_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, &vOwn_tmp, &hOwn_tmp);
-            diffFlux_max = mag(0.5*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
+            diffFlux_max = mag(1*VOwn*(alphaOwn*rhoOwn*hOwn_tmp/MWOwn_tmp - HOwn));
         }        
 
         diffFlux_limiter = min(diffFlux_max/(mag(diffFlux)*dt), 1.0);
@@ -6772,9 +6777,9 @@ void calc_diffFlux_limiter
 
     if(diffFlux > 0)
     {
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
+        maxDiffFluxOwn = 0.5*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
         
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
+        maxDiffFluxNei = 0.5*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
         
         maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxNei);
         
@@ -6789,9 +6794,9 @@ void calc_diffFlux_limiter
     }
     else
     {
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
+        maxDiffFluxNei = 0.5*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
 
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
+        maxDiffFluxOwn = 0.5*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
 
         maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxNei);
 
@@ -6843,9 +6848,9 @@ void calc_diffFlux_limiter2
 
     if(diffFlux > 0)
     {
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
+        maxDiffFluxOwn = 0.5*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
         
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
+        maxDiffFluxNei = 0.5*rhoNei*alphaNei*(YMAX - YNei)*VNei/dt;
 
         if(YOwn > YNei)
         {
@@ -6869,9 +6874,9 @@ void calc_diffFlux_limiter2
     }
     else
     {
-        maxDiffFluxNei = 0.25*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
+        maxDiffFluxNei = 0.5*rhoNei*alphaNei*(YNei - YMIN)*VNei/dt;
 
-        maxDiffFluxOwn = 0.25*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
+        maxDiffFluxOwn = 0.5*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
 
         if(YNei > YOwn)
         {
@@ -6895,6 +6900,79 @@ void calc_diffFlux_limiter2
     }       
 }
 
+void calc_diffFlux_limiter3
+(
+    const scalar& rhoOwn,
+    const scalar& alphaOwn,
+    const scalar& YOwn,
+    const scalar& VOwn,
+    const scalar& rhoNei,
+    const scalar& alphaNei,
+    const scalar& YNei,
+    const scalar& VNei,
+    const scalar& dt,
+    const scalar& diffFlux,
+    scalar& diffFlux_limiter,
+    const scalar& YMIN,
+    const scalar& YMAX
+)
+{
+    scalar maxDiffFluxOwn, maxDiffFluxOwnNei;
+    scalar coeff, den;
+    scalar maxDiffFlux;
+    scalar magDiffFlux = mag(diffFlux);
+    diffFlux_limiter = 1;    
+
+    coeff = rhoOwn*rhoNei*alphaOwn*alphaNei*VOwn*VNei/dt;
+    den = rhoOwn*alphaOwn*VOwn + rhoNei*alphaNei*VNei;
+    if(den < SMALL)
+    {
+        den += SMALL;
+    }
+    coeff /= den;
+
+    if(diffFlux > 0)
+    {
+        maxDiffFluxOwn = 1*rhoOwn*alphaOwn*(YOwn - YMIN)*VOwn/dt;
+        maxDiffFluxOwnNei = maxDiffFluxOwn;
+        if(YOwn < YNei)
+        {
+            maxDiffFluxOwnNei = 0;
+        }
+
+        maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxOwnNei);
+        
+        if(magDiffFlux > maxDiffFlux)
+        {
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
+        }        
+    }
+    else
+    {
+        maxDiffFluxOwn = 1*rhoOwn*alphaOwn*(YMAX - YOwn)*VOwn/dt;
+        maxDiffFluxOwnNei = maxDiffFluxOwn;
+        if(YNei < YOwn)
+        {
+            maxDiffFluxOwnNei = 0;
+        }
+
+        maxDiffFlux = min(maxDiffFluxOwn, maxDiffFluxOwnNei);
+
+        if(magDiffFlux > maxDiffFlux)
+        {
+            if(magDiffFlux < SMALL)
+            {
+                magDiffFlux += SMALL;
+            }
+            diffFlux_limiter = maxDiffFlux/magDiffFlux;
+        }
+    }       
+    Info << "In limiter3, maxDiffFluxOwn = " << maxDiffFluxOwn << " and maxDiffFluxOwnNei = " << maxDiffFluxOwnNei << ". " << rhoNei << tab << alphaNei << tab << YNei << tab << YMIN << tab << VNei << endl;
+} 
 
 template<class Type>
 void linearInterpolate_2ph
@@ -9725,7 +9803,7 @@ void correct_hPar
         {
             const fvPatchScalarField& pT = T.boundaryField()[patchI];
             fvPatchScalarField& phPari = hPari.boundaryField()[patchI];
-        
+       
             forAll(pT, fcI)
             {
                 T_tmp = pT[fcI];
@@ -9738,6 +9816,8 @@ void correct_hPar
 
                 calc_hpar_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, hPar_tmp);
                 phPari[fcI] = 1000*hPar_tmp[i]/MW[i];
+
+                Info << "T = " << T_tmp << ". x_water = " << x_tmp[1] << ". h_par_ = " << i << " = " << phPari[fcI] << endl;
             }
          }
     }

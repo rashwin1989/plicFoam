@@ -772,6 +772,23 @@ namespace plicFuncs
         const scalar& YMAX
     );
 
+    void calc_diffFlux_limiter3
+    (
+        const scalar& rhoOwn,
+        const scalar& alphaOwn,
+        const scalar& YOwn,
+        const scalar& VOwn,
+        const scalar& rhoNei,
+        const scalar& alphaNei,
+        const scalar& YNei,
+        const scalar& VNei,
+        const scalar& dt,
+        const scalar& diffFlux,
+        scalar& diffFlux_limiter,
+        const scalar& YMIN,
+        const scalar& YMAX
+    );
+
     template<class Type>
     void linearInterpolate_2ph
     (
@@ -1102,6 +1119,27 @@ namespace plicFuncs
         int nT_kij,
         double *kij,
         volScalarField& h
+    );
+
+void correct_hPar
+(
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
+    PtrList<volScalarField>& hPar
     );
 
     void correct_boundaryField_C

@@ -52,9 +52,14 @@ plicFuncs::linearInterpolate_2ph(rho0, mesh, w_ph0, rho0f);
 plicFuncs::linearInterpolate_2ph(mu1, mesh, w_ph1, mu1f, interp_debug, osGrad);
 plicFuncs::linearInterpolate_2ph(mu0, mesh, w_ph0, mu0f, interp_debug, osGrad);
 
-
+// Printing Fields
+plicFuncs::print_field(Y0[0],osGrad);
+plicFuncs::print_field(Y0[1],osGrad);
 plicFuncs::correct_x_from_Y(n, MW, Y1, x1);
 plicFuncs::correct_x_from_Y(n, MW, Y0, x0);
+plicFuncs::print_field(x0[0],osGrad);
+plicFuncs::print_field(x0[1],osGrad);
+
 plicFuncs::correct_hPar(P_thermo_tmp, T1, x1, n,  Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, hpar1);
 plicFuncs::correct_hPar(P_thermo_tmp, T0, x0, n,  Pc, Tc, w, MW, Tb, SG, H8, kij_T, Ta_kij, Tb_kij, nT_kij, kij, hpar0);
 
