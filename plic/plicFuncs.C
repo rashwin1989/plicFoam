@@ -4319,8 +4319,6 @@ void calc_2ph_diffFluxes_Yi_Fick
         const fvsPatchScalarField& prho0f = rho0f.boundaryField()[patchI];
         const fvsPatchScalarField& pD0fi = D0fi.boundaryField()[patchI];
         const fvsPatchScalarField& pMagSf = meshMagSf.boundaryField()[patchI];        
-
-        Info << "Patch " << mesh.boundaryMesh().names()[patchI] << " of type " << mesh.boundaryMesh().types()[patchI] <<  endl;
         
         faceI = pp.start();
 
@@ -4529,7 +4527,6 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = 0;
                 }
-                Info << "In Y-diffusion, Coupledpatch " << mesh.boundaryMesh().names()[patchI] << ", facePhaseState = " << curPhaseState << ". Grad = " << pgradf_Y0i[fcI] << ". Area = " << curMagSf_ph0 << ". Limiter = " << diffFlux_limiter << ". DiffFlux = " << pdiffFlux_Y0i[fcI] << endl;
 
                 if(debug)
                 {
@@ -4630,8 +4627,6 @@ void calc_2ph_diffFluxes_Yi_Fick
                     pdiffFlux_Y1i[fcI] = 0;
                     pdiffFlux_Y0i[fcI] = 0;
                 }
-
-                Info << "In Y-diffusion, FixedValuepatch " << mesh.boundaryMesh().names()[patchI] << ", facePhaseState = " << curPhaseState << ". Grad = " << pgradf_Y0i[fcI] << ". Area = " << curMagSf_ph0 << ". Limiter = " << diffFlux_limiter << ". DiffFlux = " << pdiffFlux_Y0i[fcI] << endl;
 
                 if(debug)
                 {
@@ -6971,7 +6966,6 @@ void calc_diffFlux_limiter3
             diffFlux_limiter = maxDiffFlux/magDiffFlux;
         }
     }       
-    Info << "In limiter3, maxDiffFluxOwn = " << maxDiffFluxOwn << " and maxDiffFluxOwnNei = " << maxDiffFluxOwnNei << ". " << rhoNei << tab << alphaNei << tab << YNei << tab << YMIN << tab << VNei << endl;
 } 
 
 template<class Type>
@@ -9826,6 +9820,126 @@ void correct_hPar
     _DDELETE_(hPar_tmp);
 }
 
+void correct_hPar2
+(
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    const fvMesh& mesh,
+    const surfaceScalarField& weights,
+    int n,
+    double *Pc,
+    double *Tc,
+    double *w,
+    double *MW,
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,
+    PtrList<volScalarField>& hPar,
+    PtrList<surfaceScalarField>& hParf
+)
+{
+    const labelList& own = mesh.owner();
+    const labelList& nei = mesh.neighbour();
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    int i,j;
+    double T_tmp, *hPar_tmp;
+    double *x_tmp;
+    label faceI, faceOwn, faceNei;
+    scalar hParOwn;
+
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(hPar_tmp, double, n);
+
+    const scalarField& TCells = T.internalField();
+
+    for(i=0; i<n; i++)
+    {
+        volScalarField& hPari = hPar[i];
+        scalarField& hPariCells = hPari.internalField();
+        surfaceScalarField& hParfi = hParf[i];
+        forAll(TCells, cellI)
+        {
+            T_tmp = TCells[cellI];
+            for(j=0; j<n; j++)
+            {
+                x_tmp[j] = X[j].internalField()[cellI];
+            }
+
+            calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+         
+            calc_hpar_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, hPar_tmp);
+            hPariCells[cellI] = 1000*hPar_tmp[i]/MW[i];
+        }
+
+        for(faceI=0; faceI<mesh.nInternalFaces(); faceI++)
+        {
+            faceOwn = own[faceI];
+            faceNei = nei[faceI];
+            scalar wf = weights[faceI];
+
+            hParfi[faceI] = wf*hPariCells[faceOwn] + (1.0 - wf)*hPariCells[faceNei];
+        }
+
+        forAll(T.boundaryField(), patchI)
+        {
+            const fvPatchScalarField& pT = T.boundaryField()[patchI];
+            fvPatchScalarField& phPari = hPari.boundaryField()[patchI];
+       
+            forAll(pT, fcI)
+            {
+                T_tmp = pT[fcI];
+                for(j=0; j<n; j++)
+                {
+                    x_tmp[j] = X[j].boundaryField()[patchI][fcI];
+                }
+
+                calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+
+                calc_hpar_(&P, &T_tmp, x_tmp, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, hPar_tmp);
+                phPari[fcI] = 1000*hPar_tmp[i]/MW[i];
+            }
+         }
+
+        forAll(hPari.boundaryField(), patchI)
+        {
+            const polyPatch& pp = patches[patchI];
+            fvsPatchField<double>& phParfi = hParfi.boundaryField()[patchI];
+            const fvPatchScalarField& phPari = hPari.boundaryField()[patchI];
+            const fvsPatchScalarField& pw = weights.boundaryField()[patchI];
+            faceI = pp.start();
+            if(pp.coupled())
+            {
+                const Field<double>& phPariNei = phPari.patchNeighbourField();
+
+                forAll(phParfi, fcI)
+                {
+                    faceOwn = own[faceI];
+                    scalar phPariOwn = hPariCells[faceOwn];
+                    scalar wf = pw[fcI];
+                    phParfi[fcI] = wf*phPariOwn + (1.0 - wf)*phPariNei[fcI];
+
+                    faceI++;
+                }
+            }
+            else
+            {
+                forAll(phParfi, fcI)
+                {
+                    phParfi[fcI] = phPari[fcI];
+                }
+            }
+        }
+    }
+
+    _DDELETE_(x_tmp);
+    _DDELETE_(hPar_tmp);
+}
 
 void correct_boundaryField_C
 (    

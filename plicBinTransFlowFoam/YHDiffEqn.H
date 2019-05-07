@@ -56,7 +56,7 @@ for(i=0; i<n; i++)
             i,
             dt,
             diff_debug2,
-        osDiff
+            osDiff
         );
 }
 //Done calculate species diffusive fluxes for both phases

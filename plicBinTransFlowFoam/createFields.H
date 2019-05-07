@@ -1177,10 +1177,10 @@ volScalarField Yt
     mesh
 );
 
-volScalarField Y1t = Yt;
-volScalarField Y0t = Yt;
+volScalarField Y1t = scalar(1) - Y1[0];
+volScalarField Y0t = scalar(1) - Y0[0];
 
-for(i=0; i<(n-1); i++)
+for(i=1; i<(n-1); i++)
 {
     Y1t -= Y1[i];
     Y0t -= Y0[i];
@@ -1203,7 +1203,10 @@ Y1.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        scalar(1) - Y1[0]
+        //        scalar(1) - Y1[0],
+        //        Y1[0].boundaryField().types()
+        Y1t,
+        Y1[0].boundaryField().types()
     )
 );
 Y1[endIndex].correctBoundaryConditions();
@@ -1322,7 +1325,10 @@ Y0.set
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        scalar(1) - Y0[0]
+        //        scalar(1) - Y0[0],
+        //        Y0[0].boundaryField().types()
+        Y0t,
+        Y0[0].boundaryField().types()
     )
 );
 Y0[endIndex].correctBoundaryConditions();
@@ -1589,8 +1595,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0),
-            Y1[i].boundaryField().types()
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
             )
         );
 
@@ -1610,8 +1615,7 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0),
-            Y0[i].boundaryField().types()
+            dimensionSet(0, 2, -2, 0, 0, 0, 0)
             )
         );
 }
@@ -2004,7 +2008,8 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0),
+            hpar1[i].boundaryField().types()
             )
         );    
 
@@ -2024,7 +2029,8 @@ for(i=0; i<n; i++)
                 IOobject::NO_WRITE
             ),
             mesh,
-            dimensionSet(0, 2, -2, 0, 0, 0, 0)
+            dimensionSet(0, 2, -2, 0, 0, 0, 0),
+            hpar0[i].boundaryField().types()
             )
         );
 }
