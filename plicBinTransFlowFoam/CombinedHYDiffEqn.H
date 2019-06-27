@@ -12,6 +12,7 @@ if(diff_debug)
 deltaT_diff = deltaT;
 dt = deltaT_diff;
 
+#include "correct_thermo_trans_prop.H"
 #include "diff_grad_interp.H" 
 
 if(diff_debug)
@@ -45,6 +46,7 @@ if(diff_debug)
     osDiff<< endl;
 }
 
+#include "correct_thermo_trans_prop.H"
 #include "diff_grad_interp.H" 
 
 if(diff_debug)
@@ -67,3 +69,5 @@ if(diff_debug)
     osDiff<< endl;
 }
 
+#include "correct_thermo_trans_prop.H"
+#include "diff_grad_interp.H" // For UEqn.H that used mu1f

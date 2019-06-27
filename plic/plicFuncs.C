@@ -9575,9 +9575,10 @@ void calc_mu_lambda
     int i, j;
     double vis, cond, V, CvIG;
     double *x_tmp;
+    double mu_default = 3.5e-5;
 
     _NNEW_(x_tmp, double, n);
-
+    /*
     mu = 0;
     lambda = 0;
 
@@ -9592,7 +9593,19 @@ void calc_mu_lambda
         vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
         mu += y[i]*vis;
         lambda += y[i]*cond;
+        } */
+
+    y2x(n, MW, y, x_tmp);
+    calc_v_cvig_(&P,&T,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG);
+    vis_n_cond_(&P,&T,&n,Pc,Tc,Vc,w,MW,k,dm,x_tmp,&CvIG,&V,&cond,&vis);
+    if(vis < 0)
+    {
+        Info << "Viscosity Negative: T = " << T << " Y[0] = " << y[0] << " Y[1] = " << y[1] << endl;
+        vis = mu_default;
     }
+
+    mu = vis;
+    lambda = cond;
 
     _DDELETE_(x_tmp);
 }
@@ -10348,6 +10361,160 @@ void correct_thermo_trans_prop
 
                 pv[fcI] = V;            
                 pmu[fcI] = vis;
+                for(i=0; i<n; i++)
+                {
+                    for(j=0; j<n; j++)
+                    {
+                        idx = i*n + j;
+                        D[idx].boundaryField()[patchI][fcI] = Dij[idx];
+                    }
+                }
+            }
+        }
+    }
+
+    _DDELETE_(x_tmp);
+    _DDELETE_(y_tmp);
+    _DDELETE_(Dij);    
+}
+
+
+void correct_thermo_trans_prop
+(
+    const fvMesh& mesh,
+    double P,
+    const volScalarField& T,
+    const PtrList<volScalarField>& X,
+    const PtrList<volScalarField>& Y,    
+    int n,
+    double *Pc,
+    double *Tc,
+    double *Vc,
+    double *w,
+    double *MW,    
+    double *Tb,
+    double *SG,
+    double *H8,
+    double *k,
+    double *dm,
+    double *kij_T,
+    double Ta_kij,
+    double Tb_kij,
+    int nT_kij,
+    double *kij,    
+    volScalarField& v,
+    volScalarField& mu,
+    volScalarField& lambda,
+    volScalarField& Cp,
+    volScalarField& rho,
+    PtrList<volScalarField>& D,
+    const bool debug,
+    OFstream& os
+)
+{
+    int i, j, idx;
+    double T_tmp, V, MW_tmp; 
+    double CvIG;    
+    double Cp_tmp, cond, vis;
+    double *x_tmp, *y_tmp, *Dij, *h_tmp;
+
+    _NNEW_(x_tmp, double, n);
+    _NNEW_(y_tmp, double, n);
+    _NNEW_(Dij, double, n*n);
+    _NNEW_(h_tmp, double, n);
+
+    const scalarField& TCells = T.internalField();
+    scalarField& vCells = v.internalField();    
+    scalarField& muCells = mu.internalField();
+    scalarField& lambdaCells = lambda.internalField();
+    scalarField& CpCells = Cp.internalField();
+    scalarField& rhoCells = rho.internalField();
+
+    forAll(TCells, cellI)
+    {
+        T_tmp = TCells[cellI];
+
+        for(i=0; i<n; i++)
+        {
+            x_tmp[i] = X[i].internalField()[cellI];
+            y_tmp[i] = Y[i].internalField()[cellI];            
+        }
+        
+        MW_tmp = 0;
+        for(i=0; i<n; i++)
+        {
+            MW_tmp += x_tmp[i]*MW[i];
+        }
+        MW_tmp *= 1e-3;                
+
+        calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+
+        calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
+
+        calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
+
+        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+
+        vCells[cellI] = V;
+        muCells[cellI] = vis;
+        lambdaCells[cellI] = cond;
+        CpCells[cellI] = Cp_tmp/MW_tmp;
+        rhoCells[cellI] = MW_tmp/V;
+        for(i=0; i<n; i++)
+        {            
+            for(j=0; j<n; j++)
+            {
+                idx = i*n + j;
+                D[idx].internalField()[cellI] = Dij[idx];
+            }
+        }
+    }
+
+    const polyBoundaryMesh& patches = mesh.boundaryMesh();
+    //const wordList& patchNames = patches.names();
+    
+    forAll(T.boundaryField(), patchI)
+    {
+        const polyPatch& pp = patches[patchI];
+        const fvPatchScalarField& pT = T.boundaryField()[patchI];
+        fvPatchScalarField& pv = v.boundaryField()[patchI];        
+        fvPatchScalarField& pmu = mu.boundaryField()[patchI];
+        fvPatchScalarField& plambda = lambda.boundaryField()[patchI];
+        fvPatchScalarField& pCp = Cp.boundaryField()[patchI];
+        fvPatchScalarField& prho = rho.boundaryField()[patchI];
+
+        if(!(pp.coupled()))
+        {
+            forAll(pT, fcI)
+            {
+                T_tmp = pT[fcI];
+                
+                for(i=0; i<n; i++)
+                {
+                    x_tmp[i] = X[i].boundaryField()[patchI][fcI];
+                    y_tmp[i] = Y[i].boundaryField()[patchI][fcI];
+                }
+
+                MW_tmp = 0;
+                for(i=0; i<n; i++)
+                {
+                    MW_tmp += x_tmp[i]*MW[i];
+                }
+                MW_tmp *= 1e-3;
+
+                calc_kij_from_table(T_tmp,n,Ta_kij,Tb_kij,nT_kij,kij_T,kij);
+
+                calc_v_cvig_cp_hpar_(&P,&T_tmp,x_tmp,&n,Pc,Tc,w,MW,Tb,SG,H8,kij,&V,&CvIG,&Cp_tmp,h_tmp);
+
+                calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
+
+                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+
+                pv[fcI] = V;            
+                pmu[fcI] = vis;
+                plambda[fcI] = cond;
+                pCp[fcI] = Cp_tmp/MW_tmp;
+                prho[fcI] = MW_tmp/V;
                 for(i=0; i<n; i++)
                 {
                     for(j=0; j<n; j++)

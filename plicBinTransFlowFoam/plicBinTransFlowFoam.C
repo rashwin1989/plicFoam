@@ -198,6 +198,8 @@ int main(int argc, char *argv[])
                 << runTime.elapsedCpuTime()
                 << " s" << nl << endl;
 
+            if(turn_on_diffusion)
+            {
             if(!useCombinedHeatMassDiffusion)
             {
             #include "diff_grad_interp.H"
@@ -275,7 +277,7 @@ int main(int argc, char *argv[])
                     << " s" << nl << endl;
                 }
             }
-
+            }
         }
 
         for(i=0; i<n; i++)

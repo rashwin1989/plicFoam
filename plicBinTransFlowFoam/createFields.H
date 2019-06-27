@@ -28,7 +28,7 @@ int nErf, iErf;
 double erf_a, erf_b;
 double *erfInv_table;
 bool useErf;
-bool calcDiff;
+bool calcDiff, turn_on_diffusion;
 FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -81,7 +81,8 @@ const dictionary& solDict = mesh.solutionDict();
 //------------------------------------------------------------------//
 //Reading tolerances, max iters and switches
 isothermal = transPropDict.lookupOrDefault("isothermal", true);
-useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", false);
+useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", true);
+turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
@@ -601,7 +602,8 @@ volScalarField T0
 );
 T0.correctBoundaryConditions();
 
-T_0 = T1.internalField()[0];
+T_0 = T1.internalField()[0]; // The fixed temperature for an isothermal case
+Info << "T_isothermal = " << T_0 << endl;
 //Done T initialization
 //------------------------------------------------------------------//
 
@@ -618,7 +620,7 @@ scalar Y0Tot_tmp = 0;
 for(i=0; i<(n-1); i++)
 {    
     fieldName = "Y1_0[" + Foam::name(i) + "]";
-    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 1.0);
+    Y1i_tmp = transPropDict.lookupOrDefault(fieldName, 1.0); // Works for 2 components only
     Y1_0[i] = Y1i_tmp;
     Y1Tot_tmp += Y1i_tmp;
 
@@ -649,8 +651,8 @@ const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
 
 //phase-1
 //set pure oil phase initial mole fractions
-x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0;
-y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0;
+x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0; // Works for 2 components only
+y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0; // Works for 2 components only
 
 plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
@@ -662,7 +664,7 @@ dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
 //phase-0
 //set pure water phase initial mole fractions
-x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1;
+x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1; 
 y_cellI_tmp[0] = 0; y_cellI_tmp[1] = 1;
 
 plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
@@ -743,6 +745,9 @@ volScalarField rho
     alpha1.boundaryField().types()
 );
 
+volScalarField rho1_thermo = rho1; // Used for density calculation in case of constant phase densities
+volScalarField rho0_thermo = rho0; // Used for density calculation in case of constant phase densities
+
 volScalarField mu1
 (
     IOobject
@@ -751,7 +756,7 @@ volScalarField mu1
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     mu1_0
@@ -765,7 +770,7 @@ volScalarField mu0
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     mu0_0
@@ -808,6 +813,7 @@ surfaceScalarField rhoPhi
     fvc::interpolate(rho)*phi
 );
 
+// Thermal Conductivity
 volScalarField lambda1
 (
     IOobject
@@ -835,6 +841,9 @@ volScalarField lambda0
     mesh,
     lambda0_0
 );
+
+volScalarField lambda1_thermo = lambda1;
+volScalarField lambda0_thermo = lambda0;
 // Interpolation for lambdas done in diff_grad_interp.H
 
 volScalarField Cp1
@@ -865,8 +874,33 @@ volScalarField Cp0
     Cp0_0
 );
 
-volScalarField Dh1 = lambda1/rho1/Cp1;
-volScalarField Dh0 = lambda0/rho0/Cp0;
+volScalarField Dh1
+(
+    IOobject
+    (
+        "Dh1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    lambda1_0/rho1_0/Cp1_0
+);
+
+volScalarField Dh0
+(
+    IOobject
+    (
+        "Dh0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    lambda0_0/rho0_0/Cp0_0
+);
 
 volScalarField dgdt
 (
@@ -1164,7 +1198,7 @@ for(i=0; i<(n-1); i++)
     );
 }
 
-volScalarField Yt
+volScalarField Yt  // Not used; replaced with Y1t and Y0t below
 (
     IOobject
     (
@@ -2701,6 +2735,13 @@ labelList n_iters_Ts(nCells);
 labelList status_transLLE(nCells);
 labelList cell_had_intfc(nCells);
 
+// Done Interfacial conditions and source terms
+//------------------------------------------------------------------//
+
+
+//------------------------------------------------------------------//
+// Initialize Mass Diffusivity - Transport Property
+
 for(i=0; i<n; i++)
 {
     if(calcDiff)
@@ -2813,7 +2854,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             D1_0[i]
@@ -2833,7 +2874,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             D0_0[i]
@@ -2880,6 +2921,38 @@ for(i=0; i<n; i++)
         )
     );        
 }
+
+volScalarField Le1
+(
+    IOobject
+    (
+        "Dh1",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    lambda1_0/rho1_0/Cp1_0/D1_0[0]
+);
+
+volScalarField Le0
+(
+    IOobject
+    (
+        "Dh0",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    lambda0_0/rho0_0/Cp0_0/D0_0[0]
+);
+
+// Done Initialize Mass Diffusivity - Transport Property
+//------------------------------------------------------------------//
+
 //------------------------------------------------------------------//
 /*
 //Read input parameters for error function inverse table from input file
