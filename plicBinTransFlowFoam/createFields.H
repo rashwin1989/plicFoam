@@ -18,7 +18,7 @@ fileName outputFile;
 //Input parameters, tolerances
 int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS;
 scalar error_iter;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion, variableTransportProp;
 //bool calcKij;
 double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
@@ -82,6 +82,7 @@ const dictionary& solDict = mesh.solutionDict();
 //Reading tolerances, max iters and switches
 isothermal = transPropDict.lookupOrDefault("isothermal", true);
 useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", true);
+variableTransportProp = transPropDict.lookupOrDefault("variableTransportProp", true);
 turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
@@ -873,6 +874,9 @@ volScalarField Cp0
     mesh,
     Cp0_0
 );
+
+volScalarField Cp1_thermo = Cp1;
+volScalarField Cp0_thermo = Cp0;
 
 volScalarField Dh1
 (
@@ -2926,7 +2930,7 @@ volScalarField Le1
 (
     IOobject
     (
-        "Dh1",
+        "Le1",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
@@ -2940,7 +2944,7 @@ volScalarField Le0
 (
     IOobject
     (
-        "Dh0",
+        "Le0",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,

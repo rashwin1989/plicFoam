@@ -8769,7 +8769,9 @@ void calc_Js
             //phase-1
             //ensure nf direction is into the phase
             calc_cell_intfcGrad_coeffs(mesh, cellI, nf, C_intfc_cellI, Y1_flatFld, alpha1_flatFld, C_ph1_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 1, dn1, Yeff1, debug, os);
-            
+
+            if(useErf)
+            {            
             //Calculate the BL thickness delta from error function profile for Y[0]            
             erf1 = (Yeff1[0] - ys1[0])/(Yinf1[0] - ys1[0]);
             erf1 = max(erf1, 0.0);
@@ -8778,6 +8780,7 @@ void calc_Js
             delta1_cellI = dn1/x_delta1;
 
             delta1Cells[cellI] = delta1_cellI;
+            }
 
             for(i=0; i<n; i++)
             {
@@ -8798,7 +8801,9 @@ void calc_Js
             //ensure nf direction is into the phase
             //then reverse nf again for Js0 calculation            
             calc_cell_intfcGrad_coeffs(mesh, cellI, -nf, C_intfc_cellI, Y0_flatFld, alpha1_flatFld, C_ph0_flatFld, curCellsAll, nSpecies, ALPHA_2PH_MIN, 0, dn0, Yeff0, debug, os);
-            
+
+            if(useErf)
+            {            
             //Calculate the BL thickness delta from error function profile for Y[0]            
             erf0 = (Yeff0[0] - ys0[0])/(Yinf0[0] - ys0[0]);
             erf0 = max(erf0, 0.0);
@@ -8807,6 +8812,7 @@ void calc_Js
             delta0_cellI = dn0/x_delta0;
 
             delta0Cells[cellI] = delta0_cellI;
+            }
 
             for(i=0; i<n; i++)
             {
@@ -8823,7 +8829,7 @@ void calc_Js
                 grads0[i].internalField()[cellI] = grads0_cellI[i];
             }
 
-            if(debug)
+            if(debug && useErf)
             {
                 print_line(os, 100);
                 os<< "Phase-1:" << endl;

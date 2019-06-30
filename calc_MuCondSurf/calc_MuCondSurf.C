@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     double *kij, *kij_T;
     double Tmin, Tmax, dT, Xmin, Xmax, dX;
     double *x, *x_eqm0, *x_eqm1;
+    double *Dij, D_2_comp; // For 2 components only
     bool is_2phase;
 
     int n_species_db, iread;
@@ -103,6 +104,7 @@ int main(int argc, char *argv[])
     _NNEW2_(x_eqm0, double, n);
     _NNEW2_(x_eqm1, double, n);
     _NNEW2_(h_par, double, n);
+    _NNEW_(Dij, double, n*n);
 
     iread=fscanf(f, "%s", str_tmp);         // index of species
     for (i=0; i<n; i++) iread=fscanf(f, "%d", &idx_species[i]);
@@ -287,7 +289,7 @@ int main(int argc, char *argv[])
 
     f = fopen("prop.dat+", "w");
     T = Tmin;
-    fprintf(f,"%s    %s   %s   %s   %s   %s   %s   %s    %s" "\n", "Cp [J/mol", "H [J/kg-mixture", "h-par-water [J/mol-water]", "h-par-oil [J/mol-oil]",  "Visc [Pa.s]", "Cond [W/m/K]", "Rho [kg/m3]","T [K]", "x_water");
+    fprintf(f,"%s    %s   %s   %s   %s   %s   %s   %s   %s    %s" "\n", "T [K]", "x_water", "Cp [J/mol", "H [J/kg-mixture", "h-par-water [J/mol-water]", "h-par-oil [J/mol-oil]",  "Visc [Pa.s]", "Cond [W/m/K]", "Rho [kg/m3]", "Diff [SI]");
 
     for(iT=0;iT<nT;iT++)
     {
@@ -316,7 +318,12 @@ int main(int argc, char *argv[])
             calc_hpar_(&P, &T, x, &n, Pc, Tc, w, MW, Tb, SG, H8, kij, h_par);
             Info << "H-par oil = " << h_par[0] << ". H-par water = " << h_par[1]  << endl;
 
-            fprintf(f,"%lf    %lf   %lf   %lf   %lf   %lf %lf    %lf    %lf" "\n", Cp_tmp, h_tmp, h_par[1], h_par[0],  mu_tmp, cond_tmp, rho_tmp, T, x[1]);
+            // Diffusivity
+            new_tlsm_diffusion_krishna_model_(&P,&T,&n,Pc,Tc,Vc,w,MW,kij,x,Dij);
+            Info  << ". D = " << Dij[1]  << endl;
+            D_2_comp = Dij[1]*100000000; // For 2 components only, multiplied by 10e8
+
+            fprintf(f,"%lf    %lf   %lf   %lf   %lf   %lf %lf    %lf    %lf    %lf" "\n", T, x[1], Cp_tmp, h_tmp, h_par[1], h_par[0],  mu_tmp, cond_tmp, rho_tmp, D_2_comp);
             x[0] = min(1, x[0] + dX);
             x[1] = 1- x[0];
         }
@@ -379,6 +386,7 @@ int main(int argc, char *argv[])
     _DDELETE2_(x_eqm0);
     _DDELETE2_(x_eqm1);
     _DDELETE2_(h_par);
+    _DDELETE_(Dij);
    
     Info<< "ExecutionTime = "
         << runTime.elapsedCpuTime()
