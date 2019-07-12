@@ -25,6 +25,7 @@ double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, idx, iread, n_miscible;
 double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp;
 int nErf, iErf;
+double diffusivityFactor, CourantFactor;
 double erf_a, erf_b;
 double *erfInv_table;
 bool useErf;
@@ -84,6 +85,7 @@ isothermal = transPropDict.lookupOrDefault("isothermal", true);
 useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", true);
 variableTransportProp = transPropDict.lookupOrDefault("variableTransportProp", true);
 turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
+diffusivityFactor = transPropDict.lookupOrDefault("diffusivityFactor", 1);
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);

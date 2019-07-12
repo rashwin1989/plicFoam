@@ -1,4 +1,4 @@
-if(!isothermal)
+if(!isothermal || variableTransportProp)
 {
 plicFuncs::correct_thermo_trans_prop
 (
@@ -70,6 +70,12 @@ if(variableTransportProp)
 {
     plicFuncs::correct_D_from_Dij(n, x1, Dij1, D1);
     plicFuncs::correct_D_from_Dij(n, x0, Dij0, D0);
+    // diffusivityFactor
+    for(i=0; i<n; i++)
+    {
+        D1[i] *= diffusivityFactor;
+        D0[i] *= diffusivityFactor;
+    }
 }
 
 Info<< "D1[0]:  min = " << gMin(D1[0]) << "  max = " << gMax(D1[0]) << endl;
@@ -88,9 +94,12 @@ Info<< "lambda0_thermo:  min = " << gMin(lambda0_thermo) << "  max = " << gMax(l
 
 lambda1 = lambda1_thermo;
 lambda0 = lambda0_thermo;
+// diffusivityFactor
+lambda1 *= diffusivityFactor;
+lambda0 *= diffusivityFactor;
 }
 
-if((!isothermal)||(variableTransportProp))
+if(!isothermal || variableTransportProp)
 {
 Info<< "Cp1_thermo:  min = " << gMin(Cp1_thermo) << "  max = " << gMax(Cp1_thermo) << endl;
 Info<< "Cp0_thermo:  min = " << gMin(Cp0_thermo) << "  max = " << gMax(Cp0_thermo) << endl;
@@ -98,6 +107,8 @@ Info<< "Cp0_thermo:  min = " << gMin(Cp0_thermo) << "  max = " << gMax(Cp0_therm
 Cp1 = Cp1_thermo; // Required to be updates in non-isothermal cases to set diffCourant number for deltat
 Cp0 = Cp0_thermo; // Required to be updates in non-isothermal cases to set diffCourant number for deltat 
 }
+
+Info << "Diffusivity factor applied = " << diffusivityFactor << endl;
 
 Dh1 = lambda1/rho1/Cp1;
 Dh0 = lambda0/rho0/Cp0;
