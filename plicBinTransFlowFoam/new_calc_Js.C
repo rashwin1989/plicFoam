@@ -1,0 +1,40 @@
+// New function for 2-component, non-isothermal interfacial mass transfer
+
+void calc_Js
+(
+    const fvMesh& mesh,
+    const labelListList& cellStencil,
+    const List<List<scalar> >& Y1_flatFld,
+    const List<List<scalar> >& Y0_flatFld,
+    const List<scalar>& alpha1_flatFld,
+    const volScalarField& alpha1,
+    const volScalarField& rho1,
+    const volScalarField& rho0,
+    const PtrList<volScalarField>& D1,
+    const PtrList<volScalarField>& D0,
+    const List<vector>& C_ph1_flatFld,
+    const List<vector>& C_ph0_flatFld,
+    const volVectorField& C_intfc,
+    const volScalarField& A_intfc,
+    const volVectorField& nHat,
+    const PtrList<volScalarField>& Ys1,
+    const PtrList<volScalarField>& Ys0,
+    PtrList<volScalarField>& Js1,
+    PtrList<volScalarField>& Js0,
+    PtrList<volScalarField>& grads1,
+    PtrList<volScalarField>& grads0,
+    volScalarField& delta1,
+    volScalarField& delta0,
+    const label& nSpecies,
+    const scalar& ALPHA_2PH_MIN,
+    double erf_a,
+    double erf_b,
+    int nErf,
+    double *erfInv_table,
+    bool useErf,
+    const List<scalar>& Yinf1,
+    const List<scalar>& Yinf0,
+    const bool debug,
+    OFstream& os
+)
+{

@@ -1,15 +1,111 @@
-Info<< "Phase-1 H = "
-<< (H1).weightedAverage(mesh.Vsc()).value()
-<< nl
-<< "Min(H1) = " << min(H1).value()
-<< "  Max(H1) = " << max(H1).value()
-<< nl
-<< "Min(T1) = " << min(T1).value()
-<< "  Max(T1) = " << max(T1).value()
-<< nl
-<< "H1 undershoot = " << min((min(H1).value() - H1min), 0)
-<< "  H1 overshoot = " << max((max(H1).value() - H1max), 0)
-<< nl
-<< "T1 undershoot = " << min((min(T1).value() - T1min), 0)
-<< "  T1 overshoot = " << max((max(T1).value() - T1max), 0)
-<< endl;
+
+SOURCE=plicBinTransFlowFoam.C ;  g++ -m64 -Dlinux64 -DWM_DP -Wall -Wextra -Wno-unused-parameter -Wold-style-cast -Wnon-virtual-dtor -O3  -DNoRepository -ftemplate-depth-100 -I../SCF-core/include  -I../UMFPACK/Include -I../AMD/Include -I../UFconfig      -I../plic/lnInclude     -I../plicStencils/lnInclude     -I/home/aniketsp/OpenFOAM/OpenFOAM-2.3.0/src/finiteVolume/lnInclude -IlnInclude -I. -I/home/aniketsp/OpenFOAM/OpenFOAM-2.3.0/src/OpenFOAM/lnInclude -I/home/aniketsp/OpenFOAM/OpenFOAM-2.3.0/src/OSspecific/POSIX/lnInclude   -fPIC -c $SOURCE -o Make/linux64GccDPOpt/plicBinTransFlowFoam.o
+In file included from ../plic/lnInclude/plicFuncs.H:1617:0,
+                 from ../plic/lnInclude/plic.H:63,
+                 from plicBinTransFlowFoam.C:39:
+../plic/lnInclude/plicFuncs.C: In function ‘void Foam::plicFuncs::calc_Js_T(const Foam::fvMesh&, const labelListList&, const Foam::List<Foam::List<double> >&, const Foam::List<Foam::List<double> >&, const Foam::List<double>&, const Foam::List<double>&, const Foam::List<double>&, const volScalarField&, const volScalarField&, const volScalarField&, const Foam::List<Foam::Vector<double> >&, const Foam::List<Foam::Vector<double> >&, const volVectorField&, const volScalarField&, const volVectorField&, const label&, const volScalarField&, const volScalarField&, const scalar&, double, double, int, double*, bool, bool, Foam::volScalarField&, Foam::volScalarField&, Foam::volScalarField&, Foam::volScalarField&, Foam::volScalarField&, Foam::OFstream&)’:
+../plic/lnInclude/plicFuncs.C:9413:9: warning: unused variable ‘n’ [-Wunused-variable]
+     int n = nSpecies;
+         ^
+../plic/lnInclude/plicFuncs.C:9414:9: warning: unused variable ‘i’ [-Wunused-variable]
+     int i;
+         ^
+../plic/lnInclude/plicFuncs.C:9415:12: warning: unused variable ‘erf1’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+            ^
+../plic/lnInclude/plicFuncs.C:9415:18: warning: unused variable ‘x_delta1’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                  ^
+../plic/lnInclude/plicFuncs.C:9415:28: warning: unused variable ‘delta1_cellI’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                            ^
+../plic/lnInclude/plicFuncs.C:9415:42: warning: unused variable ‘erf0’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                                          ^
+../plic/lnInclude/plicFuncs.C:9415:48: warning: unused variable ‘x_delta0’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                                                ^
+../plic/lnInclude/plicFuncs.C:9415:58: warning: unused variable ‘delta0_cellI’ [-Wunused-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                                                          ^
+../plic/lnInclude/plicFuncs.C:9415:76: warning: variable ‘two_sqrtPi’ set but not used [-Wunused-but-set-variable]
+     double erf1, x_delta1, delta1_cellI, erf0, x_delta0, delta0_cellI, pi, two_sqrtPi;
+                                                                            ^
+../plic/lnInclude/plicFuncs.C:9427:31: warning: unused variable ‘Sf’ [-Wunused-variable]
+     const surfaceVectorField& Sf = mesh.Sf();
+                               ^
+../plic/lnInclude/plicFuncs.C:9428:31: warning: unused variable ‘magSf’ [-Wunused-variable]
+     const surfaceScalarField& magSf = mesh.magSf();
+                               ^
+../plic/lnInclude/plicFuncs.C:9429:31: warning: unused variable ‘Cf’ [-Wunused-variable]
+     const surfaceVectorField& Cf = mesh.Cf();
+                               ^
+../plic/lnInclude/plicFuncs.C:9438:18: warning: unused variable ‘delta1Cells’ [-Wunused-variable]
+     scalarField& delta1Cells = delta1.internalField();
+                  ^
+../plic/lnInclude/plicFuncs.C:9439:18: warning: unused variable ‘delta0Cells’ [-Wunused-variable]
+     scalarField& delta0Cells = delta0.internalField();
+                  ^
+../plic/lnInclude/plicFuncs.C: In function ‘void Foam::plicFuncs::calc_mu_lambda(double, double, double*, int, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double&, double&)’:
+../plic/lnInclude/plicFuncs.C:9764:9: warning: unused variable ‘i’ [-Wunused-variable]
+     int i, j;
+         ^
+../plic/lnInclude/plicFuncs.C:9764:12: warning: unused variable ‘j’ [-Wunused-variable]
+     int i, j;
+            ^
+../plic/lnInclude/plicFuncs.C: In function ‘void Foam::plicFuncs::correct_hPar2(double, const volScalarField&, const Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&, const Foam::fvMesh&, const surfaceScalarField&, int, double*, double*, double*, double*, double*, double*, double*, double*, double, double, int, double*, Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&, Foam::PtrList<Foam::GeometricField<double, Foam::fvsPatchField, Foam::surfaceMesh> >&)’:
+../plic/lnInclude/plicFuncs.C:10056:12: warning: unused variable ‘hParOwn’ [-Wunused-variable]
+     scalar hParOwn;
+            ^
+../plic/lnInclude/plicFuncs.C: In function ‘void Foam::plicFuncs::correct_thermo_trans_prop(const Foam::fvMesh&, double, const volScalarField&, const Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&, const Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&, int, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double*, double, double, int, double*, Foam::volScalarField&, Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&, Foam::volScalarField&, Foam::volScalarField&, Foam::volScalarField&, Foam::PtrList<Foam::GeometricField<double, Foam::fvPatchField, Foam::volMesh> >&)’:
+../plic/lnInclude/plicFuncs.C:10386:29: warning: unused variable ‘plambda’ [-Wunused-variable]
+         fvPatchScalarField& plambda = lambda.boundaryField()[patchI];
+                             ^
+../plic/lnInclude/plicFuncs.C:10387:29: warning: unused variable ‘pCp’ [-Wunused-variable]
+         fvPatchScalarField& pCp = Cp.boundaryField()[patchI];
+                             ^
+../plic/lnInclude/plicFuncs.C:10388:29: warning: unused variable ‘pmu’ [-Wunused-variable]
+         fvPatchScalarField& pmu = mu.boundaryField()[patchI];
+                             ^
+../plic/lnInclude/plicFuncs.C:10325:15: warning: variable ‘idx’ set but not used [-Wunused-but-set-variable]
+     int i, j, idx;
+               ^
+../plic/lnInclude/plicFuncs.C:10336:18: warning: unused variable ‘lambdaCells’ [-Wunused-variable]
+     scalarField& lambdaCells = lambda.internalField();
+                  ^
+../plic/lnInclude/plicFuncs.C:10337:18: warning: unused variable ‘CpCells’ [-Wunused-variable]
+     scalarField& CpCells = Cp.internalField();
+                  ^
+../plic/lnInclude/plicFuncs.C:10338:18: warning: unused variable ‘muCells’ [-Wunused-variable]
+     scalarField& muCells = mu.internalField();
+                  ^
+In file included from plicBinTransFlowFoam.C:292:0:
+ist_BinTransLLE.H: In function ‘int main(int, char**)’:
+ist_BinTransLLE.H:36:1: error: ‘calc_Ts’ is not a member of ‘Foam::plicFuncs’
+ plicFuncs::calc_Ts
+ ^
+In file included from plicBinTransFlowFoam.C:73:0:
+createFields.H:19:17: warning: unused variable ‘n_flux_type’ [-Wunused-variable]
+ int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS, N_IST_STEPS, ist_step_count;
+                 ^
+In file included from plicBinTransFlowFoam.C:73:0:
+createFields.H:23:37: warning: unused variable ‘MASS_FRAC_TOL’ [-Wunused-variable]
+ double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
+                                     ^
+createFields.H:26:237: warning: unused variable ‘rhoh_cellI_tmp’ [-Wunused-variable]
+ double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp;
+                                                                                                                                                                                                                                             ^
+createFields.H:27:11: warning: unused variable ‘iErf’ [-Wunused-variable]
+ int nErf, iErf;
+           ^
+createFields.H:28:27: warning: unused variable ‘CourantFactor’ [-Wunused-variable]
+ double diffusivityFactor, CourantFactor;
+                           ^
+In file included from plicBinTransFlowFoam.C:73:0:
+createFields.H:3036:14: warning: unused variable ‘TsCells’ [-Wunused-variable]
+ scalarField& TsCells = Ts.internalField();
+              ^
+createFields.H:3037:14: warning: unused variable ‘QsCells’ [-Wunused-variable]
+ scalarField& QsCells = Qs.internalField();
+              ^
+make: *** [Make/linux64GccDPOpt/plicBinTransFlowFoam.o] Error 1

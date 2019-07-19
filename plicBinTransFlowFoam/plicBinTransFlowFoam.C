@@ -109,11 +109,11 @@ int main(int argc, char *argv[])
                 diffTerm_Y1[i] = diffTerm_zero;
                 diffTerm_Y0[i] = diffTerm_zero;
             }
-
+            /*
             if(ist_ON)
             {                       
                 #include "ist.H"
-            }
+                } */
 
             Info<< "ExecutionTime = "
                 << runTime.elapsedCpuTime()
@@ -249,36 +249,57 @@ int main(int argc, char *argv[])
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
 
-            }
-            }
-            
-            if(useCombinedHeatMassDiffusion)
+            }  // if(!isothermal)
+            }  // if(!useCombinedHeatMassDiffusion)
+
+            deltaT = deltaT/N_IST_STEPS;
+            for(ist_step_count=0; ist_step_count<N_IST_STEPS; ist_step_count++)
             {
-                if(isothermal)
+                if(useCombinedHeatMassDiffusion)
                 {
-            #include "diff_grad_interp.H"
-
-            Info<< "ExecutionTime = "
-                << runTime.elapsedCpuTime()
-                << " s" << nl << endl;
-
-                #include "YDiffEqn.H"
-
+                    if(isothermal)
+                    {
+                #include "diff_grad_interp.H"
+    
                 Info<< "ExecutionTime = "
                     << runTime.elapsedCpuTime()
                     << " s" << nl << endl;
-                }   
-                else
-                {
-                #include "CombinedHYDiffEqn.H"
 
-                Info<< "ExecutionTime = "
-                    << runTime.elapsedCpuTime()
-                    << " s" << nl << endl;
+                    #include "YDiffEqn.H"
+
+                    Info<< "ExecutionTime = "
+                        << runTime.elapsedCpuTime()
+                        << " s" << nl << endl;
+                    }   
+                    else
+                    {
+                    #include "CombinedHYDiffEqn.H"
+
+                    Info<< "ExecutionTime = "
+                        << runTime.elapsedCpuTime()
+                        << " s" << nl << endl;
+                    }
+                }
+
+                if(ist_ON)
+                {         
+                    if(isothermal)
+                    {              
+                        #include "ist.H"
+                    }
+                    else
+                    {
+                        #include "ist_BinTransLLE.H"
+                    }
+                    #include "correct_thermo_trans_prop.H"
                 }
             }
-            }
+            deltaT = deltaT*N_IST_STEPS;
+            Info << "N_IST_STEPS = " << N_IST_STEPS << endl;
+
+            } // if(turn_on_diffusion)
         }
+
 
         for(i=0; i<n; i++)
         {

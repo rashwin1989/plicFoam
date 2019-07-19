@@ -16,7 +16,7 @@ fileName outputFile;
 //------------------------------------------------------------------//
 //Define all int, bool, double (standard C++) variables
 //Input parameters, tolerances
-int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS;
+int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS, N_IST_STEPS, ist_step_count;
 scalar error_iter;
 bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion, variableTransportProp;
 //bool calcKij;
@@ -104,6 +104,7 @@ else
 ALPHA_BOUND_ITERS_MAX = 12;
 Y_BOUND_ITERS_MAX = 12;
 MAX_IMPLICIT_ITERS = transPropDict.lookupOrDefault("MAX_IMPLICIT_ITERS",100);
+N_IST_STEPS = transPropDict.lookupOrDefault("N_IST_STEPS",1);
 // tolerances
 ALPHA_BOUND_ERR = transPropDict.lookupOrDefault("ALPHA_BOUND_ERR", 1E-15);
 SMALLEST_ALPHA_FOR_YADV = transPropDict.lookupOrDefault("SMALLEST_ALPHA_FOR_YADV", 1E-15);
@@ -1688,13 +1689,13 @@ for(i=0; i<n; i++)
 }
 
 double T1min, T1max, H1min, H1max;
-T1min = transPropDict.lookupOrDefault("T1MIN", 500);
-T1max = transPropDict.lookupOrDefault("T1MAX", 800);
+T1min = transPropDict.lookupOrDefault("T1MIN", 680);
+T1max = transPropDict.lookupOrDefault("T1MAX", 770);
 T1_TMP_VAL = 0.5*(T1min + T1max);
 
 double T0min, T0max, H0min, H0max;
-T0min = transPropDict.lookupOrDefault("T0MIN", 500);
-T0max = transPropDict.lookupOrDefault("T0MAX", 800);
+T0min = transPropDict.lookupOrDefault("T0MIN", 680);
+T0max = transPropDict.lookupOrDefault("T0MAX", 770);
 T0_TMP_VAL = 0.5*(T0min + T0max);
 
 //Done max and min values for scalar fields
@@ -2658,6 +2659,36 @@ volScalarField alphaS0
     dimensionedScalar(fieldName, dimless/dimTime, 0)
 );
 
+Info<< "Initializing field Hs1" << endl;
+volScalarField Hs1
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("Hs1", dimEnergy/dimVol/dimTime, 0)
+);
+
+Info<< "Initializing field Hs0" << endl;
+volScalarField Hs0
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("Hs0", dimEnergy/dimVol/dimTime, 0)
+);
+
 fieldName = "pS";
 Info<< "Initializing field " << fieldName << endl;
 volScalarField pS
@@ -2716,7 +2747,7 @@ volScalarField Ts
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     alpha1*T1 + alpha0*T0
 );
@@ -3003,6 +3034,8 @@ scalarField& h0Cells = h0.internalField();
 scalarField& T1Cells = T1.internalField();
 scalarField& T0Cells = T0.internalField();
 scalarField& TsCells = Ts.internalField();
+scalarField& Hs1Cells = Hs1.internalField();
+scalarField& Hs0Cells = Hs0.internalField();
 scalarField& QsCells = Qs.internalField();
 scalarField& lambda1Cells = lambda1.internalField();
 scalarField& lambda0Cells = lambda0.internalField();
