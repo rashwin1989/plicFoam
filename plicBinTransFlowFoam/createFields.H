@@ -18,12 +18,12 @@ fileName outputFile;
 //Input parameters, tolerances
 int MAX_ITER_T, n_flux_type, MAX_ITER_Ts, implicit_iter_count, MAX_IMPLICIT_ITERS, N_IST_STEPS, ist_step_count;
 scalar error_iter;
-bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion, variableTransportProp;
+bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, diff_debug, diff_debug2, diff_debug_T, ist_debug, ist_debug2, momentumPredictor, advFlux_debug, advFlux_debug2, pEqn_debug, U_debug, isothermal, advFlux_debugH, interp_debug, ist_ON, transProp_debug, useCombinedHeatMassDiffusion, variableTransportProp, ist_BinTransLLE_mass_Transfer;
 //bool calcKij;
 double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, idx, iread, n_miscible;
-double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, V_cellI, rho1_cellI, rho0_cellI, T1_cellI, T0_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp, H1_cellI, H0_cellI, Hs1_cellI;
 int nErf, iErf;
 double diffusivityFactor, CourantFactor;
 double erf_a, erf_b;
@@ -40,7 +40,7 @@ FILE *f;
 double *Pc, *Tc, *Vc, *w, *MW, *Tb, *SG, *H8, *k, *dm;
 double *kij_T, *kij;
 //Temp variable arrays
-double *y_cellI_tmp, *x_cellI_tmp, *Dij1_tmp, *Dij0_tmp;
+double *y_cellI_tmp, *x_cellI_tmp, *x1_cellI, *x0_cellI, *Dij1_tmp, *Dij0_tmp;
 double *xs1_tmp, *xs0_tmp, *ys1_tmp, *ys0_tmp;
 //Done define all int, bool, double (standard C++) arrays/pointers
 //------------------------------------------------------------------//
@@ -144,6 +144,7 @@ transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
 useErf = transPropDict.lookupOrDefault("useErf", false);
 calcDiff = transPropDict.lookupOrDefault("calcDiff", true);
 ist_ON = transPropDict.lookupOrDefault("ist_ON", true);
+ist_BinTransLLE_mass_Transfer = transPropDict.lookupOrDefault("ist_BinTransLLE_mass_Transfer", true);
 // int switches
 //n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
@@ -180,6 +181,8 @@ _NNEW2_(xs1_tmp, double, n);
 _NNEW2_(xs0_tmp, double, n);
 _NNEW2_(ys1_tmp, double, n);
 _NNEW2_(ys0_tmp, double, n);
+_NNEW2_(x1_cellI, double, n);
+_NNEW2_(x0_cellI, double, n);
 //Done allocate memory for arrays
 //------------------------------------------------------------------//
 
@@ -2406,8 +2409,8 @@ Info<< endl;
 
 if(n_miscible==1)
 {    
-    Info<< "FATAL ERROR: Fully miscible species pair at given T0..." << endl;
-    exit(-1);
+    Info<< "ALERT: Fully miscible species pair at given T0..." << endl;
+    //    exit(-1);
 }
 
 if(calcDiff)
@@ -2750,6 +2753,21 @@ volScalarField Ts
         IOobject::AUTO_WRITE
     ),
     alpha1*T1 + alpha0*T0
+);
+
+fieldName = "Ts_display";
+Info<< "Initializing field " << fieldName << endl;
+volScalarField Ts_display
+(
+    IOobject
+    (
+        fieldName,
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    0*T0
 );
 
 fieldName = "Qs";

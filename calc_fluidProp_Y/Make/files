@@ -1,0 +1,3 @@
+calc_fluidProp_Y.C
+
+EXE = $(FOAM_APPBIN)/calc_fluidProp_Y

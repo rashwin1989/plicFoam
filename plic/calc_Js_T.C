@@ -4,39 +4,41 @@ void calc_Js_T
     const labelListList& cellStencil,    
     const List<List<scalar> >& Y1_flatFld,
     const List<List<scalar> >& Y0_flatFld,
-    const List<List<scalar> >& T1_flatFld,
-    const List<List<scalar> >& T0_flatFld,
+    const List<scalar>& T1_flatFld,
+    const List<scalar>& T0_flatFld,
     const List<scalar>& alpha1_flatFld,
     const volScalarField& alpha1,
-    //    const volScalarField& rho1,
-    //    const volScalarField& rho0,
-    const PtrList<volScalarField>& lambda1,
-    const PtrList<volScalarField>& lambda0,
+    const volScalarField& rho1,
+    const volScalarField& rho0,
+    const PtrList<volScalarField>& D1,
+    const PtrList<volScalarField>& D0,
+    const PtrList<volScalarField>& hpar1,
+    const PtrList<volScalarField>& hpar0,
     const List<vector>& C_ph1_flatFld,
     const List<vector>& C_ph0_flatFld,
     const volVectorField& C_intfc,
     const volScalarField& A_intfc,
     const volVectorField& nHat,
-    //    const PtrList<volScalarField>& Ys1,
-    //    const PtrList<volScalarField>& Ys0,
-    PtrList<volScalarField>& Hs1,
-    PtrList<volScalarField>& Hs0,
-    //    PtrList<volScalarField>& grads1,
-    //    PtrList<volScalarField>& grads0,
-    //    volScalarField& delta1,
-    //    volScalarField& delta0,
     const label& nSpecies,
-    volScalarField& T1, 
-    volScalarField& T0, 
-    volScalarField& Ts, 
+    const volScalarField& T1, 
+    const volScalarField& T0, 
+    const volScalarField& Ts, 
     const scalar& ALPHA_2PH_MIN,
     double erf_a,
     double erf_b,
     int nErf,
     double *erfInv_table,
     bool useErf,
-    //    const List<scalar>& Yinf1,
-    //    const List<scalar>& Yinf0,
+    const List<scalar>& Yinf1,
+    const List<scalar>& Yinf0,
+    const PtrList<volScalarField>& Ys1,
+    const PtrList<volScalarField>& Ys0,
+    PtrList<volScalarField>& Hs1,
+    PtrList<volScalarField>& Hs0,
+    PtrList<volScalarField>& grads1,
+    PtrList<volScalarField>& grads0,
+    volScalarField& delta1,
+    volScalarField& delta0,
     const bool debug,
     OFstream& os
 )
@@ -47,12 +49,12 @@ void calc_Js_T
     scalar alpha1_cellI, A_intfc_cellI, dn1, dn0, Teff1, Teff0;
     vector nf, C_intfc_cellI;
 
-    /*    List<scalar> grads1_cellI(n);
+    List<scalar> grads1_cellI(n);
     List<scalar> grads0_cellI(n);
     List<scalar> Yeff1(n);
     List<scalar> Yeff0(n);
     List<scalar> ys1(n);
-        List<scalar> ys0(n); */
+    List<scalar> ys0(n);
 
     pi = Foam::constant::mathematical::pi;
     two_sqrtPi = 2.0/sqrt(pi);
