@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
             Info << "H-par oil = " << h_par[0] << ". H-par water = " << h_par[1]  << endl;
 
             // Diffusivity
-            new_tlsm_diffusion_krishna_model_(&P,&T,&n,Pc,Tc,Vc,w,MW,kij,x,Dij);
+            new_tlsm_diffusion_krishna_model_modified_(&P,&T,&n,Pc,Tc,Vc,w,MW,kij,x,Dij);
             Info  << ". D = " << Dij[1]  << endl;
             D_2_comp = Dij[1]*100000000; // For 2 components only, multiplied by 10e8
 
@@ -336,6 +336,7 @@ int main(int argc, char *argv[])
         T = T + dT;
     }
     fclose(f);
+
 
     f = fopen("is2ph.dat+", "w");
     T = Tmin;

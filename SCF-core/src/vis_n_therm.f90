@@ -1727,6 +1727,48 @@ subroutine new_TLSM_diffusion_Krishna_model( &
 !}
 end subroutine new_TLSM_diffusion_Krishna_model
 
+subroutine new_TLSM_diffusion_Krishna_model_modified( &
+    ! For n=2, components 11 and 18 (water)
+    P,               & ! pressure
+    T,               & ! temperature
+    n,               & ! # of species
+    Pc,              & ! vector of Pc (Pa)
+    Tc,              & ! vector of Tc (K)
+    Vc,              & ! vector of Vc (cm^3/mol)
+    w,               & ! vector of acentric factor    
+    MW,              & ! vector of molecular weights
+    kij,             & ! matrix of BIPs
+    x,               & ! vector of molar fractions
+    Dij)               ! matrix of binary mass diffusivity 
+!{
+  implicit none
+  integer :: i, j
+  real(8), intent(in) :: P ! (Pa) pressure
+  real(8), intent(in) :: T ! (K) Temperature
+  integer, intent(in) :: n ! number of points in space , number of species
+  real(8), intent(in), dimension(n):: Pc! (Pa)
+  real(8), intent(in), dimension(n):: Tc! (K) 
+  real(8), intent(in), dimension(n):: Vc! (cm^3/mol)
+  real(8), intent(in), dimension(n):: w!  acentric factors  
+  real(8), intent(in), dimension(n):: MW ! (g/mol) molecular masses
+  real(8), intent(in), dimension(n,n):: kij! BIPs
+  real(8), intent(in), dimension(n):: x!  molar fractions
+  !(cm2/sec)diffusion coefficients and converted to m2/sec
+  real(8), dimension(n,n) :: Dij, Dij_trace
+  real(8), parameter :: D_ratio = 0.464d0
+
+  call TLSM_diffusion_trace_new(P,T,n,Pc,Tc,Vc,w,MW,kij,Dij_trace)
+
+Dij_trace(2,1) = D_ratio*Dij_trace(1,2)
+  do i=1,n
+    do j=1,n
+      Dij(i,j) = Dij_trace(i,j)**((1+x(j)-x(i))*0.5) &
+               * Dij_trace(j,i)**((1+x(i)-x(j))*0.5) 
+    enddo
+  enddo
+!}
+end subroutine new_TLSM_diffusion_Krishna_model_modified
+
 !***************************************************************************
 subroutine findEquilibrium_fix_HC_ratios( &
     P, & ! pressure (Unit: Pa)

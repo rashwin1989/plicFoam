@@ -110,6 +110,22 @@ extern "C" {
         double *Dij  // matrix of binary mass diffusivity 
                      // in vector form: idx = i + j*n (OUTPUT)
     );
+
+    void new_tlsm_diffusion_krishna_model_modified_
+    ( 
+        double *P,   // pressure     scalar
+        double *T,   // temperature  scalar
+        int    *n,   // # of species scalar
+        double *Pc,  // vector of Pc (Pa)
+        double *Tc,  // vector of Tc (K)
+        double *Vc,  // vector of Vc (cm^3/mol)
+        double *w,   // vector of acentric factors        
+        double *MW,  // vector of molecular weights
+        double *kij, // matrix of BIPs
+        double *x,   // vector of molar fractions
+        double *Dij  // matrix of binary mass diffusivity 
+                     // in vector form: idx = i + j*n (OUTPUT)
+    );
                              
     void tlsm_diffusion_trace_new_
     ( 

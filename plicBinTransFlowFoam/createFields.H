@@ -23,7 +23,7 @@ bool alpha_debug, redist_alpha, adv_debug, adv_debug2, redist_C, grad_debug, dif
 double T_TOL, H_TOL, R_gas, Ts_TOL, MASS_FRAC_TOL;
 //Temp variables
 int n, i, j, ijIndex, maxAlpha1Cell, minAlpha1Cell, nT_kij, iT, idx, iread, n_miscible;
-double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, V_cellI, rho1_cellI, rho0_cellI, T1_cellI, T0_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp, H1_cellI, H0_cellI, Hs1_cellI;
+double T_0, P_thermo_tmp, pSCoeff, Y1i_cellI, Y1t_cellI, Y0i_cellI, Y0t_cellI ,Y1n_cellI, Y0n_cellI, C1Tot_cellI, C0Tot_cellI, C1i_cellI, C0i_cellI, V_cellI, rho1_cellI, rho0_cellI, T1_cellI, T0_cellI, alpha1_cellI, alpha0_cellI, rho_tmp, mu_tmp, Ta_kij, Tb_kij, T_cellI_tmp, h_cellI_tmp, rhoh_cellI_tmp, H1_cellI, H0_cellI, Hs1_cellI, T_water, T_oil, T_LLE;
 int nErf, iErf;
 double diffusivityFactor, CourantFactor;
 double erf_a, erf_b;
@@ -80,12 +80,13 @@ const dictionary& solDict = mesh.solutionDict();
 //------------------------------------------------------------------//
 
 //------------------------------------------------------------------//
-//Reading tolerances, max iters and switches
-isothermal = transPropDict.lookupOrDefault("isothermal", true);
-useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", true);
-variableTransportProp = transPropDict.lookupOrDefault("variableTransportProp", true);
-turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
+// Reading Input Parameters
 diffusivityFactor = transPropDict.lookupOrDefault("diffusivityFactor", 1);
+// n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
+T_oil = transPropDict.lookupOrDefault("T_oil", 700);
+T_water = transPropDict.lookupOrDefault("T_water", 700);
+T_LLE = transPropDict.lookupOrDefault("T_LLE", 700);
+//Reading tolerances, max iters and switches
 // iters, correctors
 nOCorr = solDict.lookupOrDefault("nOuterCorrector", 1);
 nPCorr = solDict.lookupOrDefault("nPressureCorrector", 2);
@@ -120,12 +121,21 @@ ALPHA_2PH_MAX_IST = 1 - ALPHA_2PH_MIN_IST;
 //A_INTFC_2PH_MIN_COEFF = transPropDict.lookupOrDefault("A_INTFC_2PH_MIN_COEFF", 1E-03);
 //scalar avgSf = (mesh.magSf()).average().value();
 //A_INTFC_2PH_MIN = A_INTFC_2PH_MIN_COEFF*avgSf;
-// debug and other bool switches
+// bool switches
+isothermal = transPropDict.lookupOrDefault("isothermal", true);
+useCombinedHeatMassDiffusion = transPropDict.lookupOrDefault("useCombinedHeatMassDiffusion", true);
+variableTransportProp = transPropDict.lookupOrDefault("variableTransportProp", true);
+turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
+redist_C = transPropDict.lookupOrDefault("redist_C", false);
+useErf = transPropDict.lookupOrDefault("useErf", false);
+calcDiff = transPropDict.lookupOrDefault("calcDiff", true);
+ist_ON = transPropDict.lookupOrDefault("ist_ON", true);
+ist_BinTransLLE_mass_Transfer = transPropDict.lookupOrDefault("ist_BinTransLLE_mass_Transfer", true);
+// debug switches
 alpha_debug = transPropDict.lookupOrDefault("alpha_debug", false);
 redist_alpha = transPropDict.lookupOrDefault("redist_alpha", false);
 adv_debug = transPropDict.lookupOrDefault("adv_debug", false);
 adv_debug2 = transPropDict.lookupOrDefault("adv_debug2", false);
-redist_C = transPropDict.lookupOrDefault("redist_C", false);
 grad_debug = transPropDict.lookupOrDefault("grad_debug", false);
 //grad_debug2 = transPropDict.lookupOrDefault("grad_debug2", false);
 diff_debug = transPropDict.lookupOrDefault("diff_debug", false);
@@ -141,12 +151,6 @@ pEqn_debug = transPropDict.lookupOrDefault("pEqn_debug", false);
 U_debug = transPropDict.lookupOrDefault("U_debug", false);
 interp_debug = transPropDict.lookupOrDefault("interp_debug", false);
 transProp_debug = transPropDict.lookupOrDefault("transProp_debug", false);
-useErf = transPropDict.lookupOrDefault("useErf", false);
-calcDiff = transPropDict.lookupOrDefault("calcDiff", true);
-ist_ON = transPropDict.lookupOrDefault("ist_ON", true);
-ist_BinTransLLE_mass_Transfer = transPropDict.lookupOrDefault("ist_BinTransLLE_mass_Transfer", true);
-// int switches
-//n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 //Done reading tolerances, max iters and switches
 //------------------------------------------------------------------//
 
@@ -609,7 +613,8 @@ volScalarField T0
 );
 T0.correctBoundaryConditions();
 
-T_0 = T1.internalField()[0]; // The fixed temperature for an isothermal case
+//T_0 = T1.internalField()[0]; // The fixed temperature for an isothermal case
+T_0 = T_LLE; // The fixed temperature for an isothermal case
 Info << "T_isothermal = " << T_0 << endl;
 //Done T initialization
 //------------------------------------------------------------------//
@@ -642,7 +647,7 @@ Y0_0[n-1] = scalar(1.0) - Y0Tot_tmp;
 Y0_0[n-1] = max(Y0_0[n-1], 0.0);
 
 //Since isothermal case, calculate BIP matrix from input table once for T_0
-plicFuncs::calc_kij_from_table(T_0, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
+plicFuncs::calc_kij_from_table(T_LLE, n, Ta_kij, Tb_kij, nT_kij, kij_T, kij);
 //calcKij = false;
 Info<< "BIP matrix:  ";
 for(i=0; i<n*n; i++) Info<< kij[i] << "  ";
@@ -661,26 +666,26 @@ const dimensionedScalar& Cp0_0 = transPropDict.lookup("Cp0");
 x_cellI_tmp[0] = 1; x_cellI_tmp[1] = 0; // Works for 2 components only
 y_cellI_tmp[0] = 1; y_cellI_tmp[1] = 0; // Works for 2 components only
 
-plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+plicFuncs::calc_rho(P_thermo_tmp,T_oil,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho1_0("rho1_0", dimDensity, rho_tmp);
 
-plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+plicFuncs::calc_mu(P_thermo_tmp,T_oil,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu1_0("mu1_0", dimPressure*dimTime, mu_tmp);
 
-//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
+//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_oil,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij1_tmp);
 
 //phase-0
 //set pure water phase initial mole fractions
 x_cellI_tmp[0] = 0; x_cellI_tmp[1] = 1; 
 y_cellI_tmp[0] = 0; y_cellI_tmp[1] = 1;
 
-plicFuncs::calc_rho(P_thermo_tmp,T_0,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
+plicFuncs::calc_rho(P_thermo_tmp,T_water,x_cellI_tmp,n,Pc,Tc,w,MW,kij,rho_tmp);
 dimensionedScalar rho0_0("rho0_0", dimDensity, rho_tmp);
 
-plicFuncs::calc_mu(P_thermo_tmp,T_0,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
+plicFuncs::calc_mu(P_thermo_tmp,T_water,y_cellI_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,mu_tmp);
 dimensionedScalar mu0_0("mu0_0", dimPressure*dimTime, mu_tmp);
 
-//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
+//new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_water,&n,Pc,Tc,Vc,w,MW,kij,x_cellI_tmp,Dij0_tmp);
 
 volScalarField rho1
 (
@@ -1948,8 +1953,8 @@ for(i=0; i<n; i++)
     Y1_flatFld_diff[i] = Y_flatFld_diff;    
     Y0_flatFld_diff[i] = Y_flatFld_diff;        
 }
-List<scalar> T1_flatFld_diff(n_flatFld_diff, T_0);
-List<scalar> T0_flatFld_diff(n_flatFld_diff, T_0);
+List<scalar> T1_flatFld_diff(n_flatFld_diff, T_oil);
+List<scalar> T0_flatFld_diff(n_flatFld_diff, T_water);
 
 // labelList to indicate phase state of each mesh face
 labelList face_phaseState_diff(nFaces);
@@ -2393,7 +2398,7 @@ PtrList<volScalarField> mS0(n);
 
 // Binary LLE calculation to set equilibrium mass fractions
 n_miscible = 0;
-binarylle_(&P_thermo_tmp,&T_0,&n,Pc,Tc,w,kij,xs1_tmp,xs0_tmp,&n_miscible);
+binarylle_(&P_thermo_tmp,&T_LLE,&n,Pc,Tc,w,kij,xs1_tmp,xs0_tmp,&n_miscible);
 
 plicFuncs::x2y(n,MW,xs1_tmp,ys1_tmp);
 plicFuncs::x2y(n,MW,xs0_tmp,ys0_tmp);
@@ -2415,8 +2420,8 @@ if(n_miscible==1)
 
 if(calcDiff)
 {
-    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs1_tmp,Dij1_tmp);
-    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_0,&n,Pc,Tc,Vc,w,MW,kij,xs0_tmp,Dij0_tmp);
+    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_oil,&n,Pc,Tc,Vc,w,MW,kij,xs1_tmp,Dij1_tmp);
+    new_tlsm_diffusion_krishna_model_(&P_thermo_tmp,&T_water,&n,Pc,Tc,Vc,w,MW,kij,xs0_tmp,Dij0_tmp);
 }
 
 for(i=0; i<n; i++)
@@ -2514,7 +2519,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(fieldName, dimless/dimLength, 0)
@@ -2534,7 +2539,7 @@ for(i=0; i<n; i++)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(fieldName, dimless/dimLength, 0)

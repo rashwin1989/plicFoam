@@ -10828,7 +10828,8 @@ void correct_thermo_trans_prop
 
         calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
 
-        new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+                //  new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+        new_tlsm_diffusion_krishna_model_modified_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
         vCells[cellI] = V;
         muCells[cellI] = vis;
@@ -10883,7 +10884,8 @@ void correct_thermo_trans_prop
 
                 calc_mu_lambda(P,T_tmp,y_tmp,n,Pc,Tc,Vc,w,MW,Tb,SG,H8,k,dm,kij,vis,cond);
 
-                new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+                //  new_tlsm_diffusion_krishna_model_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
+                new_tlsm_diffusion_krishna_model_modified_(&P,&T_tmp,&n,Pc,Tc,Vc,w,MW,kij,x_tmp,Dij);
 
                 pv[fcI] = V;            
                 pmu[fcI] = vis;
