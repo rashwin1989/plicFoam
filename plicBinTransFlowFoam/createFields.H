@@ -29,7 +29,7 @@ double diffusivityFactor, CourantFactor;
 double erf_a, erf_b;
 double *erfInv_table;
 bool useErf;
-bool calcDiff, turn_on_diffusion;
+bool calcDiff, turn_on_diffusion, calcLLE;
 FILE *f;
 //Done define all int, bool, double (standard C++) variables
 //------------------------------------------------------------------//
@@ -81,7 +81,7 @@ const dictionary& solDict = mesh.solutionDict();
 
 //------------------------------------------------------------------//
 // Reading Input Parameters
-diffusivityFactor = transPropDict.lookupOrDefault("diffusivityFactor", 1);
+diffusivityFactor = transPropDict.lookupOrDefault("diffusivityFactor", 1.0);
 // n_flux_type = transPropDict.lookupOrDefault("n_flux_type", 1);
 T_oil = transPropDict.lookupOrDefault("T_oil", 700);
 T_water = transPropDict.lookupOrDefault("T_water", 700);
@@ -129,6 +129,7 @@ turn_on_diffusion = transPropDict.lookupOrDefault("turn_on_diffusion", true);
 redist_C = transPropDict.lookupOrDefault("redist_C", false);
 useErf = transPropDict.lookupOrDefault("useErf", false);
 calcDiff = transPropDict.lookupOrDefault("calcDiff", true);
+calcLLE = transPropDict.lookupOrDefault("calcLLE", true);
 ist_ON = transPropDict.lookupOrDefault("ist_ON", true);
 ist_BinTransLLE_mass_Transfer = transPropDict.lookupOrDefault("ist_BinTransLLE_mass_Transfer", true);
 // debug switches
@@ -2398,10 +2399,24 @@ PtrList<volScalarField> mS0(n);
 
 // Binary LLE calculation to set equilibrium mass fractions
 n_miscible = 0;
+
+if(calcLLE)
+{
 binarylle_(&P_thermo_tmp,&T_LLE,&n,Pc,Tc,w,kij,xs1_tmp,xs0_tmp,&n_miscible);
 
 plicFuncs::x2y(n,MW,xs1_tmp,ys1_tmp);
 plicFuncs::x2y(n,MW,xs0_tmp,ys0_tmp);
+}
+else
+{
+ys0_tmp[0] = transPropDict.lookupOrDefault("Ys00", 0.0);
+ys0_tmp[1] = transPropDict.lookupOrDefault("Ys01", 1.0);
+ys1_tmp[0] = transPropDict.lookupOrDefault("Ys10", 1.0);
+ys1_tmp[1] = transPropDict.lookupOrDefault("Ys11", 0.0);
+
+plicFuncs::y2x(n,MW,ys1_tmp,xs1_tmp);
+plicFuncs::y2x(n,MW,ys0_tmp,xs0_tmp);
+}
 
 Info<< "n_miscible = " << n_miscible << endl;
 Info<< "Equilibrium mass fractions: " << endl;

@@ -97,6 +97,8 @@ lambda0 = lambda0_thermo;
 // diffusivityFactor
 lambda1 *= diffusivityFactor;
 lambda0 *= diffusivityFactor;
+// mu1 *= 1;
+// mu0 *= 1;
 }
 
 if(!isothermal || variableTransportProp)
